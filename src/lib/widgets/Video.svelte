@@ -32,25 +32,33 @@
 	});
 </script>
 
-<Surface {span} bleed>
+<Surface {span} bleed class="group">
 	<div class="absolute inset-0">
 		<Asset src={data.poster} alt="" />
 	</div>
 
 	<div class="widget-scrim relative flex h-full flex-col justify-end p-widget">
-		<button
-			type="button"
+		<!--
+			A provider we can build an embed URL for gets the facade. Anything
+			else — a self-hosted file, a provider added later — gets a link out,
+			because a play glyph that does nothing when pressed is worse than no
+			play glyph at all. Same mark either way; only the destination differs.
+		-->
+		<svelte:element
+			this={embed ? 'button' : 'a'}
+			type={embed ? 'button' : undefined}
+			href={embed ? undefined : data.url}
 			data-embed={embed}
 			data-embed-title={data.title}
 			class="absolute inset-0 grid place-items-center focus-visible:outline-offset-[-4px]"
 		>
-			<span class="sr-only">Play {data.title}</span>
+			<span class="sr-only">{embed ? 'Play' : 'Watch'} {data.title}</span>
 			<span
 				class="grid size-14 place-items-center rounded-full bg-black/45 text-white backdrop-blur-md transition-transform duration-200 ease-out group-hover:scale-105"
 			>
 				<Play size={22} fill="currentColor" aria-hidden="true" />
 			</span>
-		</button>
+		</svelte:element>
 
 		<p class="pointer-events-none relative text-sm font-medium text-white">{data.title}</p>
 	</div>

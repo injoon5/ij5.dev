@@ -78,6 +78,14 @@ export const actions: Actions = {
 			(l) => l.label && l.href
 		);
 
+		// The avatar is an asset like any other, so a replaced one is released
+		// on the same terms as a replaced block image.
+		const before = await env.DB.prepare(`SELECT avatar FROM profile WHERE id = 1`).first<{
+			avatar: string | null;
+		}>();
+
+		const avatar = parsed.data.avatar || null;
+
 		await env.DB.prepare(
 			`UPDATE profile SET name = ?, bio = ?, tagline = ?, avatar = ?, links = ? WHERE id = 1`
 		)
@@ -85,10 +93,14 @@ export const actions: Actions = {
 				parsed.data.name,
 				parsed.data.bio || null,
 				parsed.data.tagline || null,
-				parsed.data.avatar || null,
+				avatar,
 				JSON.stringify(links.map((l) => ({ ...l, icon: l.icon || 'globe' })))
 			)
 			.run();
+
+		if (before?.avatar !== avatar) {
+			await releaseAssets(env, [before?.avatar].filter(isAssetKey));
+		}
 
 		await syncDraft(env);
 		return { saved: 'profile' };
@@ -137,9 +149,27 @@ export const actions: Actions = {
 			return fail(400, { intent: 'block', id, errors: parsed.errors, raw: parsed.raw });
 		}
 
+		// §5 covers a replaced image as well as a deleted block. Swapping the
+		// cover on a link block used to leave the old object in R2 with nothing
+		// left pointing at it, and content-addressed keys mean nothing would ever
+		// collect it — so read what the block referred to before overwriting it.
+		const before = await env.DB.prepare(`SELECT data FROM blocks WHERE id = ?`)
+			.bind(id)
+			.first<{ data: string }>();
+
+		const next = JSON.stringify(parsed.data);
+
 		await env.DB.prepare(`UPDATE blocks SET span = ?, data = ? WHERE id = ?`)
-			.bind(span, JSON.stringify(parsed.data), id)
+			.bind(span, next, id)
 			.run();
+
+		if (before) {
+			const kept = new Set(assetKeysIn(next));
+			await releaseAssets(
+				env,
+				assetKeysIn(before.data).filter((key) => !kept.has(key))
+			);
+		}
 
 		await syncDraft(env);
 		return { saved: id };
@@ -159,9 +189,7 @@ export const actions: Actions = {
 
 		await env.DB.prepare(`DELETE FROM blocks WHERE id = ?`).bind(id).run();
 
-		// §5 — no scheduled cleanup. The object goes when its last reference
-		// does, checked in the same handler that removed the reference.
-		if (row) await releaseAssets(env, row.data);
+		if (row) await releaseAssets(env, assetKeysIn(row.data));
 
 		await syncDraft(env);
 		return { deleted: id };
@@ -204,20 +232,35 @@ export const actions: Actions = {
 	}
 };
 
+/** Every field in the catalog that can hold an asset key. */
+const ASSET_FIELDS = ['src', 'image', 'poster', 'avatar'];
+
+const isAssetKey = (v: unknown): v is string => typeof v === 'string' && v.startsWith('img/');
+
 /**
- * Deletes any R2 object this block referenced that no other block still uses.
- * Content-addressed keys make the check a straight string comparison.
+ * The asset keys a block's stored JSON refers to. Not exported: a
+ * `+page.server.ts` may only export the names SvelteKit knows, and anything
+ * else makes the whole route a 500.
  */
-async function releaseAssets(env: App.Platform['env'], rawData: string) {
-	let keys: string[] = [];
+function assetKeysIn(rawData: string): string[] {
 	try {
 		const data = JSON.parse(rawData) as Record<string, unknown>;
-		keys = ['src', 'image', 'poster', 'avatar']
-			.map((k) => data[k])
-			.filter((v): v is string => typeof v === 'string' && v.startsWith('img/'));
+		return ASSET_FIELDS.map((k) => data[k]).filter(isAssetKey);
 	} catch {
-		return;
+		return [];
 	}
+}
+
+/**
+ * Deletes any R2 object in `keys` that nothing references any more (§5). No
+ * scheduled cleanup: the object goes when its last reference does, checked in
+ * the same handler that removed the reference.
+ *
+ * Call this *after* the write that dropped the reference, never before — the
+ * check is a live query, so running it first would find the row being replaced
+ * and conclude the image is still in use.
+ */
+async function releaseAssets(env: App.Platform['env'], keys: string[]) {
 	if (!keys.length) return;
 
 	for (const key of keys) {

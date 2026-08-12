@@ -1,0 +1,43 @@
+# §13. Types, then tests, then a build — the same three commands the deploy
+# runs, so a red pipeline here is a deploy that would have failed.
+#
+# Deployment is deliberately not wired in. `wrangler deploy` on green would
+# push the redirect hook straight to production, and §13 asks for
+# `wrangler versions upload` with a gradual rollout on that path instead.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # `node:sqlite` is unflagged from 22.5 on, which is what runs the
+          # migration and the hits upsert in the test suite.
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Types
+        run: npm run check
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

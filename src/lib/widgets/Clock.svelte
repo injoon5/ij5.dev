@@ -9,7 +9,7 @@
      rendered time is wrong the moment the page is cached — which, given the
      version-keyed edge cache, is immediately. -->
 <Surface {span}>
-	<span class="text-2xs font-semibold tracking-wide text-text-subtle">Local time</span>
+	<span class="text-2xs font-semibold text-text-subtle">Local time</span>
 	<div class="mt-auto">
 		<p class="text-xl font-semibold">{data.place}</p>
 		<p class="tnum mt-0.5 text-xs text-text-muted">{data.offset}</p>

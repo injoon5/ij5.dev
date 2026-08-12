@@ -9,7 +9,7 @@
 
 <Surface {span} flexible>
 	{#if data.title}
-		<p class="text-2xs font-semibold tracking-wide text-text-subtle">{data.title}</p>
+		<p class="text-2xs font-semibold text-text-subtle">{data.title}</p>
 	{/if}
 	<div class="mt-auto space-y-2 pt-3 text-sm text-pretty text-text-muted">
 		{#each paragraphs as p (p)}

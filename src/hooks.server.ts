@@ -46,11 +46,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const cache = platform?.caches?.default;
 	const path = event.url.pathname;
 	const seg = path.slice(1);
+	const method = event.request.method;
+	// A redirect answers a navigation. Anything else arriving at a slug is a
+	// scanner, and answering it with a 302 would file the probe as a click.
+	const readOnly = method === 'GET' || method === 'HEAD';
 
 	// ---------------------------------------------------------------- redirect
 	// Single-segment and dot-free: `/a/b` never reaches KV, and neither does
 	// robots.txt, favicon.ico or og.png.
-	if (env && isSlugCandidate(seg)) {
+	if (env && readOnly && isSlugCandidate(seg)) {
 		const key = slugCacheKey(seg);
 
 		try {
@@ -86,10 +90,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 			// Miss, or expired. Expiry is lazy — `exp` rides in the KV value and
 			// the D1 row survives for history.
-			track(event, { slug: seg.slice(0, 64), kind: '404' });
+			track(event, { slug: seg, kind: '404' });
 		} catch {
 			// §13 — a KV failure on this path is a 404, never a 500.
-			track(event, { slug: seg.slice(0, 64), kind: '404' });
+			track(event, { slug: seg, kind: '404' });
 		}
 	}
 
@@ -98,16 +102,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// purges only the colo it runs in, so an edit would leave other regions
 	// serving stale content. A version-keyed entry makes every colo miss at
 	// once, with nothing to purge.
-	if (env && path === '/' && (event.request.method === 'GET' || event.request.method === 'HEAD')) {
+	if (env && path === '/' && readOnly) {
+		// Outside the KV read and above the cache check, deliberately. A cache
+		// hit is still a visit, and so is a visit to a bento that has never been
+		// published — that page renders from D1 and used to be counted nowhere,
+		// which silently zeroed the numbers for the page that matters most until
+		// someone happened to press Publish.
+		track(event, { slug: '', kind: 'bento' });
+
 		try {
 			const doc = await env.KV.get<BentoDoc>('bento', { type: 'json', cacheTtl: 60 });
 			if (doc) {
 				const etag = `"bento-v${doc.v}"`;
-
-				// Above the cache check, deliberately: a cache hit is still a
-				// visit, and putting this below would silently undercount the
-				// page that matters most.
-				track(event, { slug: '', kind: 'bento' });
 
 				if (event.request.headers.get('if-none-match') === etag) {
 					return harden(
@@ -125,7 +131,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 				event.locals.authed = false;
 				event.locals.bento = doc;
 				const res = await resolve(event);
-				if (res.status === 200 && cache) {
+				// Store from GET only. A HEAD is served from an entry a GET put
+				// there, but must never be the request that fills it: the entry is
+				// shared, and a body-less response in it would blank the page for
+				// everyone else until the next publish.
+				if (res.status === 200 && cache && method === 'GET') {
 					const copy = res.clone();
 					const store = new Response(copy.body, {
 						status: 200,
@@ -147,8 +157,28 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// ------------------------------------------------------------------- auth
 	event.locals.authed = await valid(event.cookies.get(SESSION_COOKIE), env?.SESSION_SECRET);
 
-	// `/api` has no `+layout.server.ts`, so it guards here.
-	if (path.startsWith('/api') && !event.locals.authed) {
+	/**
+	 * `/api` has no `+layout.server.ts`, so it guards here — but only the
+	 * cookie-authenticated half.
+	 *
+	 * `/api/links` authenticates itself with a bearer token and deliberately
+	 * does *not* accept the session cookie: a cookie is attached by the browser
+	 * to whatever request the browser is talked into making, which is the whole
+	 * of CSRF, while a bearer token has to be supplied by the caller. Letting
+	 * the cookie in here would hand any page on any origin the shortener.
+	 *
+	 * Everything else under `/api` — today, the binary asset upload — is called
+	 * by the admin UI with the session and is guarded here.
+	 *
+	 * The prefix is matched with its trailing slash. `startsWith('/api')` also
+	 * matches `/apitest`, `/apiary` and every other slug that happens to begin
+	 * with those four letters — which meant a miss on one of them answered 401
+	 * instead of the designed 404 page.
+	 */
+	const isApi = path === '/api' || path.startsWith('/api/');
+	const isBearerApi = path === '/api/links' || path.startsWith('/api/links/');
+
+	if (isApi && !isBearerApi && !event.locals.authed) {
 		return new Response('Unauthorized', { status: 401 });
 	}
 

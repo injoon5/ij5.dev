@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { loadFromD1, readPublished } from '$lib/server/bento';
 import { planRefresh, readLive } from '$lib/server/live';
-import { defFor, isKind } from '$lib/widgets/catalog';
+import { needsScriptFor } from '$lib/widgets/catalog';
 import type { BentoDoc, LiveDoc } from '$lib/types';
 
 const EMPTY: BentoDoc = {
@@ -10,9 +10,10 @@ const EMPTY: BentoDoc = {
 	blocks: []
 };
 
-export const load: PageServerLoad = async ({ platform, locals }) => {
+export const load: PageServerLoad = async ({ platform, locals, url }) => {
 	const env = platform?.env;
-	if (!env) return { ...EMPTY, live: null, assetsOrigin: '', needsScript: false };
+	if (!env)
+		return { ...EMPTY, live: null, assetsOrigin: '', publicOrigin: url.origin, needsScript: false };
 
 	let doc: BentoDoc | null = null;
 
@@ -52,10 +53,13 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
 		blocks: doc.blocks,
 		live,
 		assetsOrigin: env.ASSETS_ORIGIN ?? '',
+		// Absolute URLs are not optional in a share card — a preview is fetched
+		// by a crawler with no page to resolve a relative path against. The
+		// configured origin wins over the request's so that a preview link or a
+		// workers.dev URL still points share traffic at the canonical host.
+		publicOrigin: env.PUBLIC_ORIGIN || url.origin,
 		// `/w.js` is only requested when something on the page needs it, so a
 		// bento of static blocks makes zero script requests.
-		needsScript: doc.blocks.some(
-			(b) => (isKind(b.kind) && defFor(b.kind).needsScript) || b.kind === 'image' || b.kind === 'map'
-		)
+		needsScript: doc.blocks.some((b) => needsScriptFor(b.kind))
 	};
 };

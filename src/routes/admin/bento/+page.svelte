@@ -6,17 +6,19 @@
 	import Plus from 'lucide-svelte/icons/plus';
 	import Rocket from 'lucide-svelte/icons/rocket';
 	import Undo from 'lucide-svelte/icons/undo-2';
+	import X from 'lucide-svelte/icons/x';
 	import Button from '$lib/ui/Button.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import AssetInput from '$lib/ui/AssetInput.svelte';
 	import { fieldClass } from '$lib/ui/styles';
-	import Block from '$lib/widgets/Block.svelte';
+	import BentoGrid from '$lib/widgets/BentoGrid.svelte';
 	import { KINDS, widgets, isKind, type WidgetKind } from '$lib/widgets/catalog';
 	import { serializeLines } from '$lib/widgets/fields';
 	import { toFormValues } from '$lib/widgets/form';
 	import BlockFields from './BlockFields.svelte';
-	import BlockList from './BlockList.svelte';
+	import BlockCanvas from './BlockCanvas.svelte';
+	import BlockSheet from './BlockSheet.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -27,12 +29,30 @@
 	setContext('assetsOrigin', data.assetsOrigin);
 
 	let selected = $derived(page.url.searchParams.get('b'));
+	let selectedBlock = $derived(data.draft.blocks.find((b) => b.id === selected) ?? null);
 
-	const select = (id: string) =>
-		goto(selected === id ? '/admin/bento' : `/admin/bento?b=${id}`, {
-			noScroll: true,
-			keepFocus: true
-		});
+	/**
+	 * The element the sheet should appear to come from, so the panel expands out
+	 * of the card that was pressed and collapses back into it on close.
+	 */
+	let origin = $state<HTMLElement | null>(null);
+
+	const select = (id: string, from: HTMLElement) => {
+		origin = from;
+		goto(`/admin/bento?b=${id}`, { noScroll: true, keepFocus: true });
+	};
+
+	const deselect = () => goto('/admin/bento', { noScroll: true, keepFocus: true });
+
+	// Reordering posts the same form action the nudge buttons do, so drag is a
+	// faster way to do the one thing, not a second way that skips validation.
+	let reorderForm = $state<HTMLFormElement | null>(null);
+	let orderValue = $state('');
+
+	function reorder(ids: string[]) {
+		orderValue = ids.join(',');
+		queueMicrotask(() => reorderForm?.requestSubmit());
+	}
 
 	let linksValue = $derived(
 		serializeLines(data.draft.profile.links as unknown as Array<Record<string, unknown>>, [
@@ -105,179 +125,182 @@
 {/if}
 
 <div class="editor">
-	<div class="min-w-0">
-		<!-- The identity rail is not a block: always present, always first,
-		     never reordered, so it gets its own record and its own form. -->
-		<section class="mb-8 rounded-[var(--radius-ui-lg)] bg-surface p-5">
-			<h2 class="text-sm font-semibold">Identity</h2>
+	<!-- The identity rail is not a block: always present, always first, never
+	     reordered — so it gets its own record, its own form and its own
+	     column. -->
+	<section class="mb-8 rounded-[var(--radius-ui-lg)] bg-surface p-5">
+		<h2 class="text-sm font-semibold">Identity</h2>
 
-			<form method="POST" action="?/profile" class="mt-4 flex flex-col gap-4" use:enhance>
-				<Field id="p-name" label="Name" error={form?.intent === 'profile' ? form.fields?.name : undefined}>
-					{#snippet children({ id, describedBy, invalid })}
-						<input {id} name="name" value={data.draft.profile.name} aria-describedby={describedBy} required class={fieldClass(invalid)} />
-					{/snippet}
-				</Field>
+		<form method="POST" action="?/profile" class="mt-4 flex flex-col gap-4" use:enhance>
+			<Field id="p-name" label="Name" error={form?.intent === 'profile' ? form.fields?.name : undefined}>
+				{#snippet children({ id, describedBy, invalid })}
+					<input {id} name="name" value={data.draft.profile.name} aria-describedby={describedBy} required class={fieldClass(invalid)} />
+				{/snippet}
+			</Field>
 
-				<Field id="p-tagline" label="Tagline" optional hint="One line. Allowed to wrap to two on a phone.">
-					{#snippet children({ id, describedBy, invalid })}
-						<input {id} name="tagline" value={data.draft.profile.tagline ?? ''} aria-describedby={describedBy} class={fieldClass(invalid)} />
-					{/snippet}
-				</Field>
+			<Field id="p-tagline" label="Tagline" optional hint="One line. Allowed to wrap to two on a phone.">
+				{#snippet children({ id, describedBy, invalid })}
+					<input {id} name="tagline" value={data.draft.profile.tagline ?? ''} aria-describedby={describedBy} class={fieldClass(invalid)} />
+				{/snippet}
+			</Field>
 
-				<Field id="p-bio" label="Bio" optional hint="Two to four short paragraphs, separated by blank lines.">
-					{#snippet children({ id, describedBy, invalid })}
-						<textarea {id} name="bio" rows="5" value={data.draft.profile.bio ?? ''} aria-describedby={describedBy} class="{fieldClass(invalid)} resize-y"></textarea>
-					{/snippet}
-				</Field>
+			<Field id="p-bio" label="Bio" optional hint="Two to four short paragraphs, separated by blank lines.">
+				{#snippet children({ id, describedBy, invalid })}
+					<textarea {id} name="bio" rows="5" value={data.draft.profile.bio ?? ''} aria-describedby={describedBy} class="{fieldClass(invalid)} resize-y"></textarea>
+				{/snippet}
+			</Field>
 
-				<Field id="p-avatar" label="Avatar" optional>
-					{#snippet children({ id, describedBy })}
-						<AssetInput {id} name="avatar" value={data.draft.profile.avatar ?? ''} assetsOrigin={data.assetsOrigin} {describedBy} />
-					{/snippet}
-				</Field>
+			<Field id="p-avatar" label="Avatar" optional>
+				{#snippet children({ id, describedBy })}
+					<AssetInput {id} name="avatar" value={data.draft.profile.avatar ?? ''} assetsOrigin={data.assetsOrigin} {describedBy} />
+				{/snippet}
+			</Field>
 
-				<Field
-					id="p-links"
-					label="Footer links"
-					optional
-					hint="One per line: label | url | icon. Icons: github, x, linkedin, instagram, youtube, mail, rss, globe."
-				>
-					{#snippet children({ id, describedBy, invalid })}
-						<textarea
-							{id}
-							name="links"
-							rows="4"
-							value={linksValue}
-							aria-describedby={describedBy}
-							spellcheck="false"
-							class="{fieldClass(invalid)} resize-y font-mono text-xs"
-						></textarea>
-					{/snippet}
-				</Field>
+			<Field
+				id="p-links"
+				label="Footer links"
+				optional
+				hint="One per line: label | url | icon. Icons: github, x, linkedin, instagram, youtube, mail, rss, globe."
+			>
+				{#snippet children({ id, describedBy, invalid })}
+					<textarea
+						{id}
+						name="links"
+						rows="4"
+						value={linksValue}
+						aria-describedby={describedBy}
+						spellcheck="false"
+						class="{fieldClass(invalid)} resize-y font-mono text-xs"
+					></textarea>
+				{/snippet}
+			</Field>
 
-				<div>
-					<Button type="submit" variant="secondary" size="sm">Save identity</Button>
-				</div>
-			</form>
-		</section>
+			<div>
+				<Button type="submit" variant="secondary" size="sm">Save identity</Button>
+			</div>
+		</form>
+	</section>
 
-		<section>
-			<div class="mb-3 flex items-center justify-between gap-3">
-				<h2 class="text-sm font-semibold">Blocks</h2>
-				<Button variant="secondary" size="sm" onclick={() => (adding = !adding)} aria-expanded={adding}>
-					<Plus size={14} aria-hidden="true" />
-					Add block
-				</Button>
+	<section class="min-w-0">
+		<div class="mb-3 flex items-center justify-between gap-3">
+			<h2 class="text-sm font-semibold">Blocks</h2>
+			<Button variant="secondary" size="sm" onclick={() => (adding = !adding)} aria-expanded={adding}>
+				<Plus size={14} aria-hidden="true" />
+				Add block
+			</Button>
+		</div>
+
+		{#if adding}
+			<div class="mb-4 rounded-[var(--radius-ui-lg)] bg-surface p-5">
+				{#each GROUPS as group (group.tier)}
+					<div class="mb-4 last:mb-0">
+						<p class="text-xs font-semibold">{group.label}</p>
+						<p class="mb-2 text-xs text-text-subtle">{group.note}</p>
+						<div class="flex flex-wrap gap-1.5">
+							{#each kindsIn(group.tier) as kind (kind)}
+								<form method="POST" action="?/addBlock" use:enhance={() => {
+									adding = false;
+									return async ({ update }) => update({ reset: false });
+								}}>
+									<input type="hidden" name="kind" value={kind} />
+									<Button type="submit" variant="secondary" size="sm" title={widgets[kind].description}>
+										{widgets[kind].label}
+									</Button>
+								</form>
+							{/each}
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+
+		{#if data.draft.blocks.length}
+			<!--
+				The canvas is the page, made editable: same components, same
+				spans, same sectioning. Drag a card to move it, press it to open
+				its fields. Editing a list beside a preview meant every change
+				was a guess about a card you were not looking at.
+			-->
+			<div class="bento-region canvas-frame">
+				<BlockCanvas
+					blocks={data.draft.blocks.filter((b) => isKind(b.kind))}
+					{selected}
+					onSelect={select}
+					onReorder={reorder}
+				/>
 			</div>
 
-			{#if adding}
-				<div class="mb-4 rounded-[var(--radius-ui-lg)] bg-surface p-5">
-					{#each GROUPS as group (group.tier)}
-						<div class="mb-4 last:mb-0">
-							<p class="text-xs font-semibold">{group.label}</p>
-							<p class="mb-2 text-xs text-text-subtle">{group.note}</p>
-							<div class="flex flex-wrap gap-1.5">
-								{#each kindsIn(group.tier) as kind (kind)}
-									<form method="POST" action="?/addBlock" use:enhance={() => {
-										adding = false;
-										return async ({ update }) => update({ reset: false });
-									}}>
-										<input type="hidden" name="kind" value={kind} />
-										<Button type="submit" variant="secondary" size="sm" title={widgets[kind].description}>
-											{widgets[kind].label}
-										</Button>
-									</form>
-								{/each}
-							</div>
-						</div>
-					{/each}
-				</div>
-			{/if}
-
-			{#if data.draft.blocks.length}
-				<BlockList blocks={data.draft.blocks} {selected} onSelect={select}>
-					{#snippet detail(block)}
-						{@const kind = block.kind as WidgetKind}
-						{@const errors = form?.intent === 'block' && form.id === block.id ? form.errors : undefined}
-						{@const values =
-							form?.intent === 'block' && form.id === block.id && form.raw
-								? form.raw
-								: toFormValues(kind, block.data)}
-
-						<form method="POST" action="?/updateBlock" class="flex flex-col gap-4" use:enhance>
-							<input type="hidden" name="id" value={block.id} />
-							<input type="hidden" name="kind" value={block.kind} />
-
-							<p class="text-xs text-pretty text-text-muted">{widgets[kind].description}</p>
-
-							<Field id="f-span" label="Size">
-								{#snippet children({ id, invalid })}
-									<select {id} name="span" class={fieldClass(invalid)}>
-										{#each widgets[kind].spans as span (span)}
-											<option value={span} selected={block.span === span}>{span}</option>
-										{/each}
-									</select>
-								{/snippet}
-							</Field>
-
-							<BlockFields {kind} {values} {errors} assetsOrigin={data.assetsOrigin} />
-
-							<div class="flex items-center gap-2 pt-1">
-								<Button type="submit" variant="primary" size="sm">Save block</Button>
-								<span class="flex-1"></span>
-							</div>
-						</form>
-
-						<form method="POST" action="?/deleteBlock" class="mt-4 border-t border-border-subtle pt-4" use:enhance>
-							<input type="hidden" name="id" value={block.id} />
-							<div class="flex items-center justify-between gap-4">
-								<p class="text-xs text-text-muted">
-									Any image only this block used is deleted with it.
-								</p>
-								<Button type="submit" variant="danger" size="sm">Delete</Button>
-							</div>
-						</form>
-					{/snippet}
-				</BlockList>
-			{:else}
-				<Empty
-					title="No blocks yet"
-					body="Start with a link, a call to action and a short piece of text. Five well-made blocks read better than twenty half-made ones."
-				>
-					{#snippet action()}
-						<Button variant="primary" size="sm" onclick={() => (adding = true)}>Add the first block</Button>
-					{/snippet}
-				</Empty>
-			{/if}
-		</section>
-	</div>
-
-	<!--
-		The preview renders the same components the public page does, against
-		the draft document. Nothing here is a mock-up, so what it shows is what
-		publishing produces.
-	-->
-	<aside class="preview" aria-label="Preview">
-		<div class="mb-2 flex items-baseline justify-between">
-			<h2 class="text-sm font-semibold">Preview</h2>
-			<span class="text-xs text-text-subtle">draft</span>
-		</div>
-
-		<div class="bento-region preview-frame">
-			{#if data.draft.blocks.length}
-				<div class="bento-grid">
-					{#each data.draft.blocks as block (block.id)}
-						{#if isKind(block.kind)}
-							<Block {block} />
-						{/if}
-					{/each}
-				</div>
-			{:else}
-				<p class="py-12 text-center text-sm text-text-muted">Blocks appear here as you add them.</p>
-			{/if}
-		</div>
-	</aside>
+			<!-- Drag and the nudge buttons land on one action, which is also the
+			     one that works with JavaScript off. -->
+			<form method="POST" action="?/reorder" bind:this={reorderForm} use:enhance class="hidden">
+				<input type="hidden" name="ids" value={orderValue} />
+			</form>
+		{:else}
+			<Empty
+				title="No blocks yet"
+				body="Start with a link, a call to action and a short piece of text. Five well-made blocks read better than twenty half-made ones."
+			>
+				{#snippet action()}
+					<Button variant="primary" size="sm" onclick={() => (adding = true)}>Add the first block</Button>
+				{/snippet}
+			</Empty>
+		{/if}
+	</section>
 </div>
+
+{#if selectedBlock && isKind(selectedBlock.kind)}
+	{@const block = selectedBlock}
+	{@const kind = block.kind as WidgetKind}
+	{@const errors = form?.intent === 'block' && form.id === block.id ? form.errors : undefined}
+	{@const values =
+		form?.intent === 'block' && form.id === block.id && form.raw
+			? form.raw
+			: toFormValues(kind, block.data)}
+
+	<BlockSheet open title="Edit {widgets[kind].label}" {origin} onClose={deselect}>
+		<div class="mb-4 flex items-start justify-between gap-4">
+			<div class="min-w-0">
+				<h2 class="text-md font-semibold">{widgets[kind].label}</h2>
+				<p class="mt-0.5 text-xs text-pretty text-text-muted">{widgets[kind].description}</p>
+			</div>
+			<Button variant="ghost" size="sm" onclick={deselect} aria-label="Close">
+				<X size={16} aria-hidden="true" />
+			</Button>
+		</div>
+
+		<form method="POST" action="?/updateBlock" class="flex flex-col gap-4" use:enhance>
+			<input type="hidden" name="id" value={block.id} />
+			<input type="hidden" name="kind" value={block.kind} />
+
+			<Field id="f-span" label="Size">
+				{#snippet children({ id, invalid })}
+					<select {id} name="span" class={fieldClass(invalid)}>
+						{#each widgets[kind].spans as span (span)}
+							<option value={span} selected={block.span === span}>{span}</option>
+						{/each}
+					</select>
+				{/snippet}
+			</Field>
+
+			<BlockFields {kind} {values} {errors} assetsOrigin={data.assetsOrigin} />
+
+			<div class="sticky bottom-0 -mx-1 flex items-center gap-2 bg-bg px-1 pt-3 pb-1">
+				<Button type="submit" variant="primary" size="sm">Save block</Button>
+				<Button variant="ghost" size="sm" onclick={deselect}>Cancel</Button>
+			</div>
+		</form>
+
+		<form method="POST" action="?/deleteBlock" class="mt-2 border-t border-border-subtle pt-4" use:enhance>
+			<input type="hidden" name="id" value={block.id} />
+			<div class="flex items-center justify-between gap-4">
+				<p class="text-xs text-pretty text-text-muted">
+					Any image only this block used is deleted with it.
+				</p>
+				<Button type="submit" variant="danger" size="sm">Delete</Button>
+			</div>
+		</form>
+	</BlockSheet>
+{/if}
 
 <style>
 	.editor {
@@ -285,7 +308,11 @@
 		gap: 2rem;
 	}
 
-	.preview-frame {
+	/*
+	 * The canvas sits on the page background rather than a panel, because it is
+	 * standing in for the page. A card on a card would read as a mock-up.
+	 */
+	.canvas-frame {
 		border-radius: var(--radius-ui-lg);
 		background-color: var(--bg);
 		padding: 1rem;
@@ -293,19 +320,15 @@
 
 	@media (min-width: 1024px) {
 		.editor {
-			grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
+			/* Identity is a narrow column; the canvas takes the rest, at close to
+			   the width it will actually be published at. */
+			grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
 			align-items: start;
 			gap: 2.5rem;
 		}
 
-		/* Side by side, never a tab switch: the point of the preview is seeing
-		   the change land while the form is still open. */
-		.preview {
-			position: sticky;
-			top: 2.5rem;
-			max-height: calc(100dvh - 5rem);
-			overflow-y: auto;
-			overscroll-behavior: contain;
+		.canvas-frame {
+			padding: 1.5rem;
 		}
 	}
 </style>

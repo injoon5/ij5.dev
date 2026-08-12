@@ -394,6 +394,84 @@ export const widgets = {
 		defaults: { owner: '', repo: '' }
 	},
 
+	grass: {
+		label: 'GitHub activity',
+		tier: 'live',
+		description:
+			'The contribution graph, drawn as grid cells in the page accent. 13 weeks at 1x1, 26 at 2x2.',
+		spans: ['1x1', '2x2'],
+		// Seven rows of square cells: the graph's height follows from the card's
+		// width, not from the span. Held to the two rows a `2x2` reserves it sat
+		// in the bottom fifth of a very tall card.
+		flexible: true,
+		// Contributions land at most once a day and nobody watches this widget
+		// for news, so the cheapest TTL that still looks current wins: four
+		// refreshes a day against a 1000/day KV write budget (§10).
+		ttl: 6 * HOUR,
+		schema: z.object({
+			user: z.string().trim().min(1).max(39),
+			fallbackValue: z.string().trim().max(20).optional(),
+			fallbackLabel: z.string().trim().max(60).optional()
+		}),
+		fields: [
+			{ name: 'user', label: 'Username', type: 'text', placeholder: 'injoon5' },
+			{
+				name: 'fallbackValue',
+				label: 'Fallback total',
+				type: 'text',
+				optional: true,
+				hint: 'The calendar needs GITHUB_TOKEN. Without one the widget stays off and draws an empty graph — no request is made and nothing errors.'
+			},
+			{ name: 'fallbackLabel', label: 'Fallback label', type: 'text', optional: true }
+		],
+		defaults: { user: '' }
+	},
+
+	weather: {
+		label: 'Weather',
+		tier: 'live',
+		description: 'Current conditions from Open-Meteo. No API key — this one is always on.',
+		spans: ['1x1'],
+		ttl: 30 * MINUTE,
+		schema: z.object({
+			place: shortText,
+			lat: z.coerce.number().min(-90).max(90),
+			lon: z.coerce.number().min(-180).max(180),
+			fallbackValue: z.string().trim().max(12).optional(),
+			fallbackLabel: z.string().trim().max(40).optional()
+		}),
+		fields: [
+			{ name: 'place', label: 'Place', type: 'text', placeholder: 'Seoul' },
+			{ name: 'lat', label: 'Latitude', type: 'number', placeholder: '37.5665' },
+			{ name: 'lon', label: 'Longitude', type: 'number', placeholder: '126.978' },
+			{ name: 'fallbackValue', label: 'Fallback reading', type: 'text', optional: true },
+			{ name: 'fallbackLabel', label: 'Fallback condition', type: 'text', optional: true }
+		],
+		defaults: { place: '', lat: 0, lon: 0 }
+	},
+
+	post: {
+		label: 'Latest post',
+		tier: 'live',
+		description: 'Newest entry from an RSS or Atom feed. A feed is a public URL, so no key.',
+		spans: ['1x1', '2x1'],
+		flexible: true,
+		ttl: HOUR,
+		schema: z.object({
+			feed: z.url(),
+			url: z.string().trim().optional(),
+			label: z.string().trim().max(40).optional(),
+			fallbackTitle: z.string().trim().max(120).optional()
+		}),
+		fields: [
+			{ name: 'feed', label: 'Feed URL', type: 'url', placeholder: 'https://example.com/rss.xml' },
+			{ name: 'url', label: 'Fallback link', type: 'url', optional: true },
+			{ name: 'label', label: 'Label', type: 'text', optional: true, hint: 'Defaults to "Latest post".' },
+			{ name: 'fallbackTitle', label: 'Fallback title', type: 'text', optional: true }
+		],
+		defaults: { feed: '' }
+	},
+
 	// ------------------------------------------------------------------- embed
 	video: {
 		label: 'Video',
@@ -431,6 +509,25 @@ export const isKind = (k: string): k is WidgetKind => k in widgets;
 export const defFor = (kind: WidgetKind): WidgetDef => widgets[kind];
 
 export const fieldsFor = (kind: WidgetKind): Field[] => widgets[kind].fields;
+
+/**
+ * Kinds that render an R2 image, and so want `/w.js`'s error handler: a
+ * missing object collapses to the widget surface instead of a broken-image
+ * glyph. Separate from `needsScript`, which marks a kind whose *behaviour*
+ * needs the script — a `link` with a cover image needs the handler but has no
+ * behaviour of its own.
+ */
+const IMAGE_KINDS = new Set<WidgetKind>(['image', 'map', 'link', 'video']);
+
+/**
+ * Whether a page containing this block has to load `/w.js` at all. Kept beside
+ * the registry rather than in the page load, so adding a kind that needs
+ * behaviour cannot quietly ship a page whose widget does nothing.
+ */
+export function needsScriptFor(kind: string): boolean {
+	if (!isKind(kind)) return false;
+	return Boolean(defFor(kind).needsScript) || IMAGE_KINDS.has(kind);
+}
 
 /**
  * One discriminated union over every kind, derived from the registry rather

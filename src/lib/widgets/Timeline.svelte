@@ -9,7 +9,7 @@
 
 <Surface {span} flexible>
 	{#if data.title}
-		<p class="text-2xs font-semibold tracking-wide text-text-subtle">{data.title}</p>
+		<p class="text-2xs font-semibold text-text-subtle">{data.title}</p>
 	{/if}
 
 	<ol class="mt-3 flex flex-col gap-3">

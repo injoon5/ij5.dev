@@ -286,16 +286,32 @@
 			padding-block: 0.625rem;
 		}
 
-		.row-target,
+		/*
+		   Every cell is placed explicitly. Naming only some of them left the
+		   slug as the one item with no definite row, so auto-placement filled
+		   the row with the positioned cells first and dropped the slug into
+		   whatever was left — the last column. The row then read
+		   host · note · clicks · date · slug, putting the identifier you
+		   actually scan for at the far right, and putting visual order at odds
+		   with the DOM order screen readers follow.
+		*/
+		.row-slug {
+			grid-area: 1 / 1;
+		}
+		.row-target {
+			grid-area: 1 / 2;
+		}
 		.row-note {
-			grid-column: auto;
-			grid-row: 1;
+			grid-area: 1 / 3;
 		}
 
-		.row-hits,
+		.row-hits {
+			grid-area: 1 / 4;
+			text-align: right;
+		}
+
 		.row-date {
-			grid-row: 1;
-			grid-column: auto;
+			grid-area: 1 / 5;
 			text-align: right;
 		}
 	}

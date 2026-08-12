@@ -6,12 +6,19 @@
 </script>
 
 <Surface {span} flexible>
-	<figure class="flex h-full flex-col">
+	<figure>
 		<blockquote class="text-md leading-snug text-pretty">
 			<!-- Curly quotes in prose. Straight quotes are for code. -->
 			&ldquo;{data.quote}&rdquo;
 		</blockquote>
-		<figcaption class="mt-auto pt-4 text-xs text-text-muted">
+		<!--
+			Directly under the quote, not pushed to the floor of the card. A
+			content-driven widget takes its height from a neighbour as often as
+			from itself, so anything anchored to its bottom edge sits at a
+			distance nobody chose — and an attribution floating away from its
+			quote stops reading as an attribution.
+		-->
+		<figcaption class="mt-4 text-xs text-text-muted">
 			{data.author}{#if data.role}<span class="text-text-subtle"> · {data.role}</span>{/if}
 		</figcaption>
 	</figure>

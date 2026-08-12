@@ -16,6 +16,14 @@ SESSION_SECRET=
 # Visitor hashing. Rotating it resets today's unique counts and nothing else.
 SALT=
 
-# Live widgets. Each is optional — a missing credential makes that widget
-# render its declared fallback, never an error.
+# Live widgets. Every one is optional and the site runs with none of them set:
+# a widget whose credential is missing is *disabled*, not broken. Nothing is
+# scheduled, no request goes out, and the widget draws the fallback it declares.
+#
+#   github      works without a token; one only raises the rate limit
+#   grass       needs GITHUB_TOKEN — the contribution calendar is GraphQL-only
+#               and GitHub refuses anonymous GraphQL
+#   weather     no key at all (Open-Meteo)
+#   post        no key at all (a feed is a public URL)
+#
 # GITHUB_TOKEN=

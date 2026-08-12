@@ -32,13 +32,22 @@
 		children
 	}: Props = $props();
 
-	// §7.11 — one ratio per span, so the grid never reflows as images load.
-	const RATIO: Record<Span, string> = {
-		'1x1': 'aspect-square',
-		'2x1': 'aspect-[2/1]',
-		'2x2': 'aspect-square',
-		full: 'aspect-[4/1]'
-	};
+	/**
+	 * §7.11 wants a fixed ratio per span so nothing reflows as images load, and
+	 * the grid already delivers exactly that: its row unit is one column width,
+	 * derived from the container's inline size, so a `1x1` in one row is square
+	 * by construction and a `2x2` across two rows is square at twice the size.
+	 *
+	 * Restating it as `aspect-ratio` on the widget actively broke it. A grid
+	 * item with an aspect ratio takes its height from its own width rather than
+	 * from its row, so a `2x1` — two columns plus the gap — measured 228px
+	 * against a 221px row unit, grew the row to fit, and left every `1x1`
+	 * beside it sitting 7px short of the cell it was meant to fill. Invisible
+	 * on its own; a visible step along a row.
+	 *
+	 * So no ratio here. Height comes from the row, which is what makes every
+	 * widget in a row exactly as tall as its neighbours.
+	 */
 
 	/**
 	 * Content-driven widgets get a floor, not a target. Sizing them to their
@@ -54,7 +63,7 @@
 		full: 'min-h-[7rem]'
 	};
 
-	let sizing = $derived(flexible ? MIN[span] : RATIO[span]);
+	let sizing = $derived(flexible ? MIN[span] : 'h-full');
 </script>
 
 {#if href}
