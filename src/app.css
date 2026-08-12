@@ -205,13 +205,15 @@
 	--text-md--line-height: 1.5;
 	--text-md--letter-spacing: -0.009em;
 
-	--text-lg: 1.125rem;
-	--text-lg--line-height: 1.4;
-	--text-lg--letter-spacing: -0.011em;
+	/* 20, not 18: at 18 this sat a single pixel above `md` and the two sizes
+	   carrying most of the headings were indistinguishable. */
+	--text-lg: 1.25rem;
+	--text-lg--line-height: 1.35;
+	--text-lg--letter-spacing: -0.014em;
 
-	--text-xl: 1.375rem;
-	--text-xl--line-height: 1.3;
-	--text-xl--letter-spacing: -0.016em;
+	--text-xl: 1.5rem;
+	--text-xl--line-height: 1.25;
+	--text-xl--letter-spacing: -0.018em;
 
 	--text-2xl: 1.75rem;
 	--text-2xl--line-height: 1.2;
@@ -276,11 +278,12 @@
 		color: var(--text);
 	}
 
-	/* One focus treatment for the whole product, keyboard only. */
+	/* One focus treatment for the whole product, keyboard only. No radius: the
+	   outline already follows the element's own corners, and setting one here
+	   reshapes whatever it lands on. */
 	:focus-visible {
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
-		border-radius: 4px;
 	}
 
 	:focus:not(:focus-visible) {
@@ -326,15 +329,17 @@
 		flex-shrink: 0;
 	}
 
-	/* Reduced motion means less motion, not none: opacity and color still
-	   carry meaning, movement does not. */
+	/* Less motion, not none. Narrowing the property list drops anything that
+	   moves or resizes and keeps the cues that do not — zeroing the duration
+	   would take those too. */
 	@media (prefers-reduced-motion: reduce) {
 		*,
 		*::before,
 		*::after {
 			animation-duration: 0.01ms !important;
 			animation-iteration-count: 1 !important;
-			transition-duration: 0.01ms !important;
+			transition-property: opacity, color, background-color, border-color, box-shadow,
+				fill, stroke !important;
 			scroll-behavior: auto !important;
 		}
 	}

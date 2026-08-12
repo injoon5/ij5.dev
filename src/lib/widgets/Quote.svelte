@@ -19,7 +19,19 @@
 			quote stops reading as an attribution.
 		-->
 		<figcaption class="mt-4 text-xs text-text-muted">
-			{data.author}{#if data.role}<span class="text-text-subtle"> · {data.role}</span>{/if}
+			{data.author}{#if data.role}<span class="role">{data.role}</span>{/if}
 		</figcaption>
 	</figure>
 </Surface>
+
+<style>
+	/* Generated, not written: as markup the leading space is element-leading
+	   whitespace and the compiler trims it. Also keeps it out of the a11y tree. */
+	.role {
+		color: var(--text-subtle);
+	}
+
+	.role::before {
+		content: ' · ';
+	}
+</style>

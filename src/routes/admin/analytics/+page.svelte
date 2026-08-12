@@ -3,6 +3,7 @@
 	import Chart from '$lib/ui/Chart.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import { card } from '$lib/ui/styles';
 	import { RANGE_LABELS } from './ranges';
 	import type { PageData } from './$types';
 
@@ -52,22 +53,24 @@
 		{/snippet}
 	</Empty>
 {:else}
-	<div class="grid gap-4 sm:grid-cols-3">
-		<div class="stat">
-			<p class="tnum text-2xl font-semibold">{data.totals.hits}</p>
-			<p class="mt-0.5 text-xs text-text-muted">Redirects</p>
+	<!-- Three short figures, three across at every width. Stacked, they cost a
+	     phone 330px of scroll before the chart. -->
+	<div class="grid grid-cols-3 gap-2 sm:gap-4">
+		<div class="stat {card}">
+			<p class="tnum text-xl font-semibold sm:text-2xl">{data.totals.hits}</p>
+			<p class="mt-0.5 text-xs text-pretty text-text-muted">Redirects</p>
 		</div>
-		<div class="stat">
-			<p class="tnum text-2xl font-semibold">{data.totals.bento}</p>
-			<p class="mt-0.5 text-xs text-text-muted">Bento views</p>
+		<div class="stat {card}">
+			<p class="tnum text-xl font-semibold sm:text-2xl">{data.totals.bento}</p>
+			<p class="mt-0.5 text-xs text-pretty text-text-muted">Bento views</p>
 		</div>
-		<div class="stat">
-			<p class="tnum text-2xl font-semibold">{data.totals.visitors}</p>
-			<p class="mt-0.5 text-xs text-text-muted">Daily uniques</p>
+		<div class="stat {card}">
+			<p class="tnum text-xl font-semibold sm:text-2xl">{data.totals.visitors}</p>
+			<p class="mt-0.5 text-xs text-pretty text-text-muted">Daily uniques</p>
 		</div>
 	</div>
 
-	<section class="mt-4 rounded-[var(--radius-ui-lg)] bg-surface p-5">
+	<section class="{card} mt-4">
 		<h2 class="text-sm font-semibold">Traffic</h2>
 		<div class="mt-3">
 			<Chart data={data.traffic} />
@@ -107,7 +110,7 @@
 	{#if data.notFound.length}
 		<div class="mt-4">
 			<BarList
-				title="Paths that 404'd"
+				title="Paths that 404’d"
 				rows={data.notFound.map((n) => ({ label: `/${n.path}`, value: n.hits }))}
 				empty="Nothing missing."
 			/>
@@ -124,7 +127,7 @@
 			after the fact.
 		-->
 		{#await data.detail}
-			<section class="mt-4 rounded-[var(--radius-ui-lg)] bg-surface p-5">
+			<section class="{card} mt-8">
 				<p class="text-sm text-text-muted">Loading breakdown…</p>
 			</section>
 		{:then detail}
@@ -156,16 +159,23 @@
 				</div>
 			</section>
 		{:catch}
-			<p class="mt-4 text-sm text-danger">That breakdown could not be loaded.</p>
+			<section class="{card} mt-8">
+				<p class="text-sm text-danger">That breakdown could not be loaded.</p>
+			</section>
 		{/await}
 	{/if}
 {/if}
 
 <style>
+	/* `card` pads to 1.25rem, which is most of a 110px column on a phone. */
 	.stat {
-		border-radius: var(--radius-ui-lg);
-		background-color: var(--surface);
-		padding: 1.25rem;
+		padding: 0.875rem;
+	}
+
+	@media (min-width: 640px) {
+		.stat {
+			padding: 1.25rem;
+		}
 	}
 
 	.ranges {

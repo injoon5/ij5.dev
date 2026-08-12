@@ -1,9 +1,15 @@
 <script lang="ts">
+	import { card } from './styles';
+
 	/**
 	 * A ranked list where the bar is the row background rather than a separate
 	 * element. One less thing to align, and the label stays readable at any
 	 * width because it never shares the row with a chart.
+	 *
+	 * Bars are a sunken surface, not the accent: length and order already carry
+	 * rank, and the accent is spoken for by actions and the focus ring.
 	 */
+
 	type Row = { label: string; value: number; href?: string };
 
 	let {
@@ -22,7 +28,7 @@
 	let max = $derived(Math.max(1, ...rows.map((r) => r.value)));
 </script>
 
-<section class="rounded-[var(--radius-ui-lg)] bg-surface p-5">
+<section class={card}>
 	<svelte:element this={`h${level}`} class="text-sm font-semibold">{title}</svelte:element>
 
 	{#if rows.length}
@@ -32,10 +38,11 @@
 					<svelte:element
 						this={row.href ? 'a' : 'div'}
 						href={row.href}
-						class="relative flex min-h-9 items-center justify-between gap-3 rounded-[var(--radius-ui-sm)] px-2"
+						class="row relative flex min-h-9 items-center justify-between gap-3 rounded-[var(--radius-ui-sm)] px-2"
+						class:is-link={Boolean(row.href)}
 					>
 						<span
-							class="absolute inset-y-0 left-0 rounded-[var(--radius-ui-sm)] bg-accent-tint"
+							class="bar absolute inset-y-0 left-0 rounded-[var(--radius-ui-sm)] bg-surface-sunken"
 							style="width: {Math.max(2, (row.value / max) * 100)}%"
 							aria-hidden="true"
 						></span>
@@ -55,3 +62,17 @@
 		<p class="mt-3 text-sm text-pretty text-text-muted">{empty}</p>
 	{/if}
 </section>
+
+<style>
+	/* The bar deepens rather than the row filling behind it, which would land on
+	   the same surface the bar is painted in. Inverts correctly in dark. */
+	@media (hover: hover) and (pointer: fine) {
+		.row.is-link:hover .bar {
+			background-color: var(--border-subtle);
+		}
+	}
+
+	.bar {
+		transition: background-color 150ms var(--ease-out);
+	}
+</style>

@@ -6,8 +6,15 @@
 	let {
 		block,
 		live,
-		eager = false
-	}: { block: Block; live?: unknown; eager?: boolean } = $props();
+		eager = false,
+		/** A block that fails its schema: hidden on `/`, flagged in the editor. */
+		onInvalid = 'hide'
+	}: {
+		block: Block;
+		live?: unknown;
+		eager?: boolean;
+		onInvalid?: 'hide' | 'placeholder';
+	} = $props();
 
 	// Grid placement. Four columns at `lg`, two below — a `2x1` is therefore
 	// the full width of a phone, which is the point: mobile is a different
@@ -41,9 +48,22 @@
 	let Widget = $derived(
 		isKind(block.kind) && block.kind !== 'heading' ? components[block.kind] : null
 	);
+
+	/**
+	 * Widgets read `data` without guarding it, so a row stored under an older
+	 * shape reaches a renderer that throws — and on `/` that throws out of the
+	 * SSR pass and 500s the page. Newly added blocks land here too: their
+	 * defaults are deliberately empty and fail the same check.
+	 */
+	let valid = $derived.by(() => {
+		if (!isKind(block.kind)) return false;
+		return defFor(block.kind).schema.safeParse(block.data).success;
+	});
+
+	let label = $derived(isKind(block.kind) ? defFor(block.kind).label : block.kind);
 </script>
 
-{#if Widget}
+{#if Widget && valid}
 	<!--
 		`grid` on the wrapper, not `block`: the wrapper is what the grid sizes,
 		and a block-level child would sit at its own content height inside it.
@@ -52,5 +72,12 @@
 	-->
 	<div class="grid {spanClass}">
 		<Widget span={block.span} data={block.data} {live} {eager} />
+	</div>
+{:else if Widget && onInvalid === 'placeholder'}
+	<div class="grid {spanClass}">
+		<div class="widget h-full items-center justify-center text-center">
+			<p class="text-sm font-semibold text-text-muted">{label}</p>
+			<p class="mt-1 text-xs text-pretty text-text-subtle">Fill in its fields to show it.</p>
+		</div>
 	</div>
 {/if}

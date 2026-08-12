@@ -3,10 +3,12 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import { fieldClass } from '$lib/ui/styles';
+	import { pending } from '$lib/ui/pending.svelte';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
-	let submitting = $state(false);
+
+	const signingIn = pending();
 </script>
 
 <svelte:head>
@@ -22,13 +24,7 @@
 		<form
 			method="POST"
 			class="mt-6 flex flex-col gap-4"
-			use:enhance={() => {
-				submitting = true;
-				return async ({ update }) => {
-					await update();
-					submitting = false;
-				};
-			}}
+			use:enhance={signingIn.submit}
 		>
 			<Field id="token" label="Token" error={form?.error}>
 				{#snippet children({ id, describedBy, invalid })}
@@ -47,8 +43,8 @@
 				{/snippet}
 			</Field>
 
-			<Button type="submit" variant="primary" disabled={submitting}>
-				{submitting ? 'Checking…' : 'Sign in'}
+			<Button type="submit" variant="primary" busy={signingIn.busy} busyLabel="Checking…">
+				Sign in
 			</Button>
 		</form>
 	</div>

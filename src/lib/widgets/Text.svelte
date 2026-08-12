@@ -4,7 +4,8 @@
 
 	let { span, data }: { span: Span; data: Record<string, string> } = $props();
 
-	let paragraphs = $derived(data.body.split(/\n{2,}/).filter(Boolean));
+	// `Block` validates first; the guard stays because this renders on `/`.
+	let paragraphs = $derived((data.body ?? '').split(/\n{2,}/).filter(Boolean));
 </script>
 
 <Surface {span} flexible>

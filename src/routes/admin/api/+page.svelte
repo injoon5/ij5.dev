@@ -188,9 +188,9 @@
 		font-family: var(--font-mono);
 	}
 
+	/* Space, not rules: the verb and path already open each item. */
 	.endpoint + .endpoint {
-		border-top: 1px solid var(--border-subtle);
-		padding-top: 1rem;
+		padding-top: 0.75rem;
 	}
 
 	/*

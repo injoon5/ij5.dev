@@ -62,4 +62,9 @@
 	.copy:global([data-copied]) .copy-done {
 		visibility: visible;
 	}
+
+	/* Set by `/w.js` when the clipboard is unavailable or refuses. */
+	.copy:global([data-copy-failed]) {
+		color: var(--danger);
+	}
 </style>

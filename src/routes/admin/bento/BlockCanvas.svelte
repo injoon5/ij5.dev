@@ -201,7 +201,7 @@
 					navigates away mid-edit is the fastest way to lose work.
 				-->
 				<div class="canvas-widget" aria-hidden="true">
-					<Block {block} />
+					<Block {block} onInvalid="placeholder" />
 				</div>
 
 				<!--
@@ -353,9 +353,29 @@
 		color: var(--text);
 	}
 
-	/* Touch has no hover to reveal them, so the controls are simply present. */
+	/* Touch has no hover, so these are always present — which means they cannot
+	   be an overlay. They take their own lane above the card instead. */
 	@media (hover: none) {
-		.item-tools,
+		.canvas-item {
+			grid-template-rows: auto minmax(0, 1fr);
+			row-gap: 0.25rem;
+		}
+
+		/* Explicit rows: the widget is first in the DOM, the lane is above it. */
+		.item-tools {
+			position: static;
+			grid-row: 1;
+			justify-self: end;
+			padding: 0;
+			background-color: transparent;
+			backdrop-filter: none;
+			opacity: 1;
+		}
+
+		.canvas-widget {
+			grid-row: 2;
+		}
+
 		.heading-tools {
 			opacity: 1;
 		}

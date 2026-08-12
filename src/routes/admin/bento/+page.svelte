@@ -11,7 +11,8 @@
 	import Empty from '$lib/ui/Empty.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import AssetInput from '$lib/ui/AssetInput.svelte';
-	import { fieldClass } from '$lib/ui/styles';
+	import { card, fieldClass } from '$lib/ui/styles';
+	import { pending } from '$lib/ui/pending.svelte';
 	import BentoGrid from '$lib/widgets/BentoGrid.svelte';
 	import { KINDS, widgets, isKind, type WidgetKind } from '$lib/widgets/catalog';
 	import { serializeLines } from '$lib/widgets/fields';
@@ -75,6 +76,13 @@
 		KINDS.filter((k) => widgets[k].tier === tier);
 
 	let adding = $state(false);
+
+	// Adding a block needs no flag: the picker collapses on submit.
+	const publishing = pending();
+	const reverting = pending();
+	const savingProfile = pending();
+	const savingBlock = pending();
+	const deletingBlock = pending();
 </script>
 
 <svelte:head><title>Bento</title></svelte:head>
@@ -93,16 +101,29 @@
 
 	<div class="flex items-center gap-2">
 		{#if data.canRevert}
-			<form method="POST" action="?/revert" use:enhance>
-				<Button type="submit" variant="ghost" size="sm">
+			<form method="POST" action="?/revert" use:enhance={reverting.submit}>
+				<Button
+					type="submit"
+					variant="ghost"
+					size="sm"
+					busy={reverting.busy}
+					busyLabel="Reverting…"
+				>
 					<Undo size={14} aria-hidden="true" />
 					Revert
 				</Button>
 			</form>
 		{/if}
 
-		<form method="POST" action="?/publish" use:enhance>
-			<Button type="submit" variant="primary" size="sm" disabled={!data.dirty}>
+		<form method="POST" action="?/publish" use:enhance={publishing.submit}>
+			<Button
+				type="submit"
+				variant="primary"
+				size="sm"
+				disabled={!data.dirty}
+				busy={publishing.busy}
+				busyLabel="Publishing…"
+			>
 				<Rocket size={14} aria-hidden="true" />
 				Publish
 			</Button>
@@ -128,25 +149,30 @@
 	<!-- The identity rail is not a block: always present, always first, never
 	     reordered — so it gets its own record, its own form and its own
 	     column. -->
-	<section class="mb-8 rounded-[var(--radius-ui-lg)] bg-surface p-5">
+	<section class="{card} mb-8">
 		<h2 class="text-sm font-semibold">Identity</h2>
 
-		<form method="POST" action="?/profile" class="mt-4 flex flex-col gap-4" use:enhance>
+		<form
+			method="POST"
+			action="?/profile"
+			class="mt-3 flex flex-col gap-4"
+			use:enhance={savingProfile.submit}
+		>
 			<Field id="p-name" label="Name" error={form?.intent === 'profile' ? form.fields?.name : undefined}>
 				{#snippet children({ id, describedBy, invalid })}
-					<input {id} name="name" value={data.draft.profile.name} aria-describedby={describedBy} required class={fieldClass(invalid)} />
+					<input {id} name="name" value={data.draft.profile.name} aria-describedby={describedBy} aria-invalid={invalid || undefined} required class={fieldClass(invalid)} />
 				{/snippet}
 			</Field>
 
 			<Field id="p-tagline" label="Tagline" optional hint="One line. Allowed to wrap to two on a phone.">
 				{#snippet children({ id, describedBy, invalid })}
-					<input {id} name="tagline" value={data.draft.profile.tagline ?? ''} aria-describedby={describedBy} class={fieldClass(invalid)} />
+					<input {id} name="tagline" value={data.draft.profile.tagline ?? ''} aria-describedby={describedBy} aria-invalid={invalid || undefined} class={fieldClass(invalid)} />
 				{/snippet}
 			</Field>
 
 			<Field id="p-bio" label="Bio" optional hint="Two to four short paragraphs, separated by blank lines.">
 				{#snippet children({ id, describedBy, invalid })}
-					<textarea {id} name="bio" rows="5" value={data.draft.profile.bio ?? ''} aria-describedby={describedBy} class="{fieldClass(invalid)} resize-y"></textarea>
+					<textarea {id} name="bio" rows="5" value={data.draft.profile.bio ?? ''} aria-describedby={describedBy} aria-invalid={invalid || undefined} class="{fieldClass(invalid)} resize-y"></textarea>
 				{/snippet}
 			</Field>
 
@@ -169,6 +195,7 @@
 						rows="4"
 						value={linksValue}
 						aria-describedby={describedBy}
+						aria-invalid={invalid || undefined}
 						spellcheck="false"
 						class="{fieldClass(invalid)} resize-y font-mono text-xs"
 					></textarea>
@@ -176,7 +203,15 @@
 			</Field>
 
 			<div>
-				<Button type="submit" variant="secondary" size="sm">Save identity</Button>
+				<Button
+					type="submit"
+					variant="secondary"
+					size="sm"
+					busy={savingProfile.busy}
+					busyLabel="Saving…"
+				>
+					Save identity
+				</Button>
 			</div>
 		</form>
 	</section>
@@ -191,7 +226,7 @@
 		</div>
 
 		{#if adding}
-			<div class="mb-4 rounded-[var(--radius-ui-lg)] bg-surface p-5">
+			<div class="{card} mb-4">
 				{#each GROUPS as group (group.tier)}
 					<div class="mb-4 last:mb-0">
 						<p class="text-xs font-semibold">{group.label}</p>
@@ -268,13 +303,18 @@
 			</Button>
 		</div>
 
-		<form method="POST" action="?/updateBlock" class="flex flex-col gap-4" use:enhance>
+		<form
+			method="POST"
+			action="?/updateBlock"
+			class="flex flex-col gap-4"
+			use:enhance={savingBlock.submit}
+		>
 			<input type="hidden" name="id" value={block.id} />
 			<input type="hidden" name="kind" value={block.kind} />
 
 			<Field id="f-span" label="Size">
 				{#snippet children({ id, invalid })}
-					<select {id} name="span" class={fieldClass(invalid)}>
+					<select {id} name="span" aria-invalid={invalid || undefined} class={fieldClass(invalid)}>
 						{#each widgets[kind].spans as span (span)}
 							<option value={span} selected={block.span === span}>{span}</option>
 						{/each}
@@ -285,18 +325,39 @@
 			<BlockFields {kind} {values} {errors} assetsOrigin={data.assetsOrigin} />
 
 			<div class="sticky bottom-0 -mx-1 flex items-center gap-2 bg-bg px-1 pt-3 pb-1">
-				<Button type="submit" variant="primary" size="sm">Save block</Button>
+				<Button
+					type="submit"
+					variant="primary"
+					size="sm"
+					busy={savingBlock.busy}
+					busyLabel="Saving…"
+				>
+					Save block
+				</Button>
 				<Button variant="ghost" size="sm" onclick={deselect}>Cancel</Button>
 			</div>
 		</form>
 
-		<form method="POST" action="?/deleteBlock" class="mt-2 border-t border-border-subtle pt-4" use:enhance>
+		<form
+			method="POST"
+			action="?/deleteBlock"
+			class="mt-2 border-t border-border-subtle pt-4"
+			use:enhance={deletingBlock.submit}
+		>
 			<input type="hidden" name="id" value={block.id} />
 			<div class="flex items-center justify-between gap-4">
 				<p class="text-xs text-pretty text-text-muted">
 					Any image only this block used is deleted with it.
 				</p>
-				<Button type="submit" variant="danger" size="sm">Delete</Button>
+				<Button
+					type="submit"
+					variant="danger"
+					size="sm"
+					busy={deletingBlock.busy}
+					busyLabel="Deleting…"
+				>
+					Delete
+				</Button>
 			</div>
 		</form>
 	</BlockSheet>
