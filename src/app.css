@@ -180,9 +180,13 @@
 	--text-base--line-height: 1.55;
 	--text-base--letter-spacing: -0.003em;
 
-	--text-md: 1rem;
-	--text-md--line-height: 1.6;
-	--text-md--letter-spacing: -0.006em;
+	/* 17px, not 16. At 16 this sat one pixel above `base` — a step nobody can
+	   perceive is not a step, and two adjacent sizes doing the same job is how
+	   a scale stops carrying hierarchy. This is the "lead" size: a tagline, a
+	   pull quote, a title over an image. */
+	--text-md: 1.0625rem;
+	--text-md--line-height: 1.5;
+	--text-md--letter-spacing: -0.009em;
 
 	--text-lg: 1.125rem;
 	--text-lg--line-height: 1.4;

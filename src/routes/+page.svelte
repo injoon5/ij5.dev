@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { setContext } from 'svelte';
-	import Block from '$lib/widgets/Block.svelte';
+	import BentoGrid from '$lib/widgets/BentoGrid.svelte';
 	import PlatformIcon from '$lib/widgets/PlatformIcon.svelte';
 	import type { LiveDoc } from '$lib/types';
 	import type { PageData } from './$types';
@@ -32,11 +32,14 @@
 	<title>{title}</title>
 	<meta name="description" content={description} />
 
+	<link rel="canonical" href={data.publicOrigin} />
+
 	<meta property="og:type" content="website" />
-	<meta property="og:url" content="https://ij5.dev" />
+	<meta property="og:url" content={data.publicOrigin} />
 	<meta property="og:title" content={title} />
 	<meta property="og:description" content={description} />
-	<meta property="og:image" content="https://ij5.dev/og.png" />
+	<!-- Cache-busted by filename on change, so this can be immutable. -->
+	<meta property="og:image" content="{data.publicOrigin}/og.png" />
 	<!-- Without explicit dimensions some clients fall back to a small square. -->
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
@@ -83,12 +86,20 @@
 
 			<h1 class="mt-5 text-2xl font-semibold">{data.profile.name}</h1>
 
+			<!--
+				Three sizes, three jobs, three levels of contrast. The tagline used
+				to sit one pixel above the bio in the same muted grey, so the whole
+				rail read as one undifferentiated block of text and the line that
+				says what you do had no more weight than the third paragraph about
+				it. Size alone was never going to carry that — the tagline holds
+				full text contrast and the bio steps back.
+			-->
 			{#if data.profile.tagline}
-				<p class="mt-1.5 text-md text-pretty text-text-muted">{data.profile.tagline}</p>
+				<p class="mt-2 max-w-[34ch] text-md text-pretty">{data.profile.tagline}</p>
 			{/if}
 
 			{#if bio.length}
-				<div class="mt-5 max-w-[40ch] space-y-3 text-base text-pretty text-text-muted">
+				<div class="mt-6 max-w-[40ch] space-y-3.5 text-sm text-pretty text-text-muted">
 					{#each bio as paragraph (paragraph)}
 						<p>{paragraph}</p>
 					{/each}
@@ -117,11 +128,7 @@
 
 	<main class="bento-region min-w-0">
 		{#if data.blocks.length}
-			<div class="bento-grid">
-				{#each data.blocks as block (block.id)}
-					<Block {block} live={live[block.id]?.data} eager={block.id === firstBlockId} />
-				{/each}
-			</div>
+			<BentoGrid blocks={data.blocks} {live} eagerId={firstBlockId} />
 		{:else}
 			<!-- Every list has a designed empty state, this one included. It is
 			     what the site looks like on day one, so it should not look

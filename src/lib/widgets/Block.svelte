@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Block, Span } from '$lib/types';
 	import { components, isKind } from './index';
+	import { defFor } from './catalog';
 
 	let {
 		block,
@@ -18,16 +19,38 @@
 		full: 'col-span-2 lg:col-span-4'
 	};
 
-	let Widget = $derived(isKind(block.kind) ? components[block.kind] : null);
+	/**
+	 * A content-driven kind takes its width from the span and its height from
+	 * what is in it. Holding a three-row list to the two rows a `2x2` reserves
+	 * puts a quarter-page of dead space inside the card — and dead space inside
+	 * a widget is exactly what stops a grid reading as one system. Rows still
+	 * stretch to their tallest item, so neighbours line up either way.
+	 */
+	const FLEXIBLE_SPAN_CLASS: Partial<Record<Span, string>> = {
+		'2x2': 'col-span-2'
+	};
+
+	let flexible = $derived(isKind(block.kind) && Boolean(defFor(block.kind).flexible));
+
+	let spanClass = $derived(
+		(flexible ? FLEXIBLE_SPAN_CLASS[block.span] : undefined) ?? SPAN_CLASS[block.span]
+	);
+
+	// `heading` is a section rule rather than a cell, so `BentoGrid` renders it
+	// between grids and it never reaches this component.
+	let Widget = $derived(
+		isKind(block.kind) && block.kind !== 'heading' ? components[block.kind] : null
+	);
 </script>
 
 {#if Widget}
-	{#if block.kind === 'heading'}
-		<!-- `heading` places itself: it is a section rule, not a grid cell. -->
-		<Widget data={block.data} />
-	{:else}
-		<div class={SPAN_CLASS[block.span]}>
-			<Widget span={block.span} data={block.data} {live} {eager} />
-		</div>
-	{/if}
+	<!--
+		`grid` on the wrapper, not `block`: the wrapper is what the grid sizes,
+		and a block-level child would sit at its own content height inside it.
+		That is what left a hole under every `2x2` — the area was two rows tall
+		and the widget in it was not.
+	-->
+	<div class="grid {spanClass}">
+		<Widget span={block.span} data={block.data} {live} {eager} />
+	</div>
 {/if}

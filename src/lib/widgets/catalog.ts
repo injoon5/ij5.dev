@@ -433,6 +433,25 @@ export const defFor = (kind: WidgetKind): WidgetDef => widgets[kind];
 export const fieldsFor = (kind: WidgetKind): Field[] => widgets[kind].fields;
 
 /**
+ * Kinds that render an R2 image, and so want `/w.js`'s error handler: a
+ * missing object collapses to the widget surface instead of a broken-image
+ * glyph. Separate from `needsScript`, which marks a kind whose *behaviour*
+ * needs the script — a `link` with a cover image needs the handler but has no
+ * behaviour of its own.
+ */
+const IMAGE_KINDS = new Set<WidgetKind>(['image', 'map', 'link', 'video']);
+
+/**
+ * Whether a page containing this block has to load `/w.js` at all. Kept beside
+ * the registry rather than in the page load, so adding a kind that needs
+ * behaviour cannot quietly ship a page whose widget does nothing.
+ */
+export function needsScriptFor(kind: string): boolean {
+	if (!isKind(kind)) return false;
+	return Boolean(defFor(kind).needsScript) || IMAGE_KINDS.has(kind);
+}
+
+/**
  * One discriminated union over every kind, derived from the registry rather
  * than maintained beside it. A malformed block cannot be saved, so the
  * renderer never has to defend against bad data.

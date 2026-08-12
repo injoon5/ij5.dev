@@ -136,16 +136,19 @@
 
 				<div class="grid gap-4 lg:grid-cols-3">
 					<BarList
+						level={3}
 						title="Referrers"
 						rows={detail.referrers.map((r) => ({ label: r.referrer, value: r.hits }))}
 						empty="No referrers for this link."
 					/>
 					<BarList
+						level={3}
 						title="Countries"
 						rows={detail.countries.map((c) => ({ label: country(c.country), value: c.hits }))}
 						empty="No geography for this link."
 					/>
 					<BarList
+						level={3}
 						title="Devices"
 						rows={detail.devices.map((d) => ({ label: d.device, value: d.hits }))}
 						empty="No devices for this link."

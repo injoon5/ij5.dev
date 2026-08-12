@@ -46,7 +46,10 @@
 			<!-- Clamped rather than left to overflow: a title cut mid-word by
 			     `overflow: hidden` looks like a rendering bug, an ellipsis looks
 			     like an editorial decision. -->
-			<p class="line-clamp-3 text-base leading-snug font-semibold text-balance">{data.title}</p>
+			<!-- Clamped to three lines, so it needs the leading of wrapped text
+			     rather than the leading of a headline. `snug` (1.375) closed the
+			     lines up at exactly the length where they need separating. -->
+			<p class="line-clamp-3 text-base leading-[1.4] font-semibold text-balance">{data.title}</p>
 			<p class="mt-1 truncate text-xs text-text-muted">{data.subtitle || host}</p>
 		</div>
 	</Surface>

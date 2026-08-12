@@ -22,10 +22,13 @@
 
 	/**
 	 * A single day is the common case on a new install, and a one-point line
-	 * draws nothing at all. Mirroring the point gives a flat band that reads
-	 * correctly as "one day, this many" instead of an empty box.
+	 * draws nothing at all. Mirroring the point into a flat band does not fix
+	 * it either: a lone point is by definition its own maximum, so the band
+	 * always floods the full height of the plot and says "100%" rather than
+	 * "one day, this many". One day is a bar, not a trend — so draw a bar.
 	 */
-	let series = $derived(data.length === 1 ? [data[0], data[0]] : data);
+	let single = $derived(data.length === 1);
+	let series = $derived(single ? [data[0], data[0]] : data);
 
 	let max = $derived(Math.max(1, ...series.map((d) => d.hits)));
 	let step = $derived(series.length > 1 ? W / (series.length - 1) : 0);
@@ -85,7 +88,16 @@
 			</linearGradient>
 		</defs>
 
-		{#if area}
+		{#if single}
+			<rect
+				x={W / 2 - W * 0.06}
+				y={y(series[0].hits)}
+				width={W * 0.12}
+				height={H - y(series[0].hits)}
+				fill="var(--accent)"
+				opacity="0.85"
+			/>
+		{:else if area}
 			<path d={area} fill="url(#chart-fill)" />
 			<path
 				d={line}
@@ -145,9 +157,11 @@
 
 	<!-- Inline labels rather than a legend: a legend costs a second lookup on
 	     a chart with one series. -->
-	<div class="axis">
+	<div class="axis" class:axis-single={single}>
 		{#each ticks as i (i)}
-			<span class="tnum" style="left: {(x(i) / W) * 100}%">{fmtDay(series[i].day)}</span>
+			<span class="tnum" style={single ? '' : `left: ${(x(i) / W) * 100}%`}>
+				{fmtDay(series[i].day)}
+			</span>
 		{/each}
 	</div>
 </div>
@@ -177,6 +191,12 @@
 		position: relative;
 		height: 1.25rem;
 		margin-top: 0.25rem;
+	}
+
+	/* One bar, one label, both centred — nothing to position against. */
+	.axis-single {
+		display: flex;
+		justify-content: center;
 	}
 
 	.axis span {

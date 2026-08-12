@@ -11,7 +11,7 @@
 	import Field from '$lib/ui/Field.svelte';
 	import AssetInput from '$lib/ui/AssetInput.svelte';
 	import { fieldClass } from '$lib/ui/styles';
-	import Block from '$lib/widgets/Block.svelte';
+	import BentoGrid from '$lib/widgets/BentoGrid.svelte';
 	import { KINDS, widgets, isKind, type WidgetKind } from '$lib/widgets/catalog';
 	import { serializeLines } from '$lib/widgets/fields';
 	import { toFormValues } from '$lib/widgets/form';
@@ -265,13 +265,7 @@
 
 		<div class="bento-region preview-frame">
 			{#if data.draft.blocks.length}
-				<div class="bento-grid">
-					{#each data.draft.blocks as block (block.id)}
-						{#if isKind(block.kind)}
-							<Block {block} />
-						{/if}
-					{/each}
-				</div>
+				<BentoGrid blocks={data.draft.blocks.filter((b) => isKind(b.kind))} />
 			{:else}
 				<p class="py-12 text-center text-sm text-text-muted">Blocks appear here as you add them.</p>
 			{/if}
