@@ -1,0 +1,171 @@
+import type { Handle } from '@sveltejs/kit';
+import { isSlugCandidate } from '$lib/reserved';
+import { valid, SESSION_COOKIE } from '$lib/server/auth';
+import { track } from '$lib/server/track';
+import type { BentoDoc, SlugRecord } from '$lib/types';
+
+/**
+ * SvelteKit owns the request but not the redirect (§2).
+ *
+ * `/:slug` short-circuits before `resolve()`: it must not pay route
+ * resolution, layout loading, or render bootstrap. Everything imported at the
+ * top of this file is evaluated at startup on *every* request, redirects
+ * included — so the import graph here stays deliberately small and anything
+ * heavier is imported dynamically inside the branch that needs it.
+ */
+
+const REDIRECT_TTL = 300;
+
+/** Query-independent, so `/gh?utm_source=x` and `/gh` share one cache entry. */
+const slugCacheKey = (seg: string) => new Request(`https://cache.internal/s/${seg}`);
+const bentoCacheKey = (v: number) => new Request(`https://cache.internal/bento/v${v}`);
+
+/**
+ * A second, deliberately narrow policy. `frame-ancestors` and `base-uri` are
+ * ignored inside a <meta> tag, which is how SvelteKit may deliver the main
+ * policy configured in `svelte.config.js`. Two policies are both enforced.
+ */
+const SECURITY_HEADERS: Array<[string, string]> = [
+	['Content-Security-Policy', "frame-ancestors 'none'; base-uri 'none'"],
+	['Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload'],
+	['X-Content-Type-Options', 'nosniff'],
+	// Still sends the origin cross-site, which is exactly what the
+	// hostname-only referrer capture in §6 needs.
+	['Referrer-Policy', 'strict-origin-when-cross-origin'],
+	['Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()']
+];
+
+function harden(res: Response) {
+	for (const [k, v] of SECURITY_HEADERS) res.headers.set(k, v);
+	return res;
+}
+
+export const handle: Handle = async ({ event, resolve }) => {
+	const platform = event.platform;
+	const env = platform?.env;
+	const cache = platform?.caches?.default;
+	const path = event.url.pathname;
+	const seg = path.slice(1);
+
+	// ---------------------------------------------------------------- redirect
+	// Single-segment and dot-free: `/a/b` never reaches KV, and neither does
+	// robots.txt, favicon.ico or og.png.
+	if (env && isSlugCandidate(seg)) {
+		const key = slugCacheKey(seg);
+
+		try {
+			const cached = await cache?.match(key);
+			if (cached) {
+				track(event, { slug: seg, kind: 'redirect' });
+				return cached;
+			}
+
+			const hit = await env.KV.get<SlugRecord>(`slug:${seg}`, {
+				type: 'json',
+				// Without this a colo that has not seen the key recently reads
+				// from central storage on every miss.
+				cacheTtl: REDIRECT_TTL
+			});
+
+			if (hit?.target && (!hit.exp || hit.exp > Date.now())) {
+				const res = new Response(null, {
+					status: hit.status ?? 302,
+					headers: {
+						Location: hit.target,
+						// `s-maxage`, not `max-age`: the edge caches, the browser
+						// does not. A private browser cache would keep sending a
+						// visitor to the old target after a repoint, with no way
+						// to reach them.
+						'Cache-Control': `s-maxage=${REDIRECT_TTL}, max-age=0`
+					}
+				});
+				track(event, { slug: seg, kind: 'redirect' });
+				platform?.context?.waitUntil?.(cache?.put(key, res.clone()) ?? Promise.resolve());
+				return res;
+			}
+
+			// Miss, or expired. Expiry is lazy — `exp` rides in the KV value and
+			// the D1 row survives for history.
+			track(event, { slug: seg.slice(0, 64), kind: '404' });
+		} catch {
+			// §13 — a KV failure on this path is a 404, never a 500.
+			track(event, { slug: seg.slice(0, 64), kind: '404' });
+		}
+	}
+
+	// ------------------------------------------------------------------ bento
+	// Caching rendered HTML on a TTL would be wrong here: `cache.delete()`
+	// purges only the colo it runs in, so an edit would leave other regions
+	// serving stale content. A version-keyed entry makes every colo miss at
+	// once, with nothing to purge.
+	if (env && path === '/' && event.request.method === 'GET') {
+		try {
+			const doc = await env.KV.get<BentoDoc>('bento', { type: 'json', cacheTtl: 60 });
+			if (doc) {
+				const etag = `"bento-v${doc.v}"`;
+
+				// Above the cache check, deliberately: a cache hit is still a
+				// visit, and putting this below would silently undercount the
+				// page that matters most.
+				track(event, { slug: '', kind: 'bento' });
+
+				if (event.request.headers.get('if-none-match') === etag) {
+					return harden(
+						new Response(null, {
+							status: 304,
+							headers: { ETag: etag, 'Cache-Control': 'public, max-age=0, must-revalidate' }
+						})
+					);
+				}
+
+				const key = bentoCacheKey(doc.v);
+				const cached = await cache?.match(key);
+				if (cached) return harden(browserFacing(cached, etag));
+
+				event.locals.authed = false;
+				event.locals.bento = doc;
+				const res = await resolve(event);
+				if (res.status === 200 && cache) {
+					const copy = res.clone();
+					const store = new Response(copy.body, {
+						status: 200,
+						headers: new Headers(copy.headers)
+					});
+					store.headers.delete('set-cookie');
+					// The key is version-scoped, so staleness is impossible and
+					// the entry can live as long as the colo will keep it.
+					store.headers.set('Cache-Control', 'public, s-maxage=31536000');
+					platform?.context?.waitUntil?.(cache.put(key, store));
+				}
+				return harden(browserFacing(res, etag));
+			}
+		} catch {
+			// Fall through to a normal render; the page load falls back to D1.
+		}
+	}
+
+	// ------------------------------------------------------------------- auth
+	event.locals.authed = await valid(event.cookies.get(SESSION_COOKIE), env?.SESSION_SECRET);
+
+	// `/api` has no `+layout.server.ts`, so it guards here.
+	if (path.startsWith('/api') && !event.locals.authed) {
+		return new Response('Unauthorized', { status: 401 });
+	}
+
+	return harden(await resolve(event));
+};
+
+/**
+ * The edge cache is doing the real work, so what the browser gets stays
+ * conservative — an unchanged bento then costs a 304 with no body.
+ */
+function browserFacing(res: Response, etag: string) {
+	const out = new Response(res.body, {
+		status: res.status,
+		statusText: res.statusText,
+		headers: new Headers(res.headers)
+	});
+	out.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+	out.headers.set('ETag', etag);
+	return out;
+}

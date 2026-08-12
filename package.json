@@ -1,0 +1,40 @@
+{
+	"name": "ij5",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"test": "vitest run",
+		"test:e2e": "playwright test",
+		"cf-typegen": "wrangler types",
+		"db:migrate:local": "wrangler d1 migrations apply ij5 --local",
+		"db:migrate": "wrangler d1 migrations apply ij5 --remote"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "^1.51.3",
+		"@sveltejs/adapter-cloudflare": "^7.2.9",
+		"@sveltejs/kit": "^2.70.2",
+		"@sveltejs/vite-plugin-svelte": "^7.3.0",
+		"@tailwindcss/vite": "^4.3.3",
+		"@vitest/coverage-v8": "^4.1.10",
+		"svelte": "^5.56.8",
+		"svelte-check": "^4.7.5",
+		"tailwindcss": "^4.3.3",
+		"typescript": "^6.0.3",
+		"vite": "^8.2.1",
+		"vitest": "^4.1.10",
+		"wrangler": "^4.121.0"
+	},
+	"dependencies": {
+		"lucide-svelte": "^1.0.1",
+		"svelte-dnd-action": "^0.9.78",
+		"zod": "^4.4.3"
+	}
+}
