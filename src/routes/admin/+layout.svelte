@@ -4,6 +4,7 @@
 	import LayoutGrid from 'lucide-svelte/icons/layout-grid';
 	import LinkIcon from 'lucide-svelte/icons/link-2';
 	import ChartLine from 'lucide-svelte/icons/chart-line';
+	import Terminal from 'lucide-svelte/icons/terminal';
 	import LogOut from 'lucide-svelte/icons/log-out';
 
 	let { children }: { children: Snippet } = $props();
@@ -11,7 +12,8 @@
 	const NAV = [
 		{ href: '/admin', label: 'Links', icon: LinkIcon },
 		{ href: '/admin/bento', label: 'Bento', icon: LayoutGrid },
-		{ href: '/admin/analytics', label: 'Analytics', icon: ChartLine }
+		{ href: '/admin/analytics', label: 'Analytics', icon: ChartLine },
+		{ href: '/admin/api', label: 'API', icon: Terminal }
 	];
 
 	let current = $derived(page.url.pathname);
@@ -47,7 +49,13 @@
 			{/each}
 		</ul>
 
-		<form method="POST" action="/logout" class="mt-auto hidden md:block">
+		<!--
+			On the bottom bar too, not just the sidebar. It was desktop-only, which
+			left a phone with no way to sign out at all — and "nothing important
+			lives behind a breakpoint" is the same rule as "nothing important lives
+			behind hover".
+		-->
+		<form method="POST" action="/logout" class="signout">
 			<button class="nav-link w-full" type="submit">
 				<LogOut size={17} aria-hidden="true" />
 				<span>Sign out</span>
@@ -80,6 +88,10 @@
 		flex: 1;
 	}
 
+	.signout {
+		display: flex;
+	}
+
 	.nav-list :global(li) {
 		flex: 1;
 	}
@@ -91,8 +103,10 @@
 		gap: 0.5rem;
 		/* 44px minimum, made of padding rather than a bigger icon. */
 		min-height: 3.25rem;
-		padding-inline: 0.75rem;
-		font-size: var(--text-xs);
+		/* Five destinations have to clear 320px, so the bar sets its own inline
+		   padding and lets the label do the spacing. */
+		padding-inline: 0.25rem;
+		font-size: var(--text-2xs);
 		font-weight: 500;
 		color: var(--text-muted);
 		flex-direction: column;
@@ -133,10 +147,15 @@
 			gap: 0.125rem;
 		}
 
+		.signout {
+			margin-top: auto;
+		}
+
 		.nav-link {
 			flex-direction: row;
 			justify-content: flex-start;
 			min-height: 2.25rem;
+			padding-inline: 0.75rem;
 			gap: 0.625rem;
 			border-radius: var(--radius-ui);
 			font-size: var(--text-sm);

@@ -58,6 +58,16 @@
 	--success: oklch(0.55 0.13 152);
 	--warning: oklch(0.68 0.14 75);
 
+	/* Contribution graph. Mixed from the accent rather than GitHub's green: one
+	   accent is the rule, and a second hue for a single widget is exactly the
+	   decoration-without-purpose the rest of the page avoids. Empty days are a
+	   sunken surface, not a pale accent, so "nothing" reads as nothing. */
+	--grass-0: oklch(0.93 0.004 265);
+	--grass-1: color-mix(in oklab, var(--accent) 22%, var(--surface));
+	--grass-2: color-mix(in oklab, var(--accent) 45%, var(--surface));
+	--grass-3: color-mix(in oklab, var(--accent) 70%, var(--surface));
+	--grass-4: var(--accent);
+
 	/* §7.5 — contact shadow plus ambient shadow, never a single blur. */
 	--sh-widget:
 		0 1px 2px oklch(0 0 0 / 0.04),
@@ -96,6 +106,10 @@
 		--success: oklch(0.72 0.14 152);
 		--warning: oklch(0.79 0.14 75);
 
+		/* The empty cell lifts off the widget surface rather than sinking, the
+		   same inversion the shadows make in dark mode. */
+		--grass-0: oklch(0.27 0.008 265);
+
 		/* §7.5 — shadows on a dark ground read as grime. The surface is
 		   already lighter than the page; that lift is the separation. */
 		--sh-widget: none;
@@ -124,6 +138,7 @@
 	--danger-tint: oklch(0.3 0.07 25);
 	--success: oklch(0.72 0.14 152);
 	--warning: oklch(0.79 0.14 75);
+	--grass-0: oklch(0.27 0.008 265);
 	--sh-widget: none;
 	--sh-widget-lift: none;
 	--sh-pop: 0 0 0 1px oklch(1 0 0 / 0.07), 0 16px 40px -12px oklch(0 0 0 / 0.6);
@@ -161,6 +176,8 @@
 	--color-danger-tint: var(--danger-tint);
 	--color-success: var(--success);
 	--color-warning: var(--warning);
+
+	--color-grass-0: var(--grass-0);
 
 	/* Type scale. Tracking tightens as size grows — the single change that
 	   most separates set type from default type. */

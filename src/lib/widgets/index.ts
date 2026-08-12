@@ -3,11 +3,13 @@ import Clock from './Clock.svelte';
 import Contact from './Contact.svelte';
 import Cta from './Cta.svelte';
 import Github from './Github.svelte';
+import Grass from './Grass.svelte';
 import Heading from './Heading.svelte';
 import Image from './Image.svelte';
 import Link from './Link.svelte';
 import List from './List.svelte';
 import MapWidget from './Map.svelte';
+import Post from './Post.svelte';
 import Quote from './Quote.svelte';
 import Social from './Social.svelte';
 import Spacer from './Spacer.svelte';
@@ -16,6 +18,7 @@ import Stat from './Stat.svelte';
 import Text from './Text.svelte';
 import Timeline from './Timeline.svelte';
 import Video from './Video.svelte';
+import Weather from './Weather.svelte';
 import { widgets, type WidgetKind } from './catalog';
 
 /**
@@ -41,6 +44,9 @@ export const components: Record<WidgetKind, Component<any>> = {
 	spacer: Spacer,
 	clock: Clock,
 	github: Github,
+	grass: Grass,
+	weather: Weather,
+	post: Post,
 	video: Video
 };
 

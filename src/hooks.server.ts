@@ -157,8 +157,28 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// ------------------------------------------------------------------- auth
 	event.locals.authed = await valid(event.cookies.get(SESSION_COOKIE), env?.SESSION_SECRET);
 
-	// `/api` has no `+layout.server.ts`, so it guards here.
-	if (path.startsWith('/api') && !event.locals.authed) {
+	/**
+	 * `/api` has no `+layout.server.ts`, so it guards here — but only the
+	 * cookie-authenticated half.
+	 *
+	 * `/api/links` authenticates itself with a bearer token and deliberately
+	 * does *not* accept the session cookie: a cookie is attached by the browser
+	 * to whatever request the browser is talked into making, which is the whole
+	 * of CSRF, while a bearer token has to be supplied by the caller. Letting
+	 * the cookie in here would hand any page on any origin the shortener.
+	 *
+	 * Everything else under `/api` — today, the binary asset upload — is called
+	 * by the admin UI with the session and is guarded here.
+	 *
+	 * The prefix is matched with its trailing slash. `startsWith('/api')` also
+	 * matches `/apitest`, `/apiary` and every other slug that happens to begin
+	 * with those four letters — which meant a miss on one of them answered 401
+	 * instead of the designed 404 page.
+	 */
+	const isApi = path === '/api' || path.startsWith('/api/');
+	const isBearerApi = path === '/api/links' || path.startsWith('/api/links/');
+
+	if (isApi && !isBearerApi && !event.locals.authed) {
 		return new Response('Unauthorized', { status: 401 });
 	}
 

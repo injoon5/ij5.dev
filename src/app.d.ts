@@ -27,9 +27,19 @@ declare global {
 				PUBLIC_ORIGIN: string;
 				ASSETS_ORIGIN: string;
 
-				/** Live-widget credentials. Each is optional; a missing one makes
-				 * that widget render its fallback rather than an error. */
+				/**
+				 * Live-widget credentials. Every one is optional, and a widget
+				 * whose credential is absent is *disabled* rather than broken:
+				 * `isLiveAvailable` refuses to schedule it, no request is made,
+				 * and the widget renders the fallback it declares. The site runs
+				 * with none of these set.
+				 */
+
+				/** Optional for `github` (raises the rate limit), required for
+				 * `grass` — the contribution calendar is GraphQL-only and GitHub
+				 * refuses anonymous GraphQL outright. */
 				GITHUB_TOKEN?: string;
+
 			};
 			context: ExecutionContext;
 			caches: CacheStorage & { default: Cache };
