@@ -4,7 +4,10 @@
 
 	let { span, data }: { span: Span; data: Record<string, string> } = $props();
 
-	let paragraphs = $derived(data.body.split(/\n{2,}/).filter(Boolean));
+	// `Block` validates before it renders this, so `body` is a string by the
+	// time it arrives. The guard is here anyway: this is the public page, and
+	// the cost of being wrong about that once is the whole site.
+	let paragraphs = $derived((data.body ?? '').split(/\n{2,}/).filter(Boolean));
 </script>
 
 <Surface {span} flexible>

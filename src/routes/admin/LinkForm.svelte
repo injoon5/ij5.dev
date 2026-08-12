@@ -3,6 +3,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import { fieldClass } from '$lib/ui/styles';
+	import { pending } from '$lib/ui/pending.svelte';
 	import type { SlugRow } from '$lib/types';
 
 	type Props = {
@@ -17,7 +18,15 @@
 	let { row, fields = {}, values = {}, error, onDone }: Props = $props();
 
 	let mode = $derived(row ? 'update' : 'create');
-	let submitting = $state(false);
+
+	const saving = pending({
+		reset: () => mode === 'create',
+		onSuccess: () => onDone?.()
+	});
+
+	// Deleting posts and waits exactly like saving does, so it says so the same
+	// way. It was the one form on this screen that stayed silent.
+	const deleting = pending({ onSuccess: () => onDone?.() });
 
 	const iso = (ms: number | null | undefined) =>
 		ms ? new Date(ms).toISOString().slice(0, 10) : '';
@@ -36,14 +45,7 @@
 	method="POST"
 	action="?/{mode}"
 	class="flex flex-col gap-4"
-	use:enhance={() => {
-		submitting = true;
-		return async ({ update, result }) => {
-			await update({ reset: mode === 'create' });
-			submitting = false;
-			if (result.type === 'success') onDone?.();
-		};
-	}}
+	use:enhance={saving.submit}
 >
 	{#if error}
 		<p class="rounded-[var(--radius-ui)] bg-danger-tint px-3 py-2 text-sm text-danger">{error}</p>
@@ -136,8 +138,8 @@
 	</Field>
 
 	<div class="flex items-center gap-2 pt-1">
-		<Button type="submit" variant="primary" disabled={submitting}>
-			{#if submitting}Saving…{:else if row}Save changes{:else}Create link{/if}
+		<Button type="submit" variant="primary" busy={saving.busy} busyLabel="Saving…">
+			{row ? 'Save changes' : 'Create link'}
 		</Button>
 
 		{#if row}
@@ -152,17 +154,22 @@
 		method="POST"
 		action="?/delete"
 		class="mt-6 border-t border-border-subtle pt-5"
-		use:enhance={() => async ({ update, result }) => {
-			await update();
-			if (result.type === 'success') onDone?.();
-		}}
+		use:enhance={deleting.submit}
 	>
 		<input type="hidden" name="slug" value={row.slug} />
 		<div class="flex items-center justify-between gap-4">
-			<p class="text-xs text-text-muted">
+			<p class="text-xs text-pretty text-text-muted">
 				Deleting keeps the analytics history. The link stops resolving within five minutes.
 			</p>
-			<Button type="submit" variant="danger" size="sm">Delete</Button>
+			<Button
+				type="submit"
+				variant="danger"
+				size="sm"
+				busy={deleting.busy}
+				busyLabel="Deleting…"
+			>
+				Delete
+			</Button>
 		</div>
 	</form>
 {/if}

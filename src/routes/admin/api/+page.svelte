@@ -188,9 +188,14 @@
 		font-family: var(--font-mono);
 	}
 
+	/*
+	 * Space, not rules. Each endpoint already opens with a monospace verb and a
+	 * bold path against a muted summary, so the grouping is legible without
+	 * drawing five lines through the panel to say the same thing — and a line
+	 * between every item is a line the eye has to skip on every item.
+	 */
 	.endpoint + .endpoint {
-		border-top: 1px solid var(--border-subtle);
-		padding-top: 1rem;
+		padding-top: 0.75rem;
 	}
 
 	/*

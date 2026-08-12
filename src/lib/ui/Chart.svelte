@@ -63,13 +63,26 @@
 	);
 
 	/**
-	 * Two round numbers and nothing else. The readout above already carries the
-	 * exact value, so the axis only has to say what order of magnitude the line
-	 * is drawn at — and two labels that format to the same string are one label
-	 * and a rounding error.
+	 * Rounds to one significant figure below the value's own magnitude: 171 to
+	 * 170, 1_713 to 1_700, 7 to 7. The midpoint used to be a bare `max / 2`,
+	 * which against a peak of 342 printed "171" — a number that is exact, that
+	 * nobody asked for, and that reads as a measurement rather than a gridline.
+	 * The peak keeps its true value; it is the one label worth being precise.
+	 */
+	function round(v: number): number {
+		if (v < 10) return Math.round(v);
+		const magnitude = 10 ** (Math.floor(Math.log10(v)) - 1);
+		return Math.round(v / magnitude) * magnitude;
+	}
+
+	/**
+	 * Two numbers and nothing else. The readout above already carries the exact
+	 * value, so the axis only has to say what order of magnitude the line is
+	 * drawn at — and two labels that format to the same string are one label and
+	 * a rounding error.
 	 */
 	let ticks = $derived.by(() => {
-		const nice = [max, Math.round(max / 2)].filter((v, i, all) => v > 0 && all.indexOf(v) === i);
+		const nice = [max, round(max / 2)].filter((v, i, all) => v > 0 && all.indexOf(v) === i);
 		return nice.filter((v, i) => i === 0 || Math.abs(y(v) - y(nice[i - 1])) > 18);
 	});
 

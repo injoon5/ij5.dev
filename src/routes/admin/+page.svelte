@@ -68,7 +68,8 @@
 
 <div class="layout" data-detail={detail || undefined}>
 	<section class="list" aria-label="Links">
-		<header class="mb-5 flex items-center justify-between gap-4">
+		<!-- `mb-6` under a page title, the same as Bento, Analytics and API. -->
+		<header class="mb-6 flex items-center justify-between gap-4">
 			<h1 class="text-xl font-semibold">Links</h1>
 			<Button href="/admin?s=new" variant="primary" size="sm" data-sveltekit-noscroll>
 				<Plus size={15} aria-hidden="true" />
@@ -267,9 +268,13 @@
 		color: var(--text-muted);
 	}
 
+	/* Sunken, not `--surface`: this keycap lives inside a `--surface` panel, so
+	   painting it the same colour as its container left the `n` as bare
+	   monospace text with no key around it at all. A key is also a thing you
+	   press in, which is the treatment it should have had anyway. */
 	.kbd {
 		border-radius: 4px;
-		background-color: var(--surface);
+		background-color: var(--surface-sunken);
 		padding: 0.0625rem 0.3125rem;
 		font-family: var(--font-mono);
 		font-size: var(--text-2xs);
@@ -328,12 +333,15 @@
 			display: block;
 		}
 
+		/* 1.25rem, like every other panel in the product. This one was 1.5rem —
+		   the kind of difference nobody can name and everybody can feel when the
+		   detail pane sits beside a list of rows padded to the other value. */
 		.detail {
 			position: sticky;
 			top: 2.5rem;
 			border-radius: var(--radius-ui-lg);
 			background-color: var(--surface);
-			padding: 1.5rem;
+			padding: 1.25rem;
 		}
 	}
 

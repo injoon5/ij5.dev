@@ -19,7 +19,25 @@
 			quote stops reading as an attribution.
 		-->
 		<figcaption class="mt-4 text-xs text-text-muted">
-			{data.author}{#if data.role}<span class="text-text-subtle"> · {data.role}</span>{/if}
+			{data.author}{#if data.role}<span class="role">{data.role}</span>{/if}
 		</figcaption>
 	</figure>
 </Surface>
+
+<style>
+	/*
+	 * The separator is drawn, not written. Written as ` · ` inside the span its
+	 * leading space was whitespace at the start of an element, which the
+	 * compiler strips — so it rendered "Steve Jobs· Apple", the dot welded to
+	 * the name. As generated content the spacing is set in one place and cannot
+	 * be trimmed, and a screen reader reads "Steve Jobs Apple" instead of
+	 * announcing a middle dot.
+	 */
+	.role {
+		color: var(--text-subtle);
+	}
+
+	.role::before {
+		content: ' · ';
+	}
+</style>

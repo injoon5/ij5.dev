@@ -205,13 +205,18 @@
 	--text-md--line-height: 1.5;
 	--text-md--letter-spacing: -0.009em;
 
-	--text-lg: 1.125rem;
-	--text-lg--line-height: 1.4;
-	--text-lg--letter-spacing: -0.011em;
+	/* 20px, not 18. The same defect the note above describes, one step further
+	   up: `md` was raised to 17 and landed a single pixel under `lg`, so the
+	   two sizes carrying the most headings between them — a section rule, a
+	   detail title, a sheet title — were indistinguishable. The ratios now run
+	   1.13 · 1.18 · 1.20 and widen from there, instead of stalling at 1.06. */
+	--text-lg: 1.25rem;
+	--text-lg--line-height: 1.35;
+	--text-lg--letter-spacing: -0.014em;
 
-	--text-xl: 1.375rem;
-	--text-xl--line-height: 1.3;
-	--text-xl--letter-spacing: -0.016em;
+	--text-xl: 1.5rem;
+	--text-xl--line-height: 1.25;
+	--text-xl--letter-spacing: -0.018em;
 
 	--text-2xl: 1.75rem;
 	--text-2xl--line-height: 1.2;
@@ -276,11 +281,13 @@
 		color: var(--text);
 	}
 
-	/* One focus treatment for the whole product, keyboard only. */
+	/* One focus treatment for the whole product, keyboard only. No
+	   `border-radius` here: an outline already follows the element's own
+	   corners, so setting one reshapes whatever it lands on — a pill button
+	   squaring off to 4px the moment it takes keyboard focus. */
 	:focus-visible {
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
-		border-radius: 4px;
 	}
 
 	:focus:not(:focus-visible) {
@@ -326,15 +333,26 @@
 		flex-shrink: 0;
 	}
 
-	/* Reduced motion means less motion, not none: opacity and color still
-	   carry meaning, movement does not. */
+	/*
+	 * Reduced motion means less motion, not none: opacity and colour still
+	 * carry meaning, movement does not.
+	 *
+	 * Zeroing `transition-duration` says the opposite — it takes away the
+	 * cross-fades and colour changes too, which are the cues that survive the
+	 * preference. So the property list is narrowed instead: anything that moves
+	 * or resizes an element is dropped and snaps to its end state, while
+	 * everything that only changes how a stationary element looks keeps its
+	 * transition. Animations still stop outright; a keyframe sequence has no
+	 * per-property equivalent of this.
+	 */
 	@media (prefers-reduced-motion: reduce) {
 		*,
 		*::before,
 		*::after {
 			animation-duration: 0.01ms !important;
 			animation-iteration-count: 1 !important;
-			transition-duration: 0.01ms !important;
+			transition-property: opacity, color, background-color, border-color, box-shadow,
+				fill, stroke !important;
 			scroll-behavior: auto !important;
 		}
 	}

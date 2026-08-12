@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import Button from '$lib/ui/Button.svelte';
 
 	/**
 	 * Not a framework default. This is the page people reach when they mistype
@@ -38,11 +39,11 @@
 		<h1 class="mt-2 text-2xl font-semibold text-balance">{copy.title}</h1>
 		<p class="mt-2 text-base text-pretty text-text-muted">{copy.body}</p>
 
-		<a
-			href="/"
-			class="mt-7 inline-flex h-11 items-center rounded-[var(--radius-ui)] bg-accent px-4 text-sm font-medium text-accent-contrast transition-[background-color,scale] duration-150 ease-out hover:bg-accent-hover active:scale-[0.97]"
-		>
-			Go to the homepage
-		</a>
+		<!-- The shared button, not a hand-rolled copy of its class list. The copy
+		     had already drifted: it kept a 44px height at every width where the
+		     real one tightens to 36px on a pointer. -->
+		<div class="mt-7">
+			<Button href="/" variant="primary">Go to the homepage</Button>
+		</div>
 	</div>
 </main>

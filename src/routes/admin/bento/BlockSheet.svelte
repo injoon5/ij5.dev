@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 
 	/**
 	 * One surface, two shapes: a centred dialog from `md` up, a bottom drawer
@@ -11,6 +11,24 @@
 	 * the panel scales out of the card that was pressed and returns to it — and
 	 * it is interruptible, because it is a transform-and-opacity transition on a
 	 * single element rather than a keyframe sequence that has to run to the end.
+	 *
+	 * Being interruptible is a property of the *plumbing* as much as the
+	 * transition, and the plumbing here used to break it three ways:
+	 *
+	 *   - `transitionend` fired on whichever property finished first, and
+	 *     opacity was 60ms shorter than transform, so every close tore the panel
+	 *     off the screen before it reached the card. The listener now waits for
+	 *     `transform` specifically, and the two exit durations match anyway.
+	 *   - The safety timeout was never cancelled, so closing and reopening
+	 *     inside its window slammed the dialog shut under the new selection.
+	 *   - Reopening mid-exit hit `if (open && !el.open)` while the dialog was
+	 *     still technically open, so the entrance never ran and the pending
+	 *     close then took the panel away — leaving a URL that named a block and
+	 *     no sheet on screen.
+	 *
+	 * All three are the same mistake: treating open and closed as states a
+	 * transition merely decorates. `sync()` below owns the whole thing, and an
+	 * exit is something that can be turned around rather than waited out.
 	 */
 
 	type Props = {
@@ -50,60 +68,109 @@
 	const reduced = () =>
 		typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+	/** Matches the exit durations in the stylesheet, plus a frame of slack. */
+	const EXIT_MS = 200;
+
+	/** Teardown for the exit currently in flight, so an entrance can cancel it. */
+	let cancelExit: (() => void) | null = null;
+
 	$effect(() => {
-		const el = dialog;
-		if (!el) return;
-
-		if (open && !el.open) {
-			el.showModal();
-			closing = false;
-
-			if (!reduced() && panel) {
-				const start = originTransform();
-				panel.style.transition = 'none';
-				panel.style.transform = start;
-				panel.style.opacity = '0';
-				// Two frames: one for the browser to accept the start state, one
-				// for the transition to have something to interpolate from.
-				requestAnimationFrame(() => {
-					requestAnimationFrame(() => {
-						if (!panel) return;
-						panel.style.transition = '';
-						panel.style.transform = '';
-						panel.style.opacity = '';
-					});
-				});
-			}
-		}
-
-		if (!open && el.open) close();
+		// The effect tracks the props only. Everything it *does* is untracked,
+		// because `sync` writes `closing` and reads the DOM, and neither belongs
+		// in the dependency graph.
+		open;
+		dialog;
+		untrack(sync);
 	});
 
-	function close() {
+	function sync() {
 		const el = dialog;
-		if (!el?.open) return;
+		if (!el) return;
+		if (open) enter(el);
+		else if (el.open) exit(el);
+	}
+
+	function enter(el: HTMLDialogElement) {
+		// A close still on its way to the card is turned around, not queued
+		// behind. Because the transition lives on the element, clearing the
+		// inline transform makes the browser interpolate from wherever the panel
+		// actually is right now — the exit reverses out of its own midpoint
+		// instead of restarting from the card.
+		const reversing = Boolean(cancelExit);
+		cancelExit?.();
+		closing = false;
+
+		if (!el.open) el.showModal();
 
 		if (reduced() || !panel) {
+			panel?.removeAttribute('style');
+			return;
+		}
+
+		if (reversing) {
+			panel.style.transform = '';
+			panel.style.opacity = '';
+			return;
+		}
+
+		const start = originTransform();
+		panel.style.transition = 'none';
+		panel.style.transform = start;
+		panel.style.opacity = '0';
+		// Two frames: one for the browser to accept the start state, one for the
+		// transition to have something to interpolate from.
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				if (!panel || !el.open) return;
+				panel.style.transition = '';
+				panel.style.transform = '';
+				panel.style.opacity = '';
+			});
+		});
+	}
+
+	function exit(el: HTMLDialogElement) {
+		if (cancelExit) return;
+
+		if (reduced() || !panel) {
+			panel?.removeAttribute('style');
 			el.close();
 			return;
 		}
 
-		// Back to where it came from. An exit that just fades leaves the card it
-		// belongs to unaccounted for.
+		// Back to where it came from — recomputed now, so a canvas that scrolled
+		// while the sheet was open still returns the panel to the card's current
+		// position rather than the one it had on the way in.
 		closing = true;
 		panel.style.transform = originTransform();
 		panel.style.opacity = '0';
 
-		const done = () => {
-			panel?.removeAttribute('style');
-			closing = false;
-			el.close();
+		const target = panel;
+
+		// Only `transform` counts as arrival. Opacity finishing first is what
+		// used to cut the return short.
+		const onEnd = (event: TransitionEvent) => {
+			if (event.target === target && event.propertyName === 'transform') finish();
 		};
 
-		panel.addEventListener('transitionend', done, { once: true });
-		// A transition that never fires — an interrupted animation, a background
-		// tab — must not leave the dialog stuck open.
-		setTimeout(done, 260);
+		// A transition that never fires — a background tab, a display that never
+		// composites — must not leave the dialog stuck open.
+		const timer = setTimeout(finish, EXIT_MS + 60);
+
+		cancelExit = () => {
+			clearTimeout(timer);
+			target.removeEventListener('transitionend', onEnd);
+			cancelExit = null;
+		};
+
+		target.addEventListener('transitionend', onEnd);
+
+		function finish() {
+			cancelExit?.();
+			target.removeAttribute('style');
+			closing = false;
+			el.close();
+		}
 	}
 </script>
 
@@ -177,6 +244,18 @@
 			opacity 160ms var(--ease-out);
 	}
 
+	/*
+	 * The exit is a shade quicker than the entrance and its two durations are
+	 * equal, so the panel finishes fading at the instant it lands on the card
+	 * rather than 60ms before it gets there. Matched durations are also what
+	 * lets `transitionend` on `transform` be a truthful "arrived".
+	 */
+	.sheet.is-closing .panel {
+		transition:
+			transform 200ms var(--ease-drawer),
+			opacity 200ms var(--ease-out);
+	}
+
 	@media (min-width: 768px) {
 		/* Desktop: a centred dialog. Same element, same motion, different shape. */
 		.panel {
@@ -190,7 +269,8 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.panel {
+		.panel,
+		.sheet.is-closing .panel {
 			transition: none;
 		}
 

@@ -6,8 +6,20 @@
 	let {
 		block,
 		live,
-		eager = false
-	}: { block: Block; live?: unknown; eager?: boolean } = $props();
+		eager = false,
+		/**
+		 * What a block whose data no longer matches its kind should look like.
+		 * The public page shows nothing — a hole in the grid is a bad day, a
+		 * broken card is a bad day everybody can see. The editor shows a
+		 * placeholder, because a block you cannot see is a block you cannot fix.
+		 */
+		onInvalid = 'hide'
+	}: {
+		block: Block;
+		live?: unknown;
+		eager?: boolean;
+		onInvalid?: 'hide' | 'placeholder';
+	} = $props();
 
 	// Grid placement. Four columns at `lg`, two below — a `2x1` is therefore
 	// the full width of a phone, which is the point: mobile is a different
@@ -41,9 +53,33 @@
 	let Widget = $derived(
 		isKind(block.kind) && block.kind !== 'heading' ? components[block.kind] : null
 	);
+
+	/**
+	 * Every widget trusts the shape of `data` — `Text` splits `data.body`,
+	 * `List` iterates `data.items` — because the catalog's schema validates on
+	 * write and nothing invalid should reach a renderer.
+	 *
+	 * Should. Rows outlive the schema that wrote them: rename a field in the
+	 * catalog, ship it, and every block stored under the old shape now reaches
+	 * a component that reads a property which is no longer there. `Text` threw
+	 * on `undefined.split`, that threw out of the whole SSR pass, and one stale
+	 * block took the entire public page to a 500 — the one page that has to
+	 * render no matter what, on the one code path with no client to recover on.
+	 *
+	 * `bento.ts` already says the intent for the parse step: "A block that
+	 * cannot be parsed renders as nothing rather than taking the page down with
+	 * it." This is that same rule applied one layer further in, where the shape
+	 * is checked rather than the syntax. The schemas are already imported here
+	 * and `/` is edge-cached per published version, so the cost is a handful of
+	 * validations on a cache miss.
+	 */
+	let valid = $derived.by(() => {
+		if (!isKind(block.kind)) return false;
+		return defFor(block.kind).schema.safeParse(block.data).success;
+	});
 </script>
 
-{#if Widget}
+{#if Widget && valid}
 	<!--
 		`grid` on the wrapper, not `block`: the wrapper is what the grid sizes,
 		and a block-level child would sit at its own content height inside it.
@@ -52,5 +88,13 @@
 	-->
 	<div class="grid {spanClass}">
 		<Widget span={block.span} data={block.data} {live} {eager} />
+	</div>
+{:else if Widget && onInvalid === 'placeholder'}
+	<div class="grid {spanClass}">
+		<div
+			class="widget h-full items-center justify-center text-center text-xs text-pretty text-text-subtle"
+		>
+			This block’s fields no longer match its type. Open it to fix them.
+		</div>
 	</div>
 {/if}

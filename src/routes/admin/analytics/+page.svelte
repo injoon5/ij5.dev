@@ -3,6 +3,7 @@
 	import Chart from '$lib/ui/Chart.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import { card } from '$lib/ui/styles';
 	import { RANGE_LABELS } from './ranges';
 	import type { PageData } from './$types';
 
@@ -53,21 +54,21 @@
 	</Empty>
 {:else}
 	<div class="grid gap-4 sm:grid-cols-3">
-		<div class="stat">
+		<div class={card}>
 			<p class="tnum text-2xl font-semibold">{data.totals.hits}</p>
 			<p class="mt-0.5 text-xs text-text-muted">Redirects</p>
 		</div>
-		<div class="stat">
+		<div class={card}>
 			<p class="tnum text-2xl font-semibold">{data.totals.bento}</p>
 			<p class="mt-0.5 text-xs text-text-muted">Bento views</p>
 		</div>
-		<div class="stat">
+		<div class={card}>
 			<p class="tnum text-2xl font-semibold">{data.totals.visitors}</p>
 			<p class="mt-0.5 text-xs text-text-muted">Daily uniques</p>
 		</div>
 	</div>
 
-	<section class="mt-4 rounded-[var(--radius-ui-lg)] bg-surface p-5">
+	<section class="{card} mt-4">
 		<h2 class="text-sm font-semibold">Traffic</h2>
 		<div class="mt-3">
 			<Chart data={data.traffic} />
@@ -107,7 +108,7 @@
 	{#if data.notFound.length}
 		<div class="mt-4">
 			<BarList
-				title="Paths that 404'd"
+				title="Paths that 404’d"
 				rows={data.notFound.map((n) => ({ label: `/${n.path}`, value: n.hits }))}
 				empty="Nothing missing."
 			/>
@@ -124,7 +125,7 @@
 			after the fact.
 		-->
 		{#await data.detail}
-			<section class="mt-4 rounded-[var(--radius-ui-lg)] bg-surface p-5">
+			<section class="{card} mt-8">
 				<p class="text-sm text-text-muted">Loading breakdown…</p>
 			</section>
 		{:then detail}
@@ -156,18 +157,16 @@
 				</div>
 			</section>
 		{:catch}
-			<p class="mt-4 text-sm text-danger">That breakdown could not be loaded.</p>
+			<!-- The third state of the same panel, so it lands in the same place
+			     and at the same size as the other two. -->
+			<section class="{card} mt-8">
+				<p class="text-sm text-danger">That breakdown could not be loaded.</p>
+			</section>
 		{/await}
 	{/if}
 {/if}
 
 <style>
-	.stat {
-		border-radius: var(--radius-ui-lg);
-		background-color: var(--surface);
-		padding: 1.25rem;
-	}
-
 	.ranges {
 		display: flex;
 		gap: 0.125rem;

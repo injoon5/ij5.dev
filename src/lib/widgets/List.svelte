@@ -14,7 +14,7 @@
 	{/if}
 
 	<ul class="-mx-2 mt-3 flex flex-col">
-		{#each data.items as item (item.label)}
+		{#each data.items ?? [] as item (item.label)}
 			<li>
 				<svelte:element
 					this={item.href ? 'a' : 'div'}

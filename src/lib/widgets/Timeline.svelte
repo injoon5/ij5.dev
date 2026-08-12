@@ -13,7 +13,7 @@
 	{/if}
 
 	<ol class="mt-3 flex flex-col gap-3">
-		{#each data.items as item (item.label)}
+		{#each data.items ?? [] as item (item.label)}
 			<li class="flex items-baseline justify-between gap-4">
 				<span class="min-w-0 text-sm">
 					{#if item.href}
