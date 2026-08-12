@@ -1,5 +1,5 @@
 import type { Block, LiveDoc } from '$lib/types';
-import { widgets, isKind } from '$lib/widgets/catalog';
+import { defFor, isKind } from '$lib/widgets/catalog';
 
 /**
  * Live widgets (§7) without a cron job.
@@ -62,7 +62,7 @@ const isStale = (entry: LiveDoc[string] | undefined, ttl: number) =>
 export function planRefresh(blocks: Block[], live: LiveDoc | null, env: Env) {
 	const stale = blocks.filter((b) => {
 		if (!isKind(b.kind)) return false;
-		const def = widgets[b.kind];
+		const def = defFor(b.kind);
 		return def.tier === 'live' && def.ttl !== undefined && isStale(live?.[b.id], def.ttl);
 	});
 

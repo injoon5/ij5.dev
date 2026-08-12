@@ -249,6 +249,7 @@ export const widgets = {
 				name: 'items',
 				label: 'Rows',
 				type: 'lines',
+				keys: ['label', 'href', 'meta'],
 				placeholder: 'Label | https://example.com | 2024',
 				hint: 'One row per line: label, destination, trailing note.'
 			}
@@ -268,7 +269,14 @@ export const widgets = {
 		}),
 		fields: [
 			{ name: 'title', label: 'Title', type: 'text', optional: true },
-			{ name: 'items', label: 'Items', type: 'lines', placeholder: 'TypeScript', hint: 'One per line.' }
+			{
+				name: 'items',
+				label: 'Items',
+				type: 'lines',
+				keys: ['label'],
+				placeholder: 'TypeScript',
+				hint: 'One per line.'
+			}
 		],
 		defaults: { items: [] }
 	},
@@ -289,6 +297,7 @@ export const widgets = {
 				name: 'items',
 				label: 'Entries',
 				type: 'lines',
+				keys: ['label', 'href', 'meta'],
 				placeholder: 'Staff engineer, Acme | https://acme.com | 2022–now',
 				hint: 'One entry per line: what, link, when.'
 			}
@@ -411,6 +420,17 @@ export type WidgetKind = keyof typeof widgets;
 export const KINDS = Object.keys(widgets) as WidgetKind[];
 
 export const isKind = (k: string): k is WidgetKind => k in widgets;
+
+/**
+ * `satisfies` keeps the literal key types — which is what makes `WidgetKind` a
+ * union of names rather than `string` — at the cost of also keeping each
+ * entry's literal shape. These two accessors widen back to the declared type,
+ * so consumers see `Field[]` and a full `WidgetDef` instead of a union of
+ * forty object literals.
+ */
+export const defFor = (kind: WidgetKind): WidgetDef => widgets[kind];
+
+export const fieldsFor = (kind: WidgetKind): Field[] => widgets[kind].fields;
 
 /**
  * One discriminated union over every kind, derived from the registry rather

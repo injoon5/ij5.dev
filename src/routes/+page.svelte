@@ -7,6 +7,9 @@
 
 	let { data }: { data: PageData } = $props();
 
+	// The bucket origin is deployment configuration, not page state: it cannot
+	// change while this page is alive, and this page never hydrates anyway.
+	// svelte-ignore state_referenced_locally
 	setContext('assetsOrigin', data.assetsOrigin);
 
 	let live = $derived((data.live ?? {}) as LiveDoc);
@@ -135,53 +138,3 @@
 		{/if}
 	</main>
 </div>
-
-<style>
-	.page {
-		display: flex;
-		flex-direction: column;
-		gap: 2.5rem;
-		width: 100%;
-		max-width: 90rem;
-		min-height: 100dvh;
-		margin-inline: auto;
-		/* Safe areas, so nothing edge-anchored lands under a notch or the home
-		   indicator. */
-		padding: max(1.5rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
-			max(2.5rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
-	}
-
-	.rail {
-		display: flex;
-		flex-direction: column;
-		justify-content: space-between;
-	}
-
-	@media (min-width: 1024px) {
-		.page {
-			flex-direction: row;
-			gap: 3.5rem;
-			padding-inline: 2.5rem;
-			padding-block: 3.5rem;
-		}
-
-		.rail {
-			position: sticky;
-			top: 0;
-			flex-shrink: 0;
-			width: 23.75rem;
-			height: 100dvh;
-			padding-block: 3.5rem;
-			/* Its own scroll only if the bio is unusually long. The rail not
-			   moving while the grid scrolls is most of what makes the layout
-			   read as designed rather than stacked. */
-			overflow-y: auto;
-			overscroll-behavior: contain;
-			margin-block: -3.5rem;
-		}
-
-		main {
-			flex: 1;
-		}
-	}
-</style>

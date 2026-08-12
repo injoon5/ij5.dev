@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /login
+
+# Redirect slugs need no rule — they answer with a 302 and no indexable content.

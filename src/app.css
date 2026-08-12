@@ -422,6 +422,60 @@
 	}
 
 	/*
+	 * The public page's layout lives here rather than in a `<style>` block on
+	 * the route. A scoped block would make Svelte stamp a class onto every
+	 * element in `<svelte:head>` too, which is bytes on the one page whose
+	 * byte count is a ship gate.
+	 */
+	.page {
+		display: flex;
+		flex-direction: column;
+		gap: 2.5rem;
+		width: 100%;
+		max-width: 90rem;
+		min-height: 100dvh;
+		margin-inline: auto;
+		/* Safe areas, so nothing edge-anchored lands under a notch or the home
+		   indicator. */
+		padding: max(1.5rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+			max(2.5rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+	}
+
+	.rail {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+	}
+
+	@media (min-width: 1024px) {
+		.page {
+			flex-direction: row;
+			gap: 3.5rem;
+			padding-inline: 2.5rem;
+			padding-block: 3.5rem;
+		}
+
+		/* The rail not moving while the grid scrolls is most of what makes the
+		   layout read as designed rather than stacked. It gets its own scroll
+		   only if the bio is unusually long. */
+		.rail {
+			position: sticky;
+			top: 0;
+			flex-shrink: 0;
+			width: 23.75rem;
+			height: 100dvh;
+			padding-block: 3.5rem;
+			margin-block: -3.5rem;
+			overflow-y: auto;
+			overscroll-behavior: contain;
+		}
+
+		.page > main {
+			flex: 1;
+		}
+	}
+
+	/*
 	 * Two columns on a phone, four at `lg`. Rows are sized by the items' own
 	 * ratios and every item stretches to its row, so a row of widgets shares
 	 * one height without any of them being measured.

@@ -98,7 +98,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// purges only the colo it runs in, so an edit would leave other regions
 	// serving stale content. A version-keyed entry makes every colo miss at
 	// once, with nothing to purge.
-	if (env && path === '/' && event.request.method === 'GET') {
+	if (env && path === '/' && (event.request.method === 'GET' || event.request.method === 'HEAD')) {
 		try {
 			const doc = await env.KV.get<BentoDoc>('bento', { type: 'json', cacheTtl: 60 });
 			if (doc) {

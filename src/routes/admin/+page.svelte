@@ -5,7 +5,7 @@
 	import Search from 'lucide-svelte/icons/search';
 	import Button from '$lib/ui/Button.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
-	import { input } from '$lib/ui/styles';
+	import { inputClass } from '$lib/ui/styles';
 	import LinkForm from './LinkForm.svelte';
 	import type { ActionData, PageData } from './$types';
 
@@ -89,7 +89,7 @@
 					type="search"
 					placeholder="Search links"
 					aria-label="Search links"
-					class="{input} pl-9"
+					class="{inputClass} pl-9"
 				/>
 			</div>
 		{/if}

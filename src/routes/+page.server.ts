@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { loadFromD1, readPublished } from '$lib/server/bento';
 import { planRefresh, readLive } from '$lib/server/live';
-import { widgets, isKind } from '$lib/widgets/catalog';
+import { defFor, isKind } from '$lib/widgets/catalog';
 import type { BentoDoc, LiveDoc } from '$lib/types';
 
 const EMPTY: BentoDoc = {
@@ -55,7 +55,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
 		// `/w.js` is only requested when something on the page needs it, so a
 		// bento of static blocks makes zero script requests.
 		needsScript: doc.blocks.some(
-			(b) => (isKind(b.kind) && widgets[b.kind].needsScript) || b.kind === 'image' || b.kind === 'map'
+			(b) => (isKind(b.kind) && defFor(b.kind).needsScript) || b.kind === 'image' || b.kind === 'map'
 		)
 	};
 };

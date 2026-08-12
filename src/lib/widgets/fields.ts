@@ -25,6 +25,8 @@ export type Field = {
 	hint?: string;
 	optional?: boolean;
 	options?: Array<{ value: string; label: string }>;
+	/** For `lines` fields: which key each `|`-separated column maps to. */
+	keys?: string[];
 };
 
 /**

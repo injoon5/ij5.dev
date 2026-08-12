@@ -6,9 +6,5 @@ export default defineConfig({
 	// Everything Svelte-related lives in `svelte.config.js`. Passing options
 	// here instead makes SvelteKit ignore that file entirely, which would
 	// silently drop the CSP configuration.
-	plugins: [tailwindcss(), sveltekit()],
-	test: {
-		include: ['src/**/*.test.ts'],
-		environment: 'node'
-	}
+	plugins: [tailwindcss(), sveltekit()]
 });

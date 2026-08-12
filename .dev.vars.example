@@ -1,0 +1,21 @@
+# Local values for `vite dev` and `wrangler dev`. Copy to `.dev.vars`, which is
+# gitignored. In production these are `wrangler secret put`, never `vars`.
+#
+# Generate a set:
+#
+#   node -e "const c=require('crypto');const t=c.randomBytes(32).toString('base64url');
+#   console.log('token (password manager, nowhere else):',t);
+#   console.log('AUTH_HASH='+c.createHash('sha256').update(t).digest('base64'));
+#   console.log('SESSION_SECRET='+c.randomBytes(32).toString('base64'));
+#   console.log('SALT='+c.randomBytes(32).toString('base64'));"
+
+# base64(SHA-256(token)). The token itself is never stored anywhere.
+AUTH_HASH=
+# Rotate this to revoke every session at once. There is no session table.
+SESSION_SECRET=
+# Visitor hashing. Rotating it resets today's unique counts and nothing else.
+SALT=
+
+# Live widgets. Each is optional — a missing credential makes that widget
+# render its declared fallback, never an error.
+# GITHUB_TOKEN=

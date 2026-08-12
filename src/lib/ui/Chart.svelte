@@ -97,8 +97,16 @@
 			<circle cx={x(active)} cy={y(data[active].hits)} r="4" fill="var(--accent)" />
 		{/if}
 
-		<!-- One transparent target for the whole plot: pointer events cover
-		     mouse, pen and touch, so there is no separate touch path to forget. -->
+		<!--
+			One transparent target for the whole plot: pointer events cover
+			mouse, pen and touch, so there is no separate touch path to forget.
+
+			It carries no role because it is a pointer affordance and nothing
+			else — the series itself is exposed to assistive technology as the
+			table below, which is a better reading of a chart than a hover
+			target could ever be.
+		-->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<rect
 			width={W}
 			height={H}
@@ -108,6 +116,18 @@
 			onpointerleave={() => (active = null)}
 		></rect>
 	</svg>
+
+	<table class="sr-only">
+		<caption>Traffic over time</caption>
+		<thead>
+			<tr><th scope="col">Day</th><th scope="col">{label}</th></tr>
+		</thead>
+		<tbody>
+			{#each data as point (point.day)}
+				<tr><th scope="row">{fmtDay(point.day)}</th><td>{point.hits}</td></tr>
+			{/each}
+		</tbody>
+	</table>
 
 	<!-- Inline labels rather than a legend: a legend costs a second lookup on
 	     a chart with one series. -->

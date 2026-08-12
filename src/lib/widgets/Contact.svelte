@@ -53,11 +53,13 @@
 		visibility: hidden;
 	}
 
-	.copy[data-copied] .copy-idle {
+	/* `data-copied` is set by `/w.js` at runtime, so the compiler cannot see
+	   it in the markup and would otherwise prune these rules. */
+	.copy:global([data-copied]) .copy-idle {
 		visibility: hidden;
 	}
 
-	.copy[data-copied] .copy-done {
+	.copy:global([data-copied]) .copy-done {
 		visibility: visible;
 	}
 </style>
