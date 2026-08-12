@@ -115,7 +115,7 @@
 		{/if}
 	</header>
 
-	<main class="min-w-0">
+	<main class="bento-region min-w-0">
 		{#if data.blocks.length}
 			<div class="bento-grid">
 				{#each data.blocks as block (block.id)}

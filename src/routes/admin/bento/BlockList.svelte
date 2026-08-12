@@ -23,16 +23,24 @@
 	let submitEl = $state<HTMLFormElement | null>(null);
 	let orderValue = $state('');
 
-	// Drag is disabled until a handle is pressed, so a flick anywhere else on a
-	// row scrolls the page. This is the whole difference between drag-to-order
-	// being usable on a phone and being a trap.
-	let dragDisabled = $state(true);
-
 	$effect(() => {
 		if (!dragging) items = blocks.map((b) => ({ ...b }));
 	});
 
 	const FLIP = 180;
+
+	/**
+	 * A press-and-hold delay on touch, so a flick down the list still scrolls
+	 * the page instead of picking a row up. Movement before the hold elapses
+	 * cancels the drag outright, which is the difference between drag-to-order
+	 * being usable on a phone and being a trap.
+	 *
+	 * Drag is not gated behind the handle: the library already refuses to start
+	 * a drag from a nested form control, so the inputs in an expanded row are
+	 * safe, and gating on a handle press cannot work anyway — the listener is
+	 * only attached on the next update, one press too late.
+	 */
+	const TOUCH_HOLD_MS = 250;
 
 	function consider(event: CustomEvent<DndEvent<Block>>) {
 		dragging = true;
@@ -42,7 +50,6 @@
 	function finalize(event: CustomEvent<DndEvent<Block>>) {
 		items = event.detail.items;
 		dragging = false;
-		dragDisabled = true;
 		commit(items.map((b) => b.id));
 	}
 
@@ -80,7 +87,7 @@
 	use:dndzone={{
 		items,
 		flipDurationMs: FLIP,
-		dragDisabled,
+		delayTouchStart: TOUCH_HOLD_MS,
 		dropTargetStyle: {}
 	}}
 	onconsider={consider}
@@ -89,15 +96,15 @@
 	{#each items as block, index (block.id)}
 		<li animate:flip={{ duration: FLIP }} class="block-row" class:selected={selected === block.id}>
 			<div class="flex items-center gap-1 px-2">
-				<button
-					type="button"
-					class="handle"
-					aria-label="Reorder {label(block)}"
-					onpointerdown={() => (dragDisabled = false)}
-					onpointerup={() => (dragDisabled = true)}
-				>
-					<GripVertical size={15} aria-hidden="true" />
-				</button>
+				<!--
+					A cue, not a control. Making it a `<button>` would stop drags
+					starting here, because the library deliberately ignores
+					mousedown on form controls. Reordering by keyboard is the two
+					nudge buttons on the right, which also work with JS off.
+				-->
+				<span class="handle" aria-hidden="true">
+					<GripVertical size={15} />
+				</span>
 
 				<button type="button" class="summary" onclick={() => onSelect(block.id)}>
 					<!-- `ord` is the mobile order and the desktop grid diverges from

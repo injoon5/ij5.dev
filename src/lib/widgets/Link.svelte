@@ -24,8 +24,8 @@
 			<Asset src={data.image} alt="" />
 		</div>
 		<div class="widget-scrim relative flex h-full flex-col justify-end p-widget">
-			<p class="text-md font-semibold text-white">{data.title}</p>
-			<p class="mt-0.5 text-xs text-white/70">{data.subtitle || host}</p>
+			<p class="line-clamp-2 text-md font-semibold text-white">{data.title}</p>
+			<p class="mt-0.5 truncate text-xs text-white/70">{data.subtitle || host}</p>
 		</div>
 	</Surface>
 {:else}
@@ -43,7 +43,10 @@
 		</div>
 
 		<div class="mt-auto pt-3">
-			<p class="text-base leading-snug font-semibold text-balance">{data.title}</p>
+			<!-- Clamped rather than left to overflow: a title cut mid-word by
+			     `overflow: hidden` looks like a rendering bug, an ellipsis looks
+			     like an editorial decision. -->
+			<p class="line-clamp-3 text-base leading-snug font-semibold text-balance">{data.title}</p>
 			<p class="mt-1 truncate text-xs text-text-muted">{data.subtitle || host}</p>
 		</div>
 	</Surface>

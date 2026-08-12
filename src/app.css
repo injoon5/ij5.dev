@@ -476,24 +476,38 @@
 	}
 
 	/*
-	 * Two columns on a phone, four at `lg`. Rows are sized by the items' own
-	 * ratios and every item stretches to its row, so a row of widgets shares
-	 * one height without any of them being measured.
+	 * Two columns on a phone, four at `lg`.
+	 *
+	 * The row unit is the column width, computed against the region's own
+	 * inline size. That is the whole reason `1x1` is actually square and a
+	 * `2x2` is actually a square twice as wide — without a fixed row unit,
+	 * rows are sized by whatever happens to be in them and a `1x1` beside a
+	 * tall neighbour quietly becomes a rectangle.
+	 *
+	 * `minmax(unit, auto)` rather than a flat unit, so content-driven kinds
+	 * can still push a row taller instead of clipping.
 	 *
 	 * No `grid-auto-flow: dense`: back-filling holes would reorder the grid
 	 * away from `ord`, and `ord` is what the editor shows and what the mobile
 	 * layout uses. A gap left by a `full` block is deliberate whitespace.
 	 */
+	.bento-region {
+		container-type: inline-size;
+	}
+
 	.bento-grid {
+		--bento-gap: 0.75rem;
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0.75rem;
+		gap: var(--bento-gap);
+		grid-auto-rows: minmax(calc((100cqw - var(--bento-gap)) / 2), auto);
 	}
 
 	@media (min-width: 1024px) {
 		.bento-grid {
+			--bento-gap: 0.875rem;
 			grid-template-columns: repeat(4, minmax(0, 1fr));
-			gap: 0.875rem;
+			grid-auto-rows: minmax(calc((100cqw - 3 * var(--bento-gap)) / 4), auto);
 		}
 	}
 

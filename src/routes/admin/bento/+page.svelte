@@ -263,7 +263,7 @@
 			<span class="text-xs text-text-subtle">draft</span>
 		</div>
 
-		<div class="preview-frame">
+		<div class="bento-region preview-frame">
 			{#if data.draft.blocks.length}
 				<div class="bento-grid">
 					{#each data.draft.blocks as block (block.id)}

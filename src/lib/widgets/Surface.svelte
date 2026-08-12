@@ -40,11 +40,18 @@
 		full: 'aspect-[4/1]'
 	};
 
+	/**
+	 * Content-driven widgets get a floor, not a target. Sizing them to their
+	 * span's ratio leaves a six-line list sitting in a half-empty card, and
+	 * dead space inside a widget is the fastest way for a grid to stop reading
+	 * as one system. Rows stretch to their tallest item anyway, so neighbours
+	 * still line up.
+	 */
 	const MIN: Record<Span, string> = {
-		'1x1': 'min-h-[9.5rem]',
-		'2x1': 'min-h-[9.5rem]',
-		'2x2': 'min-h-[20.5rem]',
-		full: 'min-h-[9.5rem]'
+		'1x1': 'min-h-[8rem]',
+		'2x1': 'min-h-[8rem]',
+		'2x2': 'min-h-[11rem]',
+		full: 'min-h-[7rem]'
 	};
 
 	let sizing = $derived(flexible ? MIN[span] : RATIO[span]);

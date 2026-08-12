@@ -20,25 +20,34 @@
 	let active = $state<number | null>(null);
 	let width = $state(0);
 
-	let max = $derived(Math.max(1, ...data.map((d) => d.hits)));
-	let step = $derived(data.length > 1 ? W / (data.length - 1) : 0);
+	/**
+	 * A single day is the common case on a new install, and a one-point line
+	 * draws nothing at all. Mirroring the point gives a flat band that reads
+	 * correctly as "one day, this many" instead of an empty box.
+	 */
+	let series = $derived(data.length === 1 ? [data[0], data[0]] : data);
 
-	const x = (i: number) => (data.length > 1 ? i * step : W / 2);
+	let max = $derived(Math.max(1, ...series.map((d) => d.hits)));
+	let step = $derived(series.length > 1 ? W / (series.length - 1) : 0);
+
+	const x = (i: number) => i * step;
 	const y = (v: number) => H - PAD_Y - (v / max) * (H - PAD_Y * 2);
 
-	let line = $derived(data.map((d, i) => `${i ? 'L' : 'M'}${x(i)},${y(d.hits)}`).join(' '));
-	let area = $derived(data.length ? `${line} L${x(data.length - 1)},${H} L${x(0)},${H} Z` : '');
+	let line = $derived(series.map((d, i) => `${i ? 'L' : 'M'}${x(i)},${y(d.hits)}`).join(' '));
+	let area = $derived(
+		series.length > 1 ? `${line} L${x(series.length - 1)},${H} L${x(0)},${H} Z` : ''
+	);
 
 	// Four or five ticks, not one per day. More than that on a phone is a
 	// smear, and the crosshair is where exact values come from anyway.
 	let ticks = $derived.by(() => {
-		if (data.length < 2) return data.map((_, i) => i);
+		if (data.length < 2) return [0];
 		const want = width && width < 480 ? 3 : 5;
-		const every = Math.max(1, Math.ceil(data.length / want));
-		return data.map((_, i) => i).filter((i) => i % every === 0 || i === data.length - 1);
+		const every = Math.max(1, Math.ceil(series.length / want));
+		return series.map((_, i) => i).filter((i) => i % every === 0 || i === series.length - 1);
 	});
 
-	let current = $derived(active !== null ? data[active] : null);
+	let current = $derived(active !== null ? series[active] : null);
 
 	const fmtDay = (day: string) =>
 		new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short' }).format(
@@ -48,10 +57,15 @@
 	function locate(event: PointerEvent) {
 		const rect = (event.currentTarget as SVGRectElement).getBoundingClientRect();
 		const ratio = (event.clientX - rect.left) / rect.width;
-		active = Math.min(data.length - 1, Math.max(0, Math.round(ratio * (data.length - 1))));
+		active = Math.min(series.length - 1, Math.max(0, Math.round(ratio * (series.length - 1))));
 	}
 </script>
 
+{#if !data.length}
+	<p class="py-10 text-center text-sm text-pretty text-text-muted">
+		No traffic in this range yet.
+	</p>
+{:else}
 <div class="chart" bind:clientWidth={width}>
 	<div class="readout" aria-live="polite">
 		{#if current}
@@ -84,7 +98,7 @@
 			/>
 		{/if}
 
-		{#if active !== null && data[active]}
+		{#if active !== null && series[active]}
 			<line
 				x1={x(active)}
 				x2={x(active)}
@@ -94,7 +108,7 @@
 				stroke-width="1"
 				vector-effect="non-scaling-stroke"
 			/>
-			<circle cx={x(active)} cy={y(data[active].hits)} r="4" fill="var(--accent)" />
+			<circle cx={x(active)} cy={y(series[active].hits)} r="4" fill="var(--accent)" />
 		{/if}
 
 		<!--
@@ -133,10 +147,11 @@
 	     a chart with one series. -->
 	<div class="axis">
 		{#each ticks as i (i)}
-			<span class="tnum" style="left: {(x(i) / W) * 100}%">{fmtDay(data[i].day)}</span>
+			<span class="tnum" style="left: {(x(i) / W) * 100}%">{fmtDay(series[i].day)}</span>
 		{/each}
 	</div>
 </div>
+{/if}
 
 <style>
 	.chart {

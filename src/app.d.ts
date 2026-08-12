@@ -30,9 +30,6 @@ declare global {
 				/** Live-widget credentials. Each is optional; a missing one makes
 				 * that widget render its fallback rather than an error. */
 				GITHUB_TOKEN?: string;
-				SPOTIFY_CLIENT_ID?: string;
-				SPOTIFY_CLIENT_SECRET?: string;
-				SPOTIFY_REFRESH_TOKEN?: string;
 			};
 			context: ExecutionContext;
 			caches: CacheStorage & { default: Cache };
