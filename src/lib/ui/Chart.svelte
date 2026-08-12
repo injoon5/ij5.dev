@@ -1,148 +1,217 @@
 <script lang="ts">
 	/**
-	 * A purpose-built area chart rather than a charting library.
+	 * A line chart, in the shape of the sparkline on injoon5/web: no gridlines,
+	 * no tooltip box, an axis that is only ever text, and a headline above that
+	 * carries the exact value for whatever day the pointer is on.
 	 *
-	 * The dashboard needs exactly one chart shape: a dense daily series with a
-	 * crosshair readout. A library would bring a plugin architecture, a scale
-	 * abstraction and a theme to strip for that, and it would still need the
-	 * touch handling and tick thinning written by hand. This is the whole
-	 * feature in one file with no dependency.
+	 * Hand-drawn rather than LayerChart. The reference reaches for a library
+	 * because it draws four of these against a shared domain with a tuning panel
+	 * bound to every dimension; this is one chart with one series. A chart
+	 * library would bring a scale abstraction, a plugin architecture and a theme
+	 * to strip, and would still need the touch handling and tick thinning
+	 * written by hand — which is all that is actually below.
 	 */
 
 	type Point = { day: string; hits: number };
 
 	let { data, label = 'hits' }: { data: Point[]; label?: string } = $props();
 
-	const W = 800;
-	const H = 220;
-	const PAD_Y = 12;
+	/**
+	 * Geometry is in real pixels against the measured width, not a fixed viewBox
+	 * stretched to fit. `preserveAspectRatio="none"` would scale x and y by
+	 * different factors, which distorts everything that is not a path — the axis
+	 * numbers stretch, the stroke thins, a round marker renders as an ellipse.
+	 * Measuring costs one bound property and removes the whole class of problem.
+	 */
+	/** Vertical breathing room, so a peak never touches the top of the box. */
+	const PAD_Y = 10;
+	/** Left gutter the y labels start in, in viewBox units. */
+	const GUTTER = 46;
 
 	let active = $state<number | null>(null);
 	let width = $state(0);
+	let height = $state(0);
+	let plot = $state<HTMLDivElement | null>(null);
+	let dragging = $state(false);
+
+	let single = $derived(data.length === 1);
+
+	// SSR has no width. The box reserves its height in CSS, so the line simply
+	// appears once hydrated rather than shifting the numbers above it.
+	let W = $derived(Math.max(width, 1));
+	// Both axes, for the same reason: a viewBox height of 200 drawn into a 176px
+	// box is a 0.88 vertical scale, which squashes the axis numbers just as
+	// surely as a stretched width would.
+	let H = $derived(Math.max(height, 1));
 
 	/**
-	 * A single day is the common case on a new install, and a one-point line
-	 * draws nothing at all. Mirroring the point into a flat band does not fix
-	 * it either: a lone point is by definition its own maximum, so the band
-	 * always floods the full height of the plot and says "100%" rather than
-	 * "one day, this many". One day is a bar, not a trend — so draw a bar.
+	 * The domain floors at zero rather than at the smallest reading. Traffic is
+	 * a count, so a chart that starts at 40 makes a quiet week look like a
+	 * collapse — the shape of the line has to be the shape of the numbers.
 	 */
-	let single = $derived(data.length === 1);
-	let series = $derived(single ? [data[0], data[0]] : data);
+	let max = $derived(Math.max(1, ...data.map((d) => d.hits)));
+	let top = $derived(max * 1.12);
 
-	let max = $derived(Math.max(1, ...series.map((d) => d.hits)));
-	let step = $derived(series.length > 1 ? W / (series.length - 1) : 0);
+	let step = $derived(data.length > 1 ? (W - GUTTER) / (data.length - 1) : 0);
 
-	const x = (i: number) => i * step;
-	const y = (v: number) => H - PAD_Y - (v / max) * (H - PAD_Y * 2);
+	const x = (i: number) => GUTTER + i * step;
+	const y = (v: number) => H - PAD_Y - (v / top) * (H - PAD_Y * 2);
 
-	let line = $derived(series.map((d, i) => `${i ? 'L' : 'M'}${x(i)},${y(d.hits)}`).join(' '));
+	let line = $derived(data.map((d, i) => `${i ? 'L' : 'M'}${x(i)},${y(d.hits)}`).join(' '));
 	let area = $derived(
-		series.length > 1 ? `${line} L${x(series.length - 1)},${H} L${x(0)},${H} Z` : ''
+		data.length > 1 ? `${line} L${x(data.length - 1)},${H} L${x(0)},${H} Z` : ''
 	);
 
-	// Four or five ticks, not one per day. More than that on a phone is a
-	// smear, and the crosshair is where exact values come from anyway.
+	/**
+	 * Two round numbers and nothing else. The readout above already carries the
+	 * exact value, so the axis only has to say what order of magnitude the line
+	 * is drawn at — and two labels that format to the same string are one label
+	 * and a rounding error.
+	 */
 	let ticks = $derived.by(() => {
-		if (data.length < 2) return [0];
-		const want = width && width < 480 ? 3 : 5;
-		const every = Math.max(1, Math.ceil(series.length / want));
-		return series.map((_, i) => i).filter((i) => i % every === 0 || i === series.length - 1);
+		const nice = [max, Math.round(max / 2)].filter((v, i, all) => v > 0 && all.indexOf(v) === i);
+		return nice.filter((v, i) => i === 0 || Math.abs(y(v) - y(nice[i - 1])) > 18);
 	});
 
-	let current = $derived(active !== null ? series[active] : null);
+	const compact = (v: number) =>
+		v >= 10000 ? `${Math.round(v / 1000)}k` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v);
+
+	let current = $derived(active !== null ? data[active] : null);
 
 	const fmtDay = (day: string) =>
 		new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short' }).format(
 			new Date(`${day}T00:00:00Z`)
 		);
 
-	function locate(event: PointerEvent) {
-		const rect = (event.currentTarget as SVGRectElement).getBoundingClientRect();
-		const ratio = (event.clientX - rect.left) / rect.width;
-		active = Math.min(series.length - 1, Math.max(0, Math.round(ratio * (series.length - 1))));
+	function indexAt(clientX: number) {
+		const rect = plot?.getBoundingClientRect();
+		if (!rect || data.length === 0) return null;
+		if (data.length === 1) return 0;
+
+		// The gutter is part of the box but not part of the plot, so the ratio is
+		// taken against the drawn span — otherwise the marker trails the finger.
+		// Geometry is 1:1 with pixels now, so the gutter needs no conversion.
+		const span = rect.width - GUTTER;
+		if (span <= 0) return null;
+
+		const ratio = (clientX - rect.left - GUTTER) / span;
+		return Math.max(0, Math.min(data.length - 1, Math.round(ratio * (data.length - 1))));
+	}
+
+	/**
+	 * Pointer capture on the way down pins the whole drag to this element.
+	 * Without it a finger dragged past the edge is re-targeted by hit test on
+	 * every move and the readout jumps to whatever it crosses into.
+	 */
+	function onpointerdown(event: PointerEvent) {
+		plot?.setPointerCapture?.(event.pointerId);
+		dragging = true;
+		active = indexAt(event.clientX);
+	}
+
+	function onpointermove(event: PointerEvent) {
+		// A mouse scrubs on hover; a finger only while it is down.
+		if (!dragging && event.pointerType === 'touch') return;
+		active = indexAt(event.clientX);
+	}
+
+	function release(event: PointerEvent) {
+		if (plot?.hasPointerCapture?.(event.pointerId)) plot.releasePointerCapture(event.pointerId);
+		dragging = false;
+		// A finger has no hover state to fall back to, so lifting it clears the
+		// day. A mouse keeps the marker until the pointer actually leaves.
+		if (event.pointerType === 'touch') active = null;
+	}
+
+	function onpointerleave() {
+		if (!dragging) active = null;
 	}
 </script>
 
 {#if !data.length}
-	<p class="py-10 text-center text-sm text-pretty text-text-muted">
-		No traffic in this range yet.
-	</p>
+	<p class="py-10 text-center text-sm text-pretty text-text-muted">No traffic in this range yet.</p>
 {:else}
-<div class="chart" bind:clientWidth={width}>
+	<!-- The number is the headline and the chart is the footnote. No transition
+	     on the value: scrubbing is direct manipulation, and a number easing
+	     toward the day under the pointer reads as lag. -->
 	<div class="readout" aria-live="polite">
-		{#if current}
-			<span class="tnum text-lg font-semibold">{current.hits}</span>
-			<span class="text-xs text-text-muted">{label} on {fmtDay(current.day)}</span>
-		{:else}
-			<span class="tnum text-lg font-semibold">{max}</span>
-			<span class="text-xs text-text-muted">peak {label} in range</span>
-		{/if}
+		<span class="tnum text-2xl font-semibold">{(current ?? { hits: max }).hits}</span>
+		<span class="text-sm text-text-muted">
+			{#if current}{label} on {fmtDay(current.day)}{:else}peak {label} in range{/if}
+		</span>
 	</div>
 
-	<svg viewBox="0 0 {W} {H}" preserveAspectRatio="none" role="img" aria-label="Traffic over time">
-		<defs>
-			<linearGradient id="chart-fill" x1="0" x2="0" y1="0" y2="1">
-				<stop offset="0%" stop-color="var(--accent)" stop-opacity="0.18" />
-				<stop offset="100%" stop-color="var(--accent)" stop-opacity="0" />
-			</linearGradient>
-		</defs>
+	<div
+		class="chart"
+		bind:this={plot}
+		bind:clientWidth={width}
+		bind:clientHeight={height}
+		role="img"
+		aria-label="Traffic over time"
+		{onpointerdown}
+		{onpointermove}
+		{onpointerleave}
+		onpointerup={release}
+		onpointercancel={release}
+	>
+		<svg viewBox="0 0 {W} {H}">
+			<defs>
+				<linearGradient id="chart-wash" x1="0" x2="0" y1="0" y2="1">
+					<!-- An ease-out ramp, not a linear one, which held a flat film and
+					     then stopped dead at the baseline. -->
+					<stop offset="0%" stop-color="var(--accent)" stop-opacity="0.20" />
+					<stop offset="42%" stop-color="var(--accent)" stop-opacity="0.09" />
+					<stop offset="100%" stop-color="var(--accent)" stop-opacity="0" />
+				</linearGradient>
+			</defs>
 
-		{#if single}
-			<rect
-				x={W / 2 - W * 0.06}
-				y={y(series[0].hits)}
-				width={W * 0.12}
-				height={H - y(series[0].hits)}
-				fill="var(--accent)"
-				opacity="0.85"
-			/>
-		{:else if area}
-			<path d={area} fill="url(#chart-fill)" />
-			<path
-				d={line}
-				fill="none"
-				stroke="var(--accent)"
-				stroke-width="2"
-				stroke-linejoin="round"
-				stroke-linecap="round"
-				vector-effect="non-scaling-stroke"
-			/>
-		{/if}
+			<!-- Text only: no rule under the labels, no gridlines across the plot,
+			     not even a tick mark. The numbers are there to size the line, and
+			     anything drawn to connect them to it competes with the line. -->
+			{#each ticks as tick (tick)}
+				<text class="axis-label" x="0" y={y(tick)} dominant-baseline="middle">{compact(tick)}</text>
+			{/each}
 
-		{#if active !== null && series[active]}
-			<line
-				x1={x(active)}
-				x2={x(active)}
-				y1="0"
-				y2={H}
-				stroke="var(--border-strong)"
-				stroke-width="1"
-				vector-effect="non-scaling-stroke"
-			/>
-			<circle cx={x(active)} cy={y(series[active].hits)} r="4" fill="var(--accent)" />
-		{/if}
+			{#if single}
+				<!-- One day is a bar, not a trend. A lone point is its own maximum,
+				     so a line — or a band mirrored from it — floods the full height
+				     of the plot and says "100%" rather than "one day, this many". -->
+				<rect
+					x={GUTTER + (W - GUTTER) / 2 - 26}
+					y={y(data[0].hits)}
+					width="52"
+					height={H - y(data[0].hits)}
+					fill="var(--accent)"
+					opacity="0.85"
+				/>
+			{:else}
+				<path d={area} fill="url(#chart-wash)" />
+				<path
+					d={line}
+					fill="none"
+					stroke="var(--accent)"
+					stroke-width="1.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			{/if}
 
-		<!--
-			One transparent target for the whole plot: pointer events cover
-			mouse, pen and touch, so there is no separate touch path to forget.
+			{#if current && !single}
+				<line
+					x1={x(active!)}
+					x2={x(active!)}
+					y1="0"
+					y2={H}
+					stroke="var(--border-strong)"
+					stroke-width="1"
+				/>
+				<circle cx={x(active!)} cy={y(current.hits)} r="3.5" fill="var(--accent)" />
+			{/if}
+		</svg>
+	</div>
 
-			It carries no role because it is a pointer affordance and nothing
-			else — the series itself is exposed to assistive technology as the
-			table below, which is a better reading of a chart than a hover
-			target could ever be.
-		-->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<rect
-			width={W}
-			height={H}
-			fill="transparent"
-			onpointermove={locate}
-			onpointerdown={locate}
-			onpointerleave={() => (active = null)}
-		></rect>
-	</svg>
-
+	<!-- The accessible version of the chart. A line has nothing to read out;
+	     the numbers do. -->
 	<table class="sr-only">
 		<caption>Traffic over time</caption>
 		<thead>
@@ -155,64 +224,57 @@
 		</tbody>
 	</table>
 
-	<!-- Inline labels rather than a legend: a legend costs a second lookup on
-	     a chart with one series. -->
-	<div class="axis" class:axis-single={single}>
-		{#each ticks as i (i)}
-			<span class="tnum" style={single ? '' : `left: ${(x(i) / W) * 100}%`}>
-				{fmtDay(series[i].day)}
-			</span>
-		{/each}
+	<!--
+		Flush with the panel rather than indented to the plot: the heading, the
+		readout, the axis labels and these dates all start on one column, which
+		reads as alignment. The gap between this date and the first point is a
+		distance nobody measures; two staggered left edges is one anybody sees.
+	-->
+	<div class="dates">
+		<span class="tnum">{fmtDay(data[0].day)}</span>
+		{#if !single}<span class="tnum">{fmtDay(data[data.length - 1].day)}</span>{/if}
 	</div>
-</div>
 {/if}
 
 <style>
-	.chart {
-		position: relative;
-	}
-
 	.readout {
 		display: flex;
 		align-items: baseline;
 		gap: 0.5rem;
-		margin-bottom: 0.5rem;
-		min-height: 1.75rem;
 	}
 
-	svg {
+	.chart {
+		margin-top: 0.75rem;
+		height: 11rem;
+		/* A vertical swipe still scrolls the page; a horizontal drag scrubs. */
+		touch-action: pan-y;
+		-webkit-user-select: none;
+		user-select: none;
+	}
+
+	.chart svg {
 		display: block;
 		width: 100%;
-		height: 12rem;
-		touch-action: pan-y;
+		height: 100%;
 	}
 
-	.axis {
-		position: relative;
-		height: 1.25rem;
-		margin-top: 0.25rem;
+	.axis-label {
+		fill: var(--text-subtle);
+		font-size: 11px;
+		font-variant-numeric: tabular-nums;
 	}
 
-	/* One bar, one label, both centred — nothing to position against. */
-	.axis-single {
+	.dates {
 		display: flex;
-		justify-content: center;
-	}
-
-	.axis span {
-		position: absolute;
-		transform: translateX(-50%);
-		font-size: var(--text-2xs);
+		justify-content: space-between;
+		margin-top: 0.5rem;
+		font-size: var(--text-xs);
 		color: var(--text-subtle);
-		white-space: nowrap;
 	}
 
-	/* The first and last labels would otherwise hang off the plot. */
-	.axis span:first-child {
-		transform: none;
-	}
-
-	.axis span:last-child {
-		transform: translateX(-100%);
+	@media (min-width: 640px) {
+		.chart {
+			height: 13rem;
+		}
 	}
 </style>
