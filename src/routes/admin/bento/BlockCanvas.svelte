@@ -150,7 +150,7 @@
 	{#if section.heading}
 		{@const heading = section.heading}
 		<div class="canvas-heading">
-			<Heading data={heading.data as Record<string, string>} />
+			<Heading data={heading.data as Record<string, string>} first={index === 0} />
 			<div class="heading-tools">
 				<button
 					type="button"

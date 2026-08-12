@@ -45,9 +45,11 @@
 	});
 </script>
 
-{#each sections as section (section.key)}
+{#each sections as section, index (section.key)}
 	{#if section.heading}
-		<Heading data={section.heading.data as Record<string, string>} />
+		<!-- Only the very first heading skips its top space; every other one is
+		     ending a grid and needs to be clearly off it. -->
+		<Heading data={section.heading.data as Record<string, string>} first={index === 0} />
 	{/if}
 
 	{#if section.blocks.length}
