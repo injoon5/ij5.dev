@@ -12,23 +12,8 @@
 	 * it is interruptible, because it is a transform-and-opacity transition on a
 	 * single element rather than a keyframe sequence that has to run to the end.
 	 *
-	 * Being interruptible is a property of the *plumbing* as much as the
-	 * transition, and the plumbing here used to break it three ways:
-	 *
-	 *   - `transitionend` fired on whichever property finished first, and
-	 *     opacity was 60ms shorter than transform, so every close tore the panel
-	 *     off the screen before it reached the card. The listener now waits for
-	 *     `transform` specifically, and the two exit durations match anyway.
-	 *   - The safety timeout was never cancelled, so closing and reopening
-	 *     inside its window slammed the dialog shut under the new selection.
-	 *   - Reopening mid-exit hit `if (open && !el.open)` while the dialog was
-	 *     still technically open, so the entrance never ran and the pending
-	 *     close then took the panel away — leaving a URL that named a block and
-	 *     no sheet on screen.
-	 *
-	 * All three are the same mistake: treating open and closed as states a
-	 * transition merely decorates. `sync()` below owns the whole thing, and an
-	 * exit is something that can be turned around rather than waited out.
+	 * `sync()` owns both directions. An exit can be reversed mid-flight rather
+	 * than waited out, and nothing here assumes a transition runs to the end.
 	 */
 
 	type Props = {
@@ -75,9 +60,8 @@
 	let cancelExit: (() => void) | null = null;
 
 	$effect(() => {
-		// The effect tracks the props only. Everything it *does* is untracked,
-		// because `sync` writes `closing` and reads the DOM, and neither belongs
-		// in the dependency graph.
+		// Props are the only dependency; `sync` writes `closing` and touches the
+		// DOM, neither of which belongs in the graph.
 		open;
 		dialog;
 		untrack(sync);
@@ -91,11 +75,8 @@
 	}
 
 	function enter(el: HTMLDialogElement) {
-		// A close still on its way to the card is turned around, not queued
-		// behind. Because the transition lives on the element, clearing the
-		// inline transform makes the browser interpolate from wherever the panel
-		// actually is right now — the exit reverses out of its own midpoint
-		// instead of restarting from the card.
+		// Clearing the inline transform mid-exit makes the browser interpolate
+		// from wherever the panel currently is, so the close reverses in place.
 		const reversing = Boolean(cancelExit);
 		cancelExit?.();
 		closing = false;
@@ -138,17 +119,15 @@
 			return;
 		}
 
-		// Back to where it came from — recomputed now, so a canvas that scrolled
-		// while the sheet was open still returns the panel to the card's current
-		// position rather than the one it had on the way in.
+		// Recomputed, so a canvas scrolled while the sheet was open still returns
+		// the panel to where the card is now.
 		closing = true;
 		panel.style.transform = originTransform();
 		panel.style.opacity = '0';
 
 		const target = panel;
 
-		// Only `transform` counts as arrival. Opacity finishing first is what
-		// used to cut the return short.
+		// Only `transform` counts as arrival; opacity finishes on its own clock.
 		const onEnd = (event: TransitionEvent) => {
 			if (event.target === target && event.propertyName === 'transform') finish();
 		};
@@ -244,12 +223,8 @@
 			opacity 160ms var(--ease-out);
 	}
 
-	/*
-	 * The exit is a shade quicker than the entrance and its two durations are
-	 * equal, so the panel finishes fading at the instant it lands on the card
-	 * rather than 60ms before it gets there. Matched durations are also what
-	 * lets `transitionend` on `transform` be a truthful "arrived".
-	 */
+	/* Matched durations, so the fade lands with the panel rather than ahead of
+	   it. Slightly quicker than the entrance. */
 	.sheet.is-closing .panel {
 		transition:
 			transform 200ms var(--ease-drawer),

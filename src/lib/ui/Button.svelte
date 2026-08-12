@@ -11,11 +11,7 @@
 		href?: string;
 		/** In flight. Disables the button and announces it, without moving it. */
 		busy?: boolean;
-		/**
-		 * What to say while busy. A button that keeps its resting label and only
-		 * dims is indistinguishable from one that is disabled for some other
-		 * reason, so the verb changes tense: Publish → Publishing…
-		 */
+		/** Label while busy, so the verb changes tense: Publish → Publishing… */
 		busyLabel?: string;
 		children: Snippet;
 	} & Omit<HTMLButtonAttributes & HTMLAnchorAttributes, 'size'>;
@@ -36,13 +32,8 @@
 	// controls in one view is how an accent stops carrying meaning.
 	const VARIANT: Record<Variant, string> = {
 		primary: 'bg-accent text-accent-contrast hover:bg-accent-hover',
-		// The same inset hairline the inputs use, not a contact shadow. A
-		// secondary button is `bg-surface`, so on the page background it read as
-		// a raised control and inside a `bg-surface` panel it disappeared into
-		// its own container — "Save identity" was white on white with a 1px
-		// shadow for an edge. An input beside it in the same form already solved
-		// this; a button and a text field sitting in one form should not be
-		// built out of different materials.
+		// The inset hairline the inputs use, so it holds an edge on the page
+		// background and inside a `bg-surface` panel alike.
 		secondary:
 			'bg-surface text-text shadow-[inset_0_0_0_1px_var(--border-subtle)] hover:bg-surface-hover',
 		ghost: 'text-text-muted hover:bg-surface hover:text-text',
@@ -58,10 +49,8 @@
 	const base =
 		'inline-flex select-none items-center justify-center gap-1.5 rounded-[var(--radius-ui)] font-medium whitespace-nowrap transition-[background-color,color,scale] duration-150 ease-out active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45';
 
-	// The two labels share one grid cell, so the button is always as wide as the
-	// longer of them and swapping between them cannot resize it mid-press. The
-	// swap is a cross-fade rather than a cut, and opacity is one of the few
-	// things that still transitions under reduced motion.
+	// Both labels share one grid cell: the button is sized to the longer of the
+	// two and cannot resize mid-press.
 	const stack = 'col-start-1 row-start-1 flex items-center gap-1.5 transition-opacity duration-150 ease-out';
 </script>
 

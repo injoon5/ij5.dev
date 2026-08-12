@@ -7,12 +7,7 @@
 		block,
 		live,
 		eager = false,
-		/**
-		 * What a block whose data no longer matches its kind should look like.
-		 * The public page shows nothing — a hole in the grid is a bad day, a
-		 * broken card is a bad day everybody can see. The editor shows a
-		 * placeholder, because a block you cannot see is a block you cannot fix.
-		 */
+		/** A block that fails its schema: hidden on `/`, flagged in the editor. */
 		onInvalid = 'hide'
 	}: {
 		block: Block;
@@ -55,28 +50,17 @@
 	);
 
 	/**
-	 * Every widget trusts the shape of `data` — `Text` splits `data.body`,
-	 * `List` iterates `data.items` — because the catalog's schema validates on
-	 * write and nothing invalid should reach a renderer.
-	 *
-	 * Should. Rows outlive the schema that wrote them: rename a field in the
-	 * catalog, ship it, and every block stored under the old shape now reaches
-	 * a component that reads a property which is no longer there. `Text` threw
-	 * on `undefined.split`, that threw out of the whole SSR pass, and one stale
-	 * block took the entire public page to a 500 — the one page that has to
-	 * render no matter what, on the one code path with no client to recover on.
-	 *
-	 * `bento.ts` already says the intent for the parse step: "A block that
-	 * cannot be parsed renders as nothing rather than taking the page down with
-	 * it." This is that same rule applied one layer further in, where the shape
-	 * is checked rather than the syntax. The schemas are already imported here
-	 * and `/` is edge-cached per published version, so the cost is a handful of
-	 * validations on a cache miss.
+	 * Widgets read `data` without guarding it, so a row stored under an older
+	 * shape reaches a renderer that throws — and on `/` that throws out of the
+	 * SSR pass and 500s the page. Newly added blocks land here too: their
+	 * defaults are deliberately empty and fail the same check.
 	 */
 	let valid = $derived.by(() => {
 		if (!isKind(block.kind)) return false;
 		return defFor(block.kind).schema.safeParse(block.data).success;
 	});
+
+	let label = $derived(isKind(block.kind) ? defFor(block.kind).label : block.kind);
 </script>
 
 {#if Widget && valid}
@@ -91,10 +75,9 @@
 	</div>
 {:else if Widget && onInvalid === 'placeholder'}
 	<div class="grid {spanClass}">
-		<div
-			class="widget h-full items-center justify-center text-center text-xs text-pretty text-text-subtle"
-		>
-			This block’s fields no longer match its type. Open it to fix them.
+		<div class="widget h-full items-center justify-center text-center">
+			<p class="text-sm font-semibold text-text-muted">{label}</p>
+			<p class="mt-1 text-xs text-pretty text-text-subtle">Fill in its fields to show it.</p>
 		</div>
 	</div>
 {/if}

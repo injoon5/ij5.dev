@@ -77,9 +77,7 @@
 
 	let adding = $state(false);
 
-	// Every form that posts and waits says so. Adding a block is the one
-	// exception and needs no flag: the picker collapses on submit, which is the
-	// feedback.
+	// Adding a block needs no flag: the picker collapses on submit.
 	const publishing = pending();
 	const reverting = pending();
 	const savingProfile = pending();
@@ -162,19 +160,19 @@
 		>
 			<Field id="p-name" label="Name" error={form?.intent === 'profile' ? form.fields?.name : undefined}>
 				{#snippet children({ id, describedBy, invalid })}
-					<input {id} name="name" value={data.draft.profile.name} aria-describedby={describedBy} required class={fieldClass(invalid)} />
+					<input {id} name="name" value={data.draft.profile.name} aria-describedby={describedBy} aria-invalid={invalid || undefined} required class={fieldClass(invalid)} />
 				{/snippet}
 			</Field>
 
 			<Field id="p-tagline" label="Tagline" optional hint="One line. Allowed to wrap to two on a phone.">
 				{#snippet children({ id, describedBy, invalid })}
-					<input {id} name="tagline" value={data.draft.profile.tagline ?? ''} aria-describedby={describedBy} class={fieldClass(invalid)} />
+					<input {id} name="tagline" value={data.draft.profile.tagline ?? ''} aria-describedby={describedBy} aria-invalid={invalid || undefined} class={fieldClass(invalid)} />
 				{/snippet}
 			</Field>
 
 			<Field id="p-bio" label="Bio" optional hint="Two to four short paragraphs, separated by blank lines.">
 				{#snippet children({ id, describedBy, invalid })}
-					<textarea {id} name="bio" rows="5" value={data.draft.profile.bio ?? ''} aria-describedby={describedBy} class="{fieldClass(invalid)} resize-y"></textarea>
+					<textarea {id} name="bio" rows="5" value={data.draft.profile.bio ?? ''} aria-describedby={describedBy} aria-invalid={invalid || undefined} class="{fieldClass(invalid)} resize-y"></textarea>
 				{/snippet}
 			</Field>
 
@@ -197,6 +195,7 @@
 						rows="4"
 						value={linksValue}
 						aria-describedby={describedBy}
+						aria-invalid={invalid || undefined}
 						spellcheck="false"
 						class="{fieldClass(invalid)} resize-y font-mono text-xs"
 					></textarea>
@@ -315,7 +314,7 @@
 
 			<Field id="f-span" label="Size">
 				{#snippet children({ id, invalid })}
-					<select {id} name="span" class={fieldClass(invalid)}>
+					<select {id} name="span" aria-invalid={invalid || undefined} class={fieldClass(invalid)}>
 						{#each widgets[kind].spans as span (span)}
 							<option value={span} selected={block.span === span}>{span}</option>
 						{/each}

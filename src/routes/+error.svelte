@@ -39,9 +39,6 @@
 		<h1 class="mt-2 text-2xl font-semibold text-balance">{copy.title}</h1>
 		<p class="mt-2 text-base text-pretty text-text-muted">{copy.body}</p>
 
-		<!-- The shared button, not a hand-rolled copy of its class list. The copy
-		     had already drifted: it kept a 44px height at every width where the
-		     real one tightens to 36px on a pointer. -->
 		<div class="mt-7">
 			<Button href="/" variant="primary">Go to the homepage</Button>
 		</div>

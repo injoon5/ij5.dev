@@ -56,6 +56,7 @@
 					{id}
 					name={field.name}
 					aria-describedby={describedBy}
+					aria-invalid={invalid || undefined}
 					class={fieldClass(invalid)}
 				>
 					{#each field.options ?? [] as option (option.value)}

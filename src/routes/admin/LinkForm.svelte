@@ -24,8 +24,6 @@
 		onSuccess: () => onDone?.()
 	});
 
-	// Deleting posts and waits exactly like saving does, so it says so the same
-	// way. It was the one form on this screen that stayed silent.
 	const deleting = pending({ onSuccess: () => onDone?.() });
 
 	const iso = (ms: number | null | undefined) =>

@@ -25,6 +25,8 @@
 </svelte:head>
 
 <div class="admin">
+	<a href="#content" class="skip">Skip to content</a>
+
 	<!--
 		A persistent sidebar at `md` and up, a bottom bar below it. Not a
 		hamburger in either case: three destinations do not need to be hidden
@@ -63,7 +65,7 @@
 		</form>
 	</nav>
 
-	<main class="content">
+	<main class="content" id="content" tabindex="-1">
 		{@render children()}
 	</main>
 </div>
@@ -71,6 +73,30 @@
 <style>
 	.admin {
 		min-height: 100dvh;
+	}
+
+	/* Five nav stops sit before the content on every screen. */
+	.skip {
+		position: fixed;
+		top: 0.5rem;
+		left: 0.5rem;
+		z-index: 40;
+		border-radius: var(--radius-ui);
+		background-color: var(--surface);
+		box-shadow: var(--shadow-pop);
+		padding: 0.625rem 0.875rem;
+		font-size: var(--text-sm);
+		font-weight: 500;
+		transform: translateY(calc(-100% - 1rem));
+		transition: transform 150ms var(--ease-out);
+	}
+
+	.skip:focus-visible {
+		transform: none;
+	}
+
+	.content:focus {
+		outline: none;
 	}
 
 	.sidebar {

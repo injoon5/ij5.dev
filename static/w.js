@@ -10,6 +10,41 @@
 (function () {
 	'use strict';
 
+	var live;
+
+	/* The copy confirmation is an icon swap, which no screen reader sees. */
+	function say(message) {
+		if (!live) {
+			live = document.createElement('p');
+			live.setAttribute('role', 'status');
+			live.setAttribute(
+				'style',
+				'position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0'
+			);
+			document.body.appendChild(live);
+		}
+		live.textContent = '';
+		setTimeout(function () {
+			live.textContent = message;
+		}, 50);
+	}
+
+	function legacyCopy(text) {
+		try {
+			var field = document.createElement('textarea');
+			field.value = text;
+			field.setAttribute('readonly', '');
+			field.setAttribute('style', 'position:fixed;top:0;left:-9999px');
+			document.body.appendChild(field);
+			field.select();
+			var ok = document.execCommand('copy');
+			field.remove();
+			return ok;
+		} catch (e) {
+			return false;
+		}
+	}
+
 	document.addEventListener('click', function (event) {
 		var target = event.target;
 		if (!(target instanceof Element)) return;
@@ -18,13 +53,29 @@
 		if (copy) {
 			event.preventDefault();
 			var text = copy.getAttribute('data-copy') || '';
-			var done = function () {
-				copy.setAttribute('data-copied', '');
+
+			var settle = function (attr, message) {
+				copy.setAttribute(attr, '');
+				say(message);
 				setTimeout(function () {
-					copy.removeAttribute('data-copied');
+					copy.removeAttribute(attr);
 				}, 1600);
 			};
-			if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () {});
+			var done = function () {
+				settle('data-copied', 'Copied ' + text);
+			};
+			// The clipboard API is unavailable outside a secure context and can
+			// reject on focus or permissions. Both used to end in silence.
+			var failed = function () {
+				if (legacyCopy(text)) done();
+				else settle('data-copy-failed', 'Could not copy. Select the address to copy it.');
+			};
+
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(text).then(done, failed);
+			} else {
+				failed();
+			}
 			return;
 		}
 

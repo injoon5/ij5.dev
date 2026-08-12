@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import ChevronLeft from 'lucide-svelte/icons/chevron-left';
 	import Plus from 'lucide-svelte/icons/plus';
 	import Search from 'lucide-svelte/icons/search';
 	import Button from '$lib/ui/Button.svelte';
@@ -44,16 +45,16 @@
 		row.expires_at !== null && row.expires_at < Date.now();
 
 	function onKeydown(event: KeyboardEvent) {
+		// `Cmd+N`, `Ctrl+/` and friends belong to the browser.
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+
 		const el = event.target as HTMLElement | null;
-		const typing = el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+		if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable)) return;
 
 		if (event.key === 'Escape' && detail) {
+			event.preventDefault();
 			goto('/admin', { noScroll: true });
-			return;
-		}
-		if (typing) return;
-
-		if (event.key === 'n') {
+		} else if (event.key === 'n') {
 			event.preventDefault();
 			goto('/admin?s=new', { noScroll: true });
 		} else if (event.key === '/') {
@@ -68,7 +69,6 @@
 
 <div class="layout" data-detail={detail || undefined}>
 	<section class="list" aria-label="Links">
-		<!-- `mb-6` under a page title, the same as Bento, Analytics and API. -->
 		<header class="mb-6 flex items-center justify-between gap-4">
 			<h1 class="text-xl font-semibold">Links</h1>
 			<Button href="/admin?s=new" variant="primary" size="sm" data-sveltekit-noscroll>
@@ -93,6 +93,14 @@
 					class="{inputClass} pl-9"
 				/>
 			</div>
+
+			<!-- The list rewrites itself as you type; without this nothing says so. -->
+			<p class="sr-only" role="status">
+				{#if query.trim()}
+					{visible.length}
+					{visible.length === 1 ? 'link' : 'links'} match “{query.trim()}”
+				{/if}
+			</p>
 		{/if}
 
 		{#if form?.created}
@@ -161,6 +169,15 @@
 		its own, which is the behaviour a phone actually wants.
 	-->
 	<aside class="detail" aria-label="Link details">
+		<!--
+			Below `lg` the list is hidden while this pane is up, so this is the only
+			way back to it. Creating a link had no way back at all.
+		-->
+		<a href="/admin" data-sveltekit-noscroll class="back">
+			<ChevronLeft size={16} aria-hidden="true" />
+			All links
+		</a>
+
 		{#if creating}
 			<h2 class="mb-5 text-lg font-semibold">New link</h2>
 			<LinkForm
@@ -201,6 +218,24 @@
 
 	.layout:not([data-detail]) .detail {
 		display: none;
+	}
+
+	.back {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		min-height: 2.75rem;
+		margin-block: -0.5rem 0.25rem;
+		margin-inline-start: -0.25rem;
+		padding-inline: 0.25rem;
+		font-size: var(--text-sm);
+		font-weight: 500;
+		color: var(--text-muted);
+		transition: color 150ms var(--ease-out);
+	}
+
+	.back:hover {
+		color: var(--text);
 	}
 
 	.rows {
@@ -268,10 +303,7 @@
 		color: var(--text-muted);
 	}
 
-	/* Sunken, not `--surface`: this keycap lives inside a `--surface` panel, so
-	   painting it the same colour as its container left the `n` as bare
-	   monospace text with no key around it at all. A key is also a thing you
-	   press in, which is the treatment it should have had anyway. */
+	/* Sunken: this sits inside a `--surface` panel. */
 	.kbd {
 		border-radius: 4px;
 		background-color: var(--surface-sunken);
@@ -333,9 +365,11 @@
 			display: block;
 		}
 
-		/* 1.25rem, like every other panel in the product. This one was 1.5rem —
-		   the kind of difference nobody can name and everybody can feel when the
-		   detail pane sits beside a list of rows padded to the other value. */
+		/* The list never leaves, so there is nothing to go back to. */
+		.back {
+			display: none;
+		}
+
 		.detail {
 			position: sticky;
 			top: 2.5rem;

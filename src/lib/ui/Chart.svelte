@@ -62,13 +62,7 @@
 		data.length > 1 ? `${line} L${x(data.length - 1)},${H} L${x(0)},${H} Z` : ''
 	);
 
-	/**
-	 * Rounds to one significant figure below the value's own magnitude: 171 to
-	 * 170, 1_713 to 1_700, 7 to 7. The midpoint used to be a bare `max / 2`,
-	 * which against a peak of 342 printed "171" — a number that is exact, that
-	 * nobody asked for, and that reads as a measurement rather than a gridline.
-	 * The peak keeps its true value; it is the one label worth being precise.
-	 */
+	/** One significant figure below the value's magnitude: 171 → 170, 7 → 7. */
 	function round(v: number): number {
 		if (v < 10) return Math.round(v);
 		const magnitude = 10 ** (Math.floor(Math.log10(v)) - 1);
@@ -95,6 +89,10 @@
 		new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short' }).format(
 			new Date(`${day}T00:00:00Z`)
 		);
+
+	let readout = $derived(
+		current ? `${current.hits} ${label} on ${fmtDay(current.day)}` : `peak ${max} ${label} in range`
+	);
 
 	function indexAt(clientX: number) {
 		const rect = plot?.getBoundingClientRect();
@@ -139,6 +137,28 @@
 	function onpointerleave() {
 		if (!dragging) active = null;
 	}
+
+	/** Arrow keys scrub. Without this the per-day values are pointer-only. */
+	function onkeydown(event: KeyboardEvent) {
+		if (!data.length) return;
+		const last = data.length - 1;
+		const at = active ?? last;
+		let to: number | null = null;
+
+		if (event.key === 'ArrowLeft') to = Math.max(0, at - 1);
+		else if (event.key === 'ArrowRight') to = Math.min(last, at + 1);
+		else if (event.key === 'Home') to = 0;
+		else if (event.key === 'End') to = last;
+		else if (event.key === 'Escape') {
+			if (active === null) return;
+			active = null;
+			event.preventDefault();
+			return;
+		} else return;
+
+		event.preventDefault();
+		active = to;
+	}
 </script>
 
 {#if !data.length}
@@ -147,7 +167,9 @@
 	<!-- The number is the headline and the chart is the footnote. No transition
 	     on the value: scrubbing is direct manipulation, and a number easing
 	     toward the day under the pointer reads as lag. -->
-	<div class="readout" aria-live="polite">
+	<!-- No live region: `aria-valuetext` on the plot below is the spoken
+	     channel, and announcing both means every scrub is said twice. -->
+	<div class="readout" aria-hidden="true">
 		<span class="tnum text-2xl font-semibold">{(current ?? { hits: max }).hits}</span>
 		<span class="text-sm text-text-muted">
 			{#if current}{label} on {fmtDay(current.day)}{:else}peak {label} in range{/if}
@@ -159,8 +181,14 @@
 		bind:this={plot}
 		bind:clientWidth={width}
 		bind:clientHeight={height}
-		role="img"
+		role="slider"
+		tabindex="0"
 		aria-label="Traffic over time"
+		aria-valuemin="0"
+		aria-valuemax={data.length - 1}
+		aria-valuenow={active ?? data.length - 1}
+		aria-valuetext={readout}
+		{onkeydown}
 		{onpointerdown}
 		{onpointermove}
 		{onpointerleave}

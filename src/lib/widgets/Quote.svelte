@@ -25,14 +25,8 @@
 </Surface>
 
 <style>
-	/*
-	 * The separator is drawn, not written. Written as ` · ` inside the span its
-	 * leading space was whitespace at the start of an element, which the
-	 * compiler strips — so it rendered "Steve Jobs· Apple", the dot welded to
-	 * the name. As generated content the spacing is set in one place and cannot
-	 * be trimmed, and a screen reader reads "Steve Jobs Apple" instead of
-	 * announcing a middle dot.
-	 */
+	/* Generated, not written: as markup the leading space is element-leading
+	   whitespace and the compiler trims it. Also keeps it out of the a11y tree. */
 	.role {
 		color: var(--text-subtle);
 	}

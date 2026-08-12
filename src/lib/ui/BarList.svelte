@@ -6,13 +6,8 @@
 	 * element. One less thing to align, and the label stays readable at any
 	 * width because it never shares the row with a chart.
 	 *
-	 * The bars are a sunken surface, not the accent. The stylesheet's rule is
-	 * "one accent, one meaning: the primary action and the focus ring", and the
-	 * analytics page had four of these panels painting accent behind roughly
-	 * forty rows — on the same screen as an accent chart line and an accent
-	 * Publish button. At that density the colour stops pointing at anything.
-	 * Rank is already carried by the bar's length and the list's order; it does
-	 * not also need a hue.
+	 * Bars are a sunken surface, not the accent: length and order already carry
+	 * rank, and the accent is spoken for by actions and the focus ring.
 	 */
 
 	type Row = { label: string; value: number; href?: string };
@@ -69,17 +64,8 @@
 </section>
 
 <style>
-	/*
-	 * Half the rows in this list are links — "Top links" drills into a slug —
-	 * and none of them said so. Every other clickable row in the product
-	 * answers a pointer; these sat inert under one.
-	 *
-	 * The bar deepens rather than the row filling behind it: a background on
-	 * the row would land on the same surface the bar is painted in and swallow
-	 * the one mark carrying the data. `--border-subtle` is a step darker than
-	 * `--surface-sunken` in light and a step lighter in dark, so the response
-	 * reads the same way in both.
-	 */
+	/* The bar deepens rather than the row filling behind it, which would land on
+	   the same surface the bar is painted in. Inverts correctly in dark. */
 	@media (hover: hover) and (pointer: fine) {
 		.row.is-link:hover .bar {
 			background-color: var(--border-subtle);

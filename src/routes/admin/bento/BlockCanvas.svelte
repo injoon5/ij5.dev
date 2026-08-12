@@ -353,30 +353,15 @@
 		color: var(--text);
 	}
 
-	/*
-	 * Touch has no hover to reveal them, so the controls are simply present —
-	 * and something permanently present must not be sitting on the content.
-	 *
-	 * Overlaid, they were: a translucent pill parked over the top-right corner
-	 * of every card, which is where "Local time" sits on the clock, where the
-	 * star count sits on the repo, and where the outbound arrow sits on a link.
-	 * On a phone — the one place this editor is most likely to be used — the
-	 * preview was covering the thing it exists to preview, with a blur that
-	 * made both layers unreadable rather than separating them.
-	 *
-	 * So on touch they stop being an overlay and take their own lane above the
-	 * card. The widget below is a preview, and losing a row of its height costs
-	 * far less than losing its top-right corner.
-	 */
+	/* Touch has no hover, so these are always present — which means they cannot
+	   be an overlay. They take their own lane above the card instead. */
 	@media (hover: none) {
 		.canvas-item {
 			grid-template-rows: auto minmax(0, 1fr);
 			row-gap: 0.25rem;
 		}
 
-		/* Explicit rows: the widget is first in the DOM so the tools, which are
-		   the only thing here a screen reader sees, come last in reading order —
-		   but the lane they take has to be the one above the card. */
+		/* Explicit rows: the widget is first in the DOM, the lane is above it. */
 		.item-tools {
 			position: static;
 			grid-row: 1;

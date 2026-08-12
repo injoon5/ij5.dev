@@ -53,18 +53,20 @@
 		{/snippet}
 	</Empty>
 {:else}
-	<div class="grid gap-4 sm:grid-cols-3">
-		<div class={card}>
-			<p class="tnum text-2xl font-semibold">{data.totals.hits}</p>
-			<p class="mt-0.5 text-xs text-text-muted">Redirects</p>
+	<!-- Three short figures, three across at every width. Stacked, they cost a
+	     phone 330px of scroll before the chart. -->
+	<div class="grid grid-cols-3 gap-2 sm:gap-4">
+		<div class="stat {card}">
+			<p class="tnum text-xl font-semibold sm:text-2xl">{data.totals.hits}</p>
+			<p class="mt-0.5 text-xs text-pretty text-text-muted">Redirects</p>
 		</div>
-		<div class={card}>
-			<p class="tnum text-2xl font-semibold">{data.totals.bento}</p>
-			<p class="mt-0.5 text-xs text-text-muted">Bento views</p>
+		<div class="stat {card}">
+			<p class="tnum text-xl font-semibold sm:text-2xl">{data.totals.bento}</p>
+			<p class="mt-0.5 text-xs text-pretty text-text-muted">Bento views</p>
 		</div>
-		<div class={card}>
-			<p class="tnum text-2xl font-semibold">{data.totals.visitors}</p>
-			<p class="mt-0.5 text-xs text-text-muted">Daily uniques</p>
+		<div class="stat {card}">
+			<p class="tnum text-xl font-semibold sm:text-2xl">{data.totals.visitors}</p>
+			<p class="mt-0.5 text-xs text-pretty text-text-muted">Daily uniques</p>
 		</div>
 	</div>
 
@@ -157,8 +159,6 @@
 				</div>
 			</section>
 		{:catch}
-			<!-- The third state of the same panel, so it lands in the same place
-			     and at the same size as the other two. -->
 			<section class="{card} mt-8">
 				<p class="text-sm text-danger">That breakdown could not be loaded.</p>
 			</section>
@@ -167,6 +167,17 @@
 {/if}
 
 <style>
+	/* `card` pads to 1.25rem, which is most of a 110px column on a phone. */
+	.stat {
+		padding: 0.875rem;
+	}
+
+	@media (min-width: 640px) {
+		.stat {
+			padding: 1.25rem;
+		}
+	}
+
 	.ranges {
 		display: flex;
 		gap: 0.125rem;

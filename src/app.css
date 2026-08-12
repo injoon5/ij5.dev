@@ -205,11 +205,8 @@
 	--text-md--line-height: 1.5;
 	--text-md--letter-spacing: -0.009em;
 
-	/* 20px, not 18. The same defect the note above describes, one step further
-	   up: `md` was raised to 17 and landed a single pixel under `lg`, so the
-	   two sizes carrying the most headings between them — a section rule, a
-	   detail title, a sheet title — were indistinguishable. The ratios now run
-	   1.13 · 1.18 · 1.20 and widen from there, instead of stalling at 1.06. */
+	/* 20, not 18: at 18 this sat a single pixel above `md` and the two sizes
+	   carrying most of the headings were indistinguishable. */
 	--text-lg: 1.25rem;
 	--text-lg--line-height: 1.35;
 	--text-lg--letter-spacing: -0.014em;
@@ -281,10 +278,9 @@
 		color: var(--text);
 	}
 
-	/* One focus treatment for the whole product, keyboard only. No
-	   `border-radius` here: an outline already follows the element's own
-	   corners, so setting one reshapes whatever it lands on — a pill button
-	   squaring off to 4px the moment it takes keyboard focus. */
+	/* One focus treatment for the whole product, keyboard only. No radius: the
+	   outline already follows the element's own corners, and setting one here
+	   reshapes whatever it lands on. */
 	:focus-visible {
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
@@ -333,18 +329,9 @@
 		flex-shrink: 0;
 	}
 
-	/*
-	 * Reduced motion means less motion, not none: opacity and colour still
-	 * carry meaning, movement does not.
-	 *
-	 * Zeroing `transition-duration` says the opposite — it takes away the
-	 * cross-fades and colour changes too, which are the cues that survive the
-	 * preference. So the property list is narrowed instead: anything that moves
-	 * or resizes an element is dropped and snaps to its end state, while
-	 * everything that only changes how a stationary element looks keeps its
-	 * transition. Animations still stop outright; a keyframe sequence has no
-	 * per-property equivalent of this.
-	 */
+	/* Less motion, not none. Narrowing the property list drops anything that
+	   moves or resizes and keeps the cues that do not — zeroing the duration
+	   would take those too. */
 	@media (prefers-reduced-motion: reduce) {
 		*,
 		*::before,

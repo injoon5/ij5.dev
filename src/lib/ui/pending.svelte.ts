@@ -1,25 +1,14 @@
 import type { SubmitFunction } from '@sveltejs/kit';
 
 /**
- * Pending state for a progressively-enhanced form.
- *
- * Every form in the admin posts and waits, but only the sign-in form and the
- * link editor ever said so — the other eight submitted in complete silence, so
- * pressing Publish on a slow connection looked exactly like pressing nothing.
- * The two that did handle it each rolled their own `submitting` flag, which is
- * how the same interaction ends up with two behaviours.
- *
- * One object per form:
+ * Pending state for a progressively-enhanced form. One object per form:
  *
  *     const publishing = pending();
  *     <form use:enhance={publishing.submit}>
  *       <Button type="submit" busy={publishing.busy} busyLabel="Publishing…">
  *
- * `reset` defaults to false because these forms are editors — a server round
- * trip should not empty the fields someone is still working in. Set it true on
- * a create form, where an empty form is the point. Pass a function for either
- * option when it depends on props, so it is read at submit time rather than
- * captured when the form is first built.
+ * `reset` defaults to false: these are editors, and a round trip should not
+ * empty fields someone is still in. Pass a function when it depends on props.
  */
 export function pending(
 	options: { reset?: boolean | (() => boolean); onSuccess?: () => void } = {}

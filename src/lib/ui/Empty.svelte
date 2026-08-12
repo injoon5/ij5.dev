@@ -6,15 +6,7 @@
 	 * is not an empty state — it is a dead end, and empty is the state a new
 	 * install spends its first day in.
 	 *
-	 * It is the same object the public page's empty state is, so it is built the
-	 * same way: a plain surface panel. It used to be a dashed outline, which is
-	 * the one place in the product where a border did a job spacing and a
-	 * surface already do — and which made the first thing a new install shows
-	 * look like a dropzone waiting for a file.
-	 *
-	 * Title and body were also both `text-sm`, separated by weight alone. Two
-	 * lines of the same size are one block of text no matter what weight they
-	 * carry; the title now takes the step above, matching the public page.
+	 * Built as the same surface panel the public page's empty state is.
 	 */
 	let {
 		title,
