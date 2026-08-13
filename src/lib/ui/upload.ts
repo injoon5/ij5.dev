@@ -31,7 +31,9 @@ export async function shrink(file: File): Promise<{ blob: Blob; w: number; h: nu
 }
 
 /** Uploads an image and returns the content-addressed key R2 stored it under. */
-export async function uploadImage(file: File): Promise<{ key: string; w: number; h: number }> {
+export async function uploadImage(
+	file: File
+): Promise<{ key: string; w: number; h: number; mime: string; bytes: number }> {
 	if (!file.type.startsWith('image/')) throw new Error('Images only.');
 	const { blob, w, h } = await shrink(file);
 	const res = await fetch('/api/assets', {
@@ -45,5 +47,5 @@ export async function uploadImage(file: File): Promise<{ key: string; w: number;
 	});
 	if (!res.ok) throw new Error(await res.text());
 	const json = (await res.json()) as { key: string };
-	return { key: json.key, w, h };
+	return { key: json.key, w, h, mime: blob.type, bytes: blob.size };
 }

@@ -2,7 +2,7 @@ import type { Handle } from '@sveltejs/kit';
 import { isSlugCandidate } from '$lib/reserved';
 import { valid, SESSION_COOKIE } from '$lib/server/auth';
 import { track } from '$lib/server/track';
-import type { BentoDoc, SlugRecord } from '$lib/types';
+import type { HomeDoc, SlugRecord } from '$lib/types';
 
 /**
  * SvelteKit owns the request but not the redirect (§2).
@@ -19,7 +19,7 @@ const DEV = import.meta.env.DEV;
 
 /** Query-independent, so `/gh?utm_source=x` and `/gh` share one cache entry. */
 const slugCacheKey = (seg: string) => new Request(`https://cache.internal/s/${seg}`);
-const bentoCacheKey = (v: number) => new Request(`https://cache.internal/bento/v${v}`);
+const homeCacheKey = (v: number) => new Request(`https://cache.internal/home/v${v}`);
 
 /**
  * A second, deliberately narrow policy. `frame-ancestors` and `base-uri` are
@@ -98,28 +98,28 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// ------------------------------------------------------------------ bento
+	// ------------------------------------------------------------------- home
 	// Caching rendered HTML on a TTL would be wrong here: `cache.delete()`
 	// purges only the colo it runs in, so an edit would leave other regions
 	// serving stale content. A version-keyed entry makes every colo miss at
 	// once, with nothing to purge.
 	if (env && path === '/' && readOnly) {
 		// Outside the KV read and above the cache check, deliberately. A cache
-		// hit is still a visit, and so is a visit to a bento that has never been
-		// published — that page renders from D1 and used to be counted nowhere,
-		// which silently zeroed the numbers for the page that matters most until
-		// someone happened to press Publish.
-		track(event, { slug: '', kind: 'bento' });
+		// hit is still a visit, and so is a visit to a homepage that has never
+		// been published — that page renders from D1 and used to be counted
+		// nowhere, which silently zeroed the numbers for the page that matters
+		// most until someone happened to press Publish.
+		track(event, { slug: '', kind: 'home' });
 
 		try {
-			const doc = await env.KV.get<BentoDoc>('bento', { type: 'json', cacheTtl: 60 });
+			const doc = await env.KV.get<HomeDoc>('home', { type: 'json', cacheTtl: 60 });
 			// A document that predates the Markdown format carries `blocks`, not
 			// `markdown`. Treating it as published would cache an empty body
 			// under its old version key forever — fall through to the normal
 			// render instead, which falls back to D1.
 			if (doc?.markdown) {
-				const etag = `"bento-v${doc.v}"`;
-				const key = bentoCacheKey(doc.v);
+				const etag = `"home-v${doc.v}"`;
+				const key = homeCacheKey(doc.v);
 				// `vite dev` must re-render on every request. The cache key only
 				// moves on publish, so a template or CSS edit would otherwise
 				// sit behind the last HTML until `v` bumped — and a matching
@@ -138,8 +138,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 					if (cached) return harden(browserFacing(cached, etag));
 				}
 
-				event.locals.authed = false;
-				event.locals.bento = doc;
+				event.locals.home = doc;
 				const res = await resolve(event);
 				// Store from GET only. A HEAD is served from an entry a GET put
 				// there, but must never be the request that fills it: the entry is
@@ -202,7 +201,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 /**
  * The edge cache is doing the real work, so what the browser gets stays
- * conservative — an unchanged bento then costs a 304 with no body.
+ * conservative — an unchanged homepage then costs a 304 with no body.
  */
 function browserFacing(res: Response, etag: string) {
 	const out = new Response(res.body, {

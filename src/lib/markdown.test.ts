@@ -71,12 +71,45 @@ describe('renderMarkdown — link buttons', () => {
 			':::'
 		].join('\n');
 		const { html } = renderMarkdown(src, { assetsOrigin: ORIGIN });
-		expect(html).toContain('class="link-buttons"');
+		expect(html).toContain('class="link-buttons" aria-label="Links"');
 		expect(html).toContain('class="widget link-button"');
 		expect(html).toContain('GitHub');
 		expect(html).toContain('mailto:x@example.com');
 		// The javascript: row is rejected, not rendered.
 		expect(html).not.toContain('javascript:');
+	});
+});
+
+describe('renderMarkdown — photo gallery', () => {
+	it('renders a :::gallery block as a grid, resolving img/ keys', () => {
+		const dims = new Map([['img/abc123.webp', { w: 800, h: 600 }]]);
+		const src = [':::gallery', 'img/abc123.webp | A cat', 'img/def456.webp', ':::'].join('\n');
+		const { html, needsScript } = renderMarkdown(src, { assetsOrigin: ORIGIN, dims });
+		expect(html).toContain('class="gallery"');
+		expect(html).toContain('data-cols="2"');
+		expect(html).toContain(`src="${ORIGIN}/img/abc123.webp"`);
+		expect(html).toContain('width="800"');
+		expect(html).toContain('A cat');
+		// Images make the page ask for w.js, exactly like a prose image.
+		expect(needsScript).toBe(true);
+	});
+
+	it('honours cols=N clamped to 1–4', () => {
+		const src = ':::gallery cols=9\nimg/a.webp\n:::';
+		const { html } = renderMarkdown(src, { assetsOrigin: ORIGIN });
+		expect(html).toContain('data-cols="4"');
+	});
+
+	it('leaves an absolute image URL untouched and drops junk rows', () => {
+		const src = [':::gallery', 'https://cdn.example.com/x.png', 'not-an-image', ':::'].join('\n');
+		const { html } = renderMarkdown(src, { assetsOrigin: ORIGIN });
+		expect(html).toContain('src="https://cdn.example.com/x.png"');
+		expect(html).not.toContain('not-an-image');
+	});
+
+	it('renders nothing for an empty gallery', () => {
+		const { html } = renderMarkdown(':::gallery\n:::', { assetsOrigin: ORIGIN });
+		expect(html).not.toContain('class="gallery"');
 	});
 });
 

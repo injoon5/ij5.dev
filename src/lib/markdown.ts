@@ -15,10 +15,11 @@ import type { LiveDoc, LiveRequest } from '$lib/types';
  *   - every rule's output is built from trusted constants (icon paths) or
  *     escaped author text, so the injected string is safe.
  *
- * On top of CommonMark it adds three helpers:
- *   :::links … :::   a stack of big tappable link buttons (icon | label | href | sub)
- *   :name:           an inline brand icon from the allowlist
- *   ::contributions  the GitHub contribution graph (live data, `user=` optional)
+ * On top of CommonMark it adds four helpers:
+ *   :::links … :::    a stack of big tappable link buttons (icon | label | href | sub)
+ *   :::gallery … :::  a photo grid (`cols=N` optional, each row: key | caption)
+ *   :name:            an inline brand icon from the allowlist
+ *   ::contributions   the GitHub contribution graph (live data, `user=` optional)
  */
 
 export const DEFAULT_CONTRIB_USER = 'injoon5';
@@ -104,7 +105,88 @@ function renderLinks(content: string): string {
 		})
 		.join('');
 
-	return `<nav class="link-buttons">${buttons}</nav>\n`;
+	return `<nav class="link-buttons" aria-label="Links">${buttons}</nav>\n`;
+}
+
+/* --------------------------------------------------------- photo gallery */
+
+type GalleryItem = { src: string; caption: string; dims: string };
+
+function parseGalleryRow(line: string, e: RenderEnv): GalleryItem | null {
+	const [rawSrc, caption = ''] = line.split('|').map((s) => s.trim());
+	if (!rawSrc) return null;
+
+	let src = rawSrc;
+	let dims = '';
+	if (/^img\/[\w.-]+$/.test(rawSrc)) {
+		src = joinUrl(e.assetsOrigin, rawSrc);
+		const d = e.dims?.get(rawSrc);
+		if (d) dims = ` width="${d.w}" height="${d.h}"`;
+	} else if (!/^https?:\/\//i.test(rawSrc)) {
+		return null;
+	}
+
+	// Gallery images are images like any other: they want the lazy loader and
+	// the delegated error handler in w.js.
+	e.needsScript = true;
+
+	return { src, caption, dims };
+}
+
+function parseGalleryCols(line: string): number {
+	const m = /cols\s*=\s*(\d+)/i.exec(line);
+	const n = m ? Number(m[1]) : 2;
+	return Math.min(Math.max(n, 1), 4);
+}
+
+function renderGallery(content: string, cols: number, e: RenderEnv): string {
+	const items = content
+		.split('\n')
+		.map((l) => l.trim())
+		.filter(Boolean)
+		.map((l) => parseGalleryRow(l, e))
+		.filter((x): x is GalleryItem => x !== null);
+
+	if (!items.length) return '';
+
+	const cells = items
+		.map((it) => {
+			const caption = it.caption ? `<figcaption>${escapeHtml(it.caption)}</figcaption>` : '';
+			return (
+				`<figure class="gallery-item" data-span="img">` +
+				`<img class="gallery-img" src="${escapeAttr(it.src)}" alt=""` +
+				` loading="lazy" decoding="async"${it.dims}>` +
+				caption +
+				`</figure>`
+			);
+		})
+		.join('');
+
+	return `<div class="gallery" data-cols="${cols}">${cells}</div>\n`;
+}
+
+function galleryRule(state: any, startLine: number, endLine: number, silent: boolean): boolean {
+	const pos = state.bMarks[startLine] + state.tShift[startLine];
+	const line = state.src.slice(pos, state.eMarks[startLine]).trim();
+	if (!/^:::gallery\b/.test(line)) return false;
+	if (silent) return true;
+
+	let next = startLine + 1;
+	let closed = false;
+	for (; next < endLine; next++) {
+		const p = state.bMarks[next] + state.tShift[next];
+		if (state.src.slice(p, state.eMarks[next]).trim() === ':::') {
+			closed = true;
+			break;
+		}
+	}
+
+	const token = state.push('gallery_block', '', 0);
+	token.content = state.getLines(startLine + 1, next, 0, false);
+	token.meta = { cols: parseGalleryCols(line) };
+	token.map = [startLine, closed ? next + 1 : next];
+	state.line = closed ? next + 1 : next;
+	return true;
 }
 
 /* ------------------------------------------------- markdown-it rule wiring */
@@ -167,9 +249,16 @@ const md = new MarkdownIt({ html: false, linkify: true, typographer: true, break
 
 md.block.ruler.before('fence', 'contrib', contribRule);
 md.block.ruler.before('fence', 'links', linksRule);
+md.block.ruler.before('fence', 'gallery', galleryRule);
 md.inline.ruler.after('escape', 'icon', iconRule);
 
 md.renderer.rules.links_block = (tokens: any, idx: number) => renderLinks(tokens[idx].content);
+
+md.renderer.rules.gallery_block = (tokens: any, idx: number, _o: any, env: any) => {
+	const e = env as RenderEnv;
+	const meta = tokens[idx].meta as { cols: number };
+	return renderGallery(tokens[idx].content, meta.cols, e);
+};
 
 md.renderer.rules.contrib_block = (tokens: any, idx: number, _o: any, env: any) => {
 	const e = env as RenderEnv;

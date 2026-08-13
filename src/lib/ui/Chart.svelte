@@ -14,7 +14,14 @@
 
 	type Point = { day: string; hits: number };
 
+	/** Incremented per render so every chart instance gets its own gradient id. */
+	let washSeq = 0;
+
 	let { data, label = 'hits' }: { data: Point[]; label?: string } = $props();
+
+	// The wash gradient needs a stable, unique id per instance — a hardcoded id
+	// would collide the day a page renders two charts.
+	const WASH_ID = `chart-wash-${++washSeq}`;
 
 	/**
 	 * Geometry is in real pixels against the measured width, not a fixed viewBox
@@ -197,7 +204,7 @@
 	>
 		<svg viewBox="0 0 {W} {H}">
 			<defs>
-				<linearGradient id="chart-wash" x1="0" x2="0" y1="0" y2="1">
+				<linearGradient id={WASH_ID} x1="0" x2="0" y1="0" y2="1">
 					<!-- An ease-out ramp, not a linear one, which held a flat film and
 					     then stopped dead at the baseline. -->
 					<stop offset="0%" stop-color="var(--accent)" stop-opacity="0.20" />
@@ -221,12 +228,12 @@
 					x={GUTTER + (W - GUTTER) / 2 - 26}
 					y={y(data[0].hits)}
 					width="52"
-					height={H - y(data[0].hits)}
+					height={Math.max(0, H - y(data[0].hits))}
 					fill="var(--accent)"
 					opacity="0.85"
 				/>
 			{:else}
-				<path d={area} fill="url(#chart-wash)" />
+				<path d={area} fill="url(#{WASH_ID})" />
 				<path
 					d={line}
 					fill="none"

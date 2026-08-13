@@ -1,24 +1,24 @@
-import type { BentoDoc, Profile } from '$lib/types';
+import type { HomeDoc, Profile } from '$lib/types';
 
 /**
  * The homepage document lives in three KV keys (§11):
  *
- *   `bento:draft`  every editor save, instant, no version bump
- *   `bento`        the published document, `{ v, profile, markdown }`
- *   `bento:prev`   the document published before this one
+ *   `home:draft`  every editor save, instant, no version bump
+ *   `home`        the published document, `{ v, profile, markdown }`
+ *   `home:prev`   the document published before this one
  *
- * D1 stays the source of truth and every write mirrors into `bento:draft`.
+ * D1 stays the source of truth and every write mirrors into `home:draft`.
  * Publishing swaps the whole document at once, so no visitor ever sees a
- * half-updated page, and `bento:prev` makes a bad edit a scare rather than an
- * incident. (The KV keys keep the `bento:` prefix — the page changed shape, the
+ * half-updated page, and `home:prev` makes a bad edit a scare rather than an
+ * incident. (The KV keys keep the `home:` prefix — the page changed shape, the
  * storage contract did not.)
  */
 
 type Env = App.Platform['env'];
 
-const PUBLISHED = 'bento';
-const DRAFT = 'bento:draft';
-const PREV = 'bento:prev';
+const PUBLISHED = 'home';
+const DRAFT = 'home:draft';
+const PREV = 'home:prev';
 
 const EMPTY_PROFILE: Profile = {
 	name: 'ij5',
@@ -59,12 +59,12 @@ function safeJson<T>(raw: string | null | undefined, fallback: T): T {
 	}
 }
 
-export async function readPublished(env: Env): Promise<BentoDoc | null> {
-	return await env.KV.get<BentoDoc>(PUBLISHED, { type: 'json', cacheTtl: 60 });
+export async function readPublished(env: Env): Promise<HomeDoc | null> {
+	return await env.KV.get<HomeDoc>(PUBLISHED, { type: 'json', cacheTtl: 60 });
 }
 
-export async function readDraft(env: Env): Promise<BentoDoc> {
-	const draft = await env.KV.get<BentoDoc>(DRAFT, { type: 'json' });
+export async function readDraft(env: Env): Promise<HomeDoc> {
+	const draft = await env.KV.get<HomeDoc>(DRAFT, { type: 'json' });
 	if (draft) return draft;
 
 	// No draft yet: derive one from D1 so the editor always opens on something.
@@ -73,10 +73,10 @@ export async function readDraft(env: Env): Promise<BentoDoc> {
 }
 
 /** Called after every D1 write so the editor preview is never behind. */
-export async function syncDraft(env: Env): Promise<BentoDoc> {
+export async function syncDraft(env: Env): Promise<HomeDoc> {
 	const { profile, markdown } = await loadFromD1(env);
 	const current = await readPublished(env);
-	const draft: BentoDoc = { v: current?.v ?? 0, profile, markdown };
+	const draft: HomeDoc = { v: current?.v ?? 0, profile, markdown };
 	await env.KV.put(DRAFT, JSON.stringify(draft));
 	return draft;
 }
@@ -86,9 +86,9 @@ export async function syncDraft(env: Env): Promise<BentoDoc> {
  * The version bump is what invalidates every colo's edge cache at once —
  * `cache.delete()` would only reach the colo it ran in.
  */
-export async function publish(env: Env): Promise<BentoDoc> {
+export async function publish(env: Env): Promise<HomeDoc> {
 	const [draft, current] = await Promise.all([readDraft(env), readPublished(env)]);
-	const next: BentoDoc = {
+	const next: HomeDoc = {
 		v: (current?.v ?? 0) + 1,
 		profile: draft.profile,
 		markdown: draft.markdown
@@ -101,14 +101,14 @@ export async function publish(env: Env): Promise<BentoDoc> {
 }
 
 /** Two KV writes, and the difference between a bad edit and an incident. */
-export async function revert(env: Env): Promise<BentoDoc | null> {
+export async function revert(env: Env): Promise<HomeDoc | null> {
 	const [prev, current] = await Promise.all([
-		env.KV.get<BentoDoc>(PREV, { type: 'json' }),
+		env.KV.get<HomeDoc>(PREV, { type: 'json' }),
 		readPublished(env)
 	]);
 	if (!prev) return null;
 
-	const restored: BentoDoc = { ...prev, v: (current?.v ?? prev.v) + 1 };
+	const restored: HomeDoc = { ...prev, v: (current?.v ?? prev.v) + 1 };
 	await env.KV.put(PUBLISHED, JSON.stringify(restored));
 	await env.KV.put(DRAFT, JSON.stringify(restored));
 	if (current) await env.KV.put(PREV, JSON.stringify(current));

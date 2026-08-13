@@ -121,9 +121,8 @@ if (TOKEN) {
 	await shoot('admin-links', '/admin', 'desktop');
 	await shoot('admin-links-phone', '/admin', 'phone');
 	await shoot('admin-links-xs', '/admin', 'xs');
-	await shoot('admin-bento', '/admin/bento', 'desktop');
-	await shoot('admin-bento-open', '/admin/bento?b=b-cta', 'desktop');
-	await shoot('admin-bento-phone', '/admin/bento', 'phone');
+	await shoot('admin-home', '/admin/home', 'desktop');
+	await shoot('admin-home-phone', '/admin/home', 'phone');
 	await shoot('admin-analytics', '/admin/analytics', 'desktop');
 	await shoot('admin-analytics-phone', '/admin/analytics', 'phone');
 	await shoot('admin-analytics-dark', '/admin/analytics', 'desktop', { dark: true });

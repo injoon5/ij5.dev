@@ -8,7 +8,7 @@ declare global {
 			 * Set by the hook on `/` so the page load does not pay a second KV
 			 * read for the document the hook just read to build the cache key.
 			 */
-			bento?: import('$lib/types').BentoDoc | null;
+			home?: import('$lib/types').HomeDoc | null;
 		}
 
 		interface Platform {

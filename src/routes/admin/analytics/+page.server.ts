@@ -22,7 +22,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 			countries: [],
 			devices: [],
 			notFound: [],
-			totals: { hits: 0, visitors: 0, bento: 0 },
+			totals: { hits: 0, visitors: 0, home: 0 },
 			detail: null
 		};
 	}
@@ -78,7 +78,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 			env.DB.prepare(
 				`SELECT
 				   SUM(CASE WHEN kind = 'redirect' THEN n ELSE 0 END) AS redirects,
-				   SUM(CASE WHEN kind = 'bento' THEN n ELSE 0 END) AS bento
+				   SUM(CASE WHEN kind = 'home' THEN n ELSE 0 END) AS home
 				 FROM hits WHERE day >= date('now', ?1) AND device != 'bot'`
 			).bind(offset),
 
@@ -99,7 +99,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 		);
 	}
 
-	const totalRow = (totals.results as Array<{ redirects: number | null; bento: number | null }>)[0];
+	const totalRow = (totals.results as Array<{ redirects: number | null; home: number | null }>)[0];
 	const uniqueRow = (uniques.results as Array<{ visitors: number }>)[0];
 
 	return {
@@ -113,7 +113,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 		notFound: notFound.results as Array<{ path: string; hits: number }>,
 		totals: {
 			hits: totalRow?.redirects ?? 0,
-			bento: totalRow?.bento ?? 0,
+			home: totalRow?.home ?? 0,
 			visitors: uniqueRow?.visitors ?? 0
 		},
 		// Streamed: the shell and every panel above paint immediately while

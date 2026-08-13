@@ -88,19 +88,19 @@ withSqlite('hits', () => {
 		expect(total).toBe(7);
 	});
 
-	it('counts the bento under the empty slug, alongside redirects', () => {
-		hit('2026-01-01', '', 'bento', 'KR', 'direct', 'mobile');
-		hit('2026-01-01', '', 'bento', 'KR', 'direct', 'mobile');
+	it('counts the homepage under the empty slug, alongside redirects', () => {
+		hit('2026-01-01', '', 'home', 'KR', 'direct', 'mobile');
+		hit('2026-01-01', '', 'home', 'KR', 'direct', 'mobile');
 		hit(...HIT);
 
-		const [totals] = rows<{ redirects: number; bento: number }>(
+		const [totals] = rows<{ redirects: number; home: number }>(
 			`SELECT
 			   SUM(CASE WHEN kind = 'redirect' THEN n ELSE 0 END) AS redirects,
-			   SUM(CASE WHEN kind = 'bento' THEN n ELSE 0 END) AS bento
+			   SUM(CASE WHEN kind = 'home' THEN n ELSE 0 END) AS home
 			 FROM hits WHERE device != 'bot'`
 		);
 
-		expect(totals).toEqual({ redirects: 1, bento: 2 });
+		expect(totals).toEqual({ redirects: 1, home: 2 });
 	});
 
 	it('deduplicates a visitor within a day and separates them across days', () => {

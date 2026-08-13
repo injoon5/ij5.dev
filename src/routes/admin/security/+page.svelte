@@ -1,61 +1,38 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { startRegistration } from '@simplewebauthn/browser';
+	import { invalidateAll } from '$app/navigation';
 	import Fingerprint from 'lucide-svelte/icons/fingerprint';
 	import Trash from 'lucide-svelte/icons/trash-2';
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
+	import { registerPasskey } from '$lib/ui/passkey';
+	import { fmtDate } from '$lib/format';
 	import { card, fieldClass } from '$lib/ui/styles';
-	import { pending } from '$lib/ui/pending.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let name = $state('');
 	let error = $state('');
-	const adding = pending({ reset: () => true, onSuccess: () => (name = '') });
+	let busy = $state(false);
 
 	async function addPasskey() {
 		error = '';
-		if (!navigator.credentials) {
-			error = 'This browser does not support passkeys.';
-			return;
-		}
-
+		busy = true;
 		try {
-			const begin = await fetch('/api/passkey/register/begin', { method: 'POST' });
-			const { options } = await begin.json();
-
-			const response = await startRegistration({ optionsJSON: options });
-
-			const done = await fetch('/api/passkey/register/complete', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ response, name })
-			});
-
-			if (!done.ok) {
-				const body = (await done.json()) as { error?: string };
-				error = body.error ?? 'That passkey could not be saved.';
+			const result = await registerPasskey(name.trim());
+			if (!result.ok) {
+				if (result.error) error = result.error;
 				return;
 			}
-
-			// The saved key is now in D1; a reload shows it. A round trip that
-			// re-renders is simpler than hand-appending the row, and it cannot
-			// drift from what is actually stored.
-			location.reload();
-		} catch (e) {
-			// `startRegistration` throws a WebAuthnError for cancelled prompts
-			// and NotAllowedError for a declined one. Both are the user changing
-			// their mind, not a failure worth shouting about.
-			const message = e instanceof Error ? e.message : 'Passkey registration was cancelled.';
-			if (/not allowed|cancelled|abort/i.test(message)) return;
-			error = message;
+			// The saved key is now in D1; re-run the load so the list shows it.
+			// `invalidateAll` cannot drift from what is actually stored.
+			name = '';
+			await invalidateAll();
+		} finally {
+			busy = false;
 		}
 	}
-
-	const fmtDate = (ms: number) =>
-		new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' }).format(ms);
 </script>
 
 <svelte:head><title>Security</title></svelte:head>
@@ -108,7 +85,7 @@
 		{/if}
 
 		<div>
-			<Button type="submit" variant="primary" busy={adding.busy} busyLabel="Waiting for your device…">
+			<Button type="submit" variant="primary" busy={busy} busyLabel="Waiting for your device…">
 				<Fingerprint size={15} aria-hidden="true" />
 				Add passkey
 			</Button>

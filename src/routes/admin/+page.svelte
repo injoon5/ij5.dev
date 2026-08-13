@@ -6,6 +6,7 @@
 	import Search from 'lucide-svelte/icons/search';
 	import Button from '$lib/ui/Button.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
+	import { fmtDay } from '$lib/format';
 	import { inputClass } from '$lib/ui/styles';
 	import LinkForm from './LinkForm.svelte';
 	import type { ActionData, PageData } from './$types';
@@ -29,9 +30,6 @@
 				(s.note ?? '').toLowerCase().includes(q)
 		);
 	});
-
-	const fmtDate = (ms: number) =>
-		new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short' }).format(ms);
 
 	const host = (url: string) => {
 		try {
@@ -90,7 +88,7 @@
 					type="search"
 					placeholder="Search links"
 					aria-label="Search links"
-					class="{inputClass} pl-9"
+					class="{inputClass()} pl-9"
 				/>
 			</div>
 
@@ -155,7 +153,7 @@
 								{data.recent[row.slug] ?? 0}
 							</span>
 
-							<span class="row-date tnum">{fmtDate(row.created_at)}</span>
+							<span class="row-date tnum">{fmtDay(row.created_at)}</span>
 						</a>
 					</li>
 				{/each}
@@ -178,31 +176,33 @@
 			All links
 		</a>
 
-		{#if creating}
-			<h2 class="mb-5 text-lg font-semibold">New link</h2>
-			<LinkForm
-				row={null}
-				fields={form?.intent === 'create' ? form.fields : undefined}
-				values={form?.intent === 'create' ? form.values : undefined}
-				error={form?.error}
-				onDone={() => goto('/admin', { noScroll: true })}
-			/>
-		{:else if data.selected}
-			<h2 class="mb-1 text-lg font-semibold">/{data.selected.slug}</h2>
-			<p class="mb-5 truncate text-sm text-text-muted">{data.selected.target_url}</p>
-			<LinkForm
-				row={data.selected}
-				fields={form?.intent === 'update' ? form.fields : undefined}
-				values={form?.intent === 'update' ? form.values : undefined}
-				error={form?.error}
-				onDone={() => goto('/admin', { noScroll: true })}
-			/>
-		{:else}
-			<p class="text-sm text-text-muted">
-				Select a link to edit it, or press <kbd class="kbd">n</kbd> for a new one.
-			</p>
-		{/if}
-	</aside>
+		<div class="detail-pane">
+			{#if creating}
+					<h2 class="mb-5 text-lg font-semibold">New link</h2>
+					<LinkForm
+						row={null}
+						fields={form?.intent === 'create' ? form.fields : undefined}
+						values={form?.intent === 'create' ? form.values : undefined}
+						error={form?.error}
+						onDone={() => goto('/admin', { noScroll: true })}
+					/>
+				{:else if data.selected}
+					<h2 class="mb-1 text-lg font-semibold">/{data.selected.slug}</h2>
+					<p class="mb-5 truncate text-sm text-text-muted">{data.selected.target_url}</p>
+					<LinkForm
+						row={data.selected}
+						fields={form?.intent === 'update' ? form.fields : undefined}
+						values={form?.intent === 'update' ? form.values : undefined}
+						error={form?.error}
+						onDone={() => goto('/admin', { noScroll: true })}
+					/>
+				{:else}
+					<p class="text-sm text-text-muted">
+						Select a link to edit it, or press <kbd class="kbd">n</kbd> for a new one.
+					</p>
+				{/if}
+			</div>
+		</aside>
 </div>
 
 <style>
@@ -290,7 +290,7 @@
 		grid-row: 2;
 		grid-column: 2;
 		font-size: var(--text-xs);
-		color: var(--text-subtle);
+		color: var(--text-muted);
 		text-align: right;
 	}
 
@@ -376,6 +376,42 @@
 			border-radius: var(--radius-ui-lg);
 			background-color: var(--surface);
 			padding: 1.25rem;
+		}
+	}
+
+	/*
+	 * The drill-down entrance. Below `lg` the pane is a new screen that the
+	 * router hides with `display: none` when no link is selected — and a CSS
+	 * animation restarts the moment an element becomes rendered, so this plays
+	 * every time a row opens, with no JavaScript. On a wide screen the pane is
+	 * always present and the animation is gated off entirely.
+	 *
+	 * Transform and opacity only, 180ms, the same ease the surfaces press with.
+	 * `prefers-reduced-motion` zeroes the duration globally (app.css), so the
+	 * pane simply appears there.
+	 */
+	/* The drill-down entrance. Below `lg` the pane is a new screen that the
+	   router hides with `display: none` when no link is selected — and a CSS
+	   animation restarts the moment an element becomes rendered, so this plays
+	   every time a row opens, with no JavaScript. On a wide screen the pane is
+	   always present, so the animation is gated off entirely.
+
+	   Transform and opacity only, 180ms, the same ease the surfaces press
+	   with. `prefers-reduced-motion` zeroes the duration globally (app.css),
+	   so the pane simply appears there. */
+	@media (max-width: 1023px) {
+		.detail-pane {
+			animation: pane-rise 180ms var(--ease-out);
+		}
+	}
+	@keyframes pane-rise {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
 		}
 	}
 

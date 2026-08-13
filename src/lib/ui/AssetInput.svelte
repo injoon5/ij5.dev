@@ -20,6 +20,9 @@
 	let dragging = $state(false);
 	let fileEl = $state<HTMLInputElement | null>(null);
 
+	let errorId = $derived(error ? `${id}-error` : undefined);
+	let described = $derived([describedBy, errorId].filter(Boolean).join(' ') || undefined);
+
 	async function upload(file: File) {
 		busy = true;
 		error = '';
@@ -57,11 +60,11 @@
 			{id}
 			{name}
 			bind:value
-			aria-describedby={describedBy}
-			aria-invalid={invalid || undefined}
+			aria-describedby={described}
+			aria-invalid={invalid || Boolean(error) || undefined}
 			placeholder="img/…"
 			spellcheck="false"
-			class={inputClass}
+			class={inputClass(invalid)}
 		/>
 
 		{#if value}
@@ -69,7 +72,7 @@
 				type="button"
 				onclick={() => (value = '')}
 				aria-label="Clear image"
-				class="grid size-11 shrink-0 place-items-center rounded-[var(--radius-ui)] text-text-muted transition-colors duration-150 ease-out hover:bg-surface-sunken hover:text-text sm:size-9"
+				class="grid size-11 shrink-0 place-items-center rounded-[var(--radius-ui)] text-text-muted transition-colors duration-150 ease-out hover:bg-surface-sunken hover:text-text pointer-fine:size-9"
 			>
 				<X size={15} aria-hidden="true" />
 			</button>
@@ -106,7 +109,7 @@
 			type="button"
 			onclick={() => fileEl?.click()}
 			disabled={busy}
-			class="flex min-h-11 w-full items-center justify-center gap-2 text-xs text-text-muted transition-colors duration-150 ease-out hover:text-text disabled:opacity-50 sm:min-h-9"
+			class="flex min-h-11 w-full items-center justify-center gap-2 text-xs text-text-muted transition-colors duration-150 ease-out hover:text-text disabled:opacity-50 pointer-fine:min-h-9"
 		>
 			<Upload size={14} aria-hidden="true" />
 			{#if busy}
@@ -118,7 +121,7 @@
 	</div>
 
 	{#if error}
-		<p class="text-xs text-danger">{error}</p>
+		<p id={errorId} class="text-xs text-danger">{error}</p>
 	{:else}
 		<p class="text-xs text-text-subtle">
 			Resized to {MAX_EDGE}px and re-encoded to WebP in the browser before it is sent.

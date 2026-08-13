@@ -18,9 +18,13 @@ export function parseLines(raw: string, keys: string[]): Array<Record<string, st
 		});
 }
 
-export function serializeLines(
-	items: Array<Record<string, unknown>> | undefined,
-	keys: string[]
+/**
+ * Serializes items back to `a | b | c` lines. Generic over the keys so a typed
+ * item (e.g. `ProfileLink[]`) is assignable without a cast.
+ */
+export function serializeLines<T extends string>(
+	items: Array<Partial<Record<T, string>>> | undefined,
+	keys: T[]
 ): string {
 	if (!items?.length) return '';
 	return items

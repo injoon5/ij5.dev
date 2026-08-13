@@ -54,7 +54,7 @@
 	/* Text */
 	--text: oklch(0.22 0.012 265);
 	--text-muted: oklch(0.512 0.014 265);
-	--text-subtle: oklch(0.63 0.012 265);
+	--text-subtle: oklch(0.58 0.012 265);
 	--text-inverse: oklch(0.98 0.002 265);
 
 	/* Lines. Used sparingly and never on a widget. */
@@ -323,20 +323,14 @@
 		text-wrap: pretty;
 	}
 
-	/* iOS Safari zooms any input under 16px and never zooms back. Hard floor. */
+	/* iOS Safari zooms any input under 16px and never zooms back. Hard floor,
+	   at every width — a landscape phone or iPad is still a touch screen with
+	   the same zoom-on-focus behaviour, so nothing drops below 16px. */
 	input,
 	textarea,
 	select {
 		font-size: max(16px, 1em);
 		font-family: inherit;
-	}
-
-	@media (min-width: 640px) {
-		input,
-		textarea,
-		select {
-			font-size: var(--text-sm);
-		}
 	}
 
 	svg {
@@ -367,8 +361,9 @@
 --------------------------------------------------------------------------- */
 
 @layer components {
-	/* The surface: a squircle card with a layered shadow. It began as the bento
-	   widget and now backs the Markdown link buttons — same physical object. */
+	/* The surface: a squircle card with a layered shadow. It began as the
+	   homepage widget and now backs the Markdown link buttons — same physical
+	   object. */
 	.widget {
 		position: relative;
 		display: flex;
@@ -418,7 +413,9 @@
 		min-height: 100dvh;
 		max-width: 42rem;
 		margin-inline: auto;
-		padding: clamp(4rem, 12vh, 7rem) max(1.5rem, env(safe-area-inset-right)) 2.5rem
+		padding:
+			clamp(4rem, 12vh, 7rem) max(1.5rem, env(safe-area-inset-right))
+			calc(2.5rem + env(safe-area-inset-bottom))
 			max(1.5rem, env(safe-area-inset-left));
 	}
 
@@ -437,7 +434,12 @@
 	}
 
 	.masthead-name {
+		/* text-2xl, from the theme. The two companions — line-height and
+		   tracking — are set here too: these classes bypass the utilities, and
+		   a display heading at body leading is the one thing that reads off. */
 		font-size: var(--text-2xl);
+		line-height: 1.2;
+		letter-spacing: -0.021em;
 		font-weight: 600;
 	}
 
@@ -446,6 +448,8 @@
 		max-width: 40ch;
 		color: var(--text-muted);
 		font-size: var(--text-md);
+		line-height: 1.5;
+		letter-spacing: -0.009em;
 	}
 
 	/* ---------------------------------------------------------------------
@@ -476,20 +480,43 @@
 	.prose h2 {
 		margin-top: 2.5rem;
 		font-size: var(--text-xl);
+		letter-spacing: -0.018em;
 	}
 	.prose h3 {
 		margin-top: 2rem;
 		font-size: var(--text-lg);
+		letter-spacing: -0.014em;
 	}
 	.prose h4 {
 		margin-top: 1.75rem;
 		font-size: var(--text-md);
+		letter-spacing: -0.009em;
 	}
-	/* A heading owns the block beneath it — pull that block back in tight. */
+	/* A heading owns the block beneath it — pull that block back in tight.
+	   The link buttons and gallery are the exception: they are big, tappable
+	   surfaces, and hugging them under a heading reads as crammed. */
 	.prose h2 + *,
 	.prose h3 + *,
 	.prose h4 + * {
 		margin-top: 0.5rem;
+	}
+	.prose h2 + .link-buttons,
+	.prose h3 + .link-buttons,
+	.prose h4 + .link-buttons,
+	.prose h2 + .gallery,
+	.prose h3 + .gallery,
+	.prose h4 + .gallery {
+		margin-top: 1.25rem;
+	}
+	/* And the same gap when a heading follows the buttons — headings keep
+	   their own top margin, so this is mostly for symmetric rhythm. */
+	.prose .link-buttons + h2,
+	.prose .link-buttons + h3,
+	.prose .link-buttons + h4,
+	.prose .gallery + h2,
+	.prose .gallery + h3,
+	.prose .gallery + h4 {
+		margin-top: 2.75rem;
 	}
 
 	.prose a {
@@ -584,6 +611,56 @@
 		height: 1em;
 		vertical-align: -0.14em;
 		margin-inline: 0.06em;
+	}
+
+	/* ---------------------------------------------------------------------
+	   Photo gallery — the `:::gallery` shortcode
+	   A simple grid that respects the author's `cols=N` (clamped 1–4) and
+	   collapses to one column on a phone. The renderer stamps each image's
+	   intrinsic width/height, so a cell keeps its natural aspect ratio —
+	   never cropped — and reserves its box for a zero-shift load. Rows align
+	   to the tallest cell; the caption, when present, sits under the photo.
+	--------------------------------------------------------------------- */
+	.gallery {
+		display: grid;
+		grid-template-columns: 1fr;
+		align-items: start;
+		gap: 0.625rem;
+		margin-top: 1.5rem;
+	}
+
+	@media (min-width: 480px) {
+		.gallery[data-cols='2'] {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.gallery[data-cols='3'] {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+		.gallery[data-cols='4'] {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+	}
+
+	.gallery-item {
+		overflow: hidden;
+		margin: 0;
+		border-radius: var(--radius-inner-md);
+		border: 1px solid var(--border-subtle);
+		background-color: var(--surface-sunken);
+	}
+
+	.gallery-img {
+		display: block;
+		width: 100%;
+		height: auto;
+		background-color: var(--surface-sunken);
+	}
+
+	.gallery-item figcaption {
+		padding: 0.5rem 0.625rem 0.55rem;
+		color: var(--text-muted);
+		font-size: var(--text-xs);
+		line-height: 1.4;
 	}
 
 	/* ---------------------------------------------------------------------
@@ -693,7 +770,7 @@
 	.contrib-cap {
 		font-family: var(--font-mono);
 		font-size: var(--text-xs);
-		letter-spacing: -0.01em;
+		letter-spacing: 0.004em;
 		color: var(--text-muted);
 	}
 	@media (hover: hover) and (pointer: fine) {
@@ -708,7 +785,7 @@
 		padding-top: 4rem;
 		font-family: var(--font-mono);
 		font-size: var(--text-xs);
-		letter-spacing: -0.01em;
-		color: var(--text-subtle);
+		letter-spacing: 0.004em;
+		color: var(--text-muted);
 	}
 }

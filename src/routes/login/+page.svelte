@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
-	import { startAuthentication } from '@simplewebauthn/browser';
 	import Fingerprint from 'lucide-svelte/icons/fingerprint';
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
+	import { signInWithPasskey } from '$lib/ui/passkey';
 	import { fieldClass } from '$lib/ui/styles';
 	import { pending } from '$lib/ui/pending.svelte';
 	import type { ActionData } from './$types';
@@ -17,42 +17,14 @@
 
 	async function passkeySignIn() {
 		passkeyError = '';
-
-		if (!navigator.credentials) {
-			passkeyError = 'This browser does not support passkeys.';
-			return;
-		}
-
 		passkeyBusy = true;
 		try {
-			const begin = await fetch('/api/passkey/login/begin', { method: 'POST' });
-			if (!begin.ok) {
-				const body = (await begin.json()) as { error?: string };
-				passkeyError = body.error ?? 'Passkey sign-in is unavailable right now.';
+			const result = await signInWithPasskey();
+			if (!result.ok) {
+				if (result.error) passkeyError = result.error;
 				return;
 			}
-			const { options } = await begin.json();
-
-			const response = await startAuthentication({ optionsJSON: options });
-
-			const done = await fetch('/api/passkey/login/complete', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ response })
-			});
-
-			if (!done.ok) {
-				const body = (await done.json()) as { error?: string };
-				passkeyError = body.error ?? 'That passkey did not work.';
-				return;
-			}
-
 			goto('/admin');
-		} catch (e) {
-			// A cancelled or declined prompt is the user changing their mind.
-			const message = e instanceof Error ? e.message : 'Passkey sign-in was cancelled.';
-			if (/not allowed|cancelled|abort/i.test(message)) return;
-			passkeyError = message;
 		} finally {
 			passkeyBusy = false;
 		}

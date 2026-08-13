@@ -19,7 +19,7 @@
 		}
 	};
 
-	let hasData = $derived(data.traffic.length > 0 || data.totals.hits > 0 || data.totals.bento > 0);
+	let hasData = $derived(data.traffic.length > 0 || data.totals.hits > 0 || data.totals.home > 0);
 
 	const rangeHref = (key: string) =>
 		data.slug ? `/admin/analytics?r=${key}&s=${data.slug}` : `/admin/analytics?r=${key}`;
@@ -46,7 +46,7 @@
 {#if !hasData}
 	<Empty
 		title="Nothing recorded yet"
-		body="Counts appear as soon as someone follows a link or opens the bento. Every hit is aggregated on write, so these numbers are exact rather than sampled."
+		body="Counts appear as soon as someone follows a link or opens the homepage. Every hit is aggregated on write, so these numbers are exact rather than sampled."
 	>
 		{#snippet action()}
 			<Button href="/admin" variant="primary" size="sm">Create a link</Button>
@@ -61,8 +61,8 @@
 			<p class="mt-0.5 text-xs text-pretty text-text-muted">Redirects</p>
 		</div>
 		<div class="stat {card}">
-			<p class="tnum text-xl font-semibold sm:text-2xl">{data.totals.bento}</p>
-			<p class="mt-0.5 text-xs text-pretty text-text-muted">Bento views</p>
+			<p class="tnum text-xl font-semibold sm:text-2xl">{data.totals.home}</p>
+			<p class="mt-0.5 text-xs text-pretty text-text-muted">Homepage views</p>
 		</div>
 		<div class="stat {card}">
 			<p class="tnum text-xl font-semibold sm:text-2xl">{data.totals.visitors}</p>
@@ -196,6 +196,16 @@
 		color: var(--text-muted);
 		white-space: nowrap;
 		transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out);
+	}
+
+	/* The tabs are ~29px of type and padding — fine for a mouse, under the
+	   finger-minimum on a phone. A touch screen gets the 44px row instead. */
+	@media (pointer: coarse) {
+		.ranges a {
+			display: flex;
+			align-items: center;
+			min-height: 2.75rem;
+		}
 	}
 
 	.ranges a[aria-current='true'] {

@@ -41,8 +41,8 @@ CREATE TABLE assets (
 -- the storage, so counts are exact and history is permanent.
 CREATE TABLE hits (
   day      TEXT    NOT NULL,            -- 'YYYY-MM-DD'
-  slug     TEXT    NOT NULL,            -- slug for redirects, '' for bento, path for 404s
-  kind     TEXT    NOT NULL,            -- redirect | bento | 404
+  slug     TEXT    NOT NULL,            -- slug for redirects, '' for home, path for 404s
+  kind     TEXT    NOT NULL,            -- redirect | home | 404
   country  TEXT    NOT NULL,
   referrer TEXT    NOT NULL,            -- hostname only, 'direct' if none
   device   TEXT    NOT NULL,            -- mobile | desktop | bot

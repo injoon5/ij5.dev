@@ -2,7 +2,7 @@
 """
 Generates the raster brand assets from the same tokens the CSS uses.
 
-The mark is the bento itself: one tall cell beside two stacked ones. It reads
+The mark is one tall cell beside two stacked ones. It reads
 as an abstract geometric mark at 16px, which a wordmark never does, and it
 stays recognisably the same object at 1200px.
 

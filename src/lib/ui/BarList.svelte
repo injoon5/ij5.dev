@@ -16,14 +16,13 @@
 		title,
 		rows,
 		empty,
-		unit = '',
 		/**
 		 * Heading level. These panels sit directly under the page title on the
 		 * dashboard, but nested inside a per-slug section on the detail view —
 		 * where an `h2` would claim to be a peer of the section containing it.
 		 */
 		level = 2
-	}: { title: string; rows: Row[]; empty: string; unit?: string; level?: 2 | 3 } = $props();
+	}: { title: string; rows: Row[]; empty: string; level?: 2 | 3 } = $props();
 
 	let max = $derived(Math.max(1, ...rows.map((r) => r.value)));
 </script>
@@ -38,7 +37,7 @@
 					<svelte:element
 						this={row.href ? 'a' : 'div'}
 						href={row.href}
-						class="row relative flex min-h-9 items-center justify-between gap-3 rounded-[var(--radius-ui-sm)] px-2"
+						class="row relative flex min-h-9 items-center justify-between gap-3 rounded-[var(--radius-ui-sm)] px-2 pointer-coarse:min-h-11"
 						class:is-link={Boolean(row.href)}
 					>
 						<span
@@ -51,9 +50,7 @@
 						     read, and the list is where you decide whether to turn
 						     it into a real slug. -->
 						<span class="relative min-w-0 truncate text-sm" title={row.label}>{row.label}</span>
-						<span class="tnum relative shrink-0 text-sm text-text-muted"
-							>{row.value}{unit}</span
-						>
+						<span class="tnum relative shrink-0 text-sm text-text-muted">{row.value}</span>
 					</svelte:element>
 				</li>
 			{/each}

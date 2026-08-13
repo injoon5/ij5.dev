@@ -9,7 +9,7 @@ import { SLUG_PATTERN } from '$lib/reserved';
  * The trade: dimensions are fixed at write time. Six columns is the ceiling.
  */
 
-export type Kind = 'redirect' | 'bento' | '404';
+export type Kind = 'redirect' | 'home' | '404';
 
 const BOT =
 	/bot|crawl|spider|slurp|facebookexternalhit|embedly|quora link preview|pinterest|vkshare|whatsapp|telegram|discord|slackbot|preview|headless|monitor|curl|wget|python-requests|axios|node-fetch/i;

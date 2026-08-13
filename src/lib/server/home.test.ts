@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { hasPrevious, publish, readDraft, readPublished, revert, syncDraft } from './bento';
-import type { BentoDoc, Profile } from '$lib/types';
+import { hasPrevious, publish, readDraft, readPublished, revert, syncDraft } from './home';
+import type { HomeDoc, Profile } from '$lib/types';
 
 /**
  * The publish invariant behind §11's edge cache: a new document is a new
@@ -38,7 +38,7 @@ const profile = (name: string): Profile => ({
 	content: null
 });
 
-const doc = (v: number, name: string, markdown: string): BentoDoc => ({
+const doc = (v: number, name: string, markdown: string): HomeDoc => ({
 	v,
 	profile: profile(name),
 	markdown
@@ -54,7 +54,7 @@ describe('publish', () => {
 		env = fake.env;
 	});
 
-	const seedDraft = (d: BentoDoc) => store.set('bento:draft', JSON.stringify(d));
+	const seedDraft = (d: HomeDoc) => store.set('home:draft', JSON.stringify(d));
 
 	it('bumps the version, which is what invalidates every colo at once', async () => {
 		seedDraft(doc(0, 'first', '# hi'));
@@ -101,9 +101,9 @@ describe('revert', () => {
 	it('restores the previous document under a new version', async () => {
 		const { store, env } = fakeEnv();
 
-		store.set('bento:draft', JSON.stringify(doc(0, 'first', 'a')));
+		store.set('home:draft', JSON.stringify(doc(0, 'first', 'a')));
 		await publish(env); // v1, 'first'
-		store.set('bento:draft', JSON.stringify(doc(1, 'second', 'b')));
+		store.set('home:draft', JSON.stringify(doc(1, 'second', 'b')));
 		await publish(env); // v2, 'second'
 
 		const reverted = await revert(env);
@@ -117,9 +117,9 @@ describe('revert', () => {
 	it('is itself revertible, so a mistaken revert is not a one-way door', async () => {
 		const { store, env } = fakeEnv();
 
-		store.set('bento:draft', JSON.stringify(doc(0, 'first', 'a')));
+		store.set('home:draft', JSON.stringify(doc(0, 'first', 'a')));
 		await publish(env);
-		store.set('bento:draft', JSON.stringify(doc(1, 'second', 'b')));
+		store.set('home:draft', JSON.stringify(doc(1, 'second', 'b')));
 		await publish(env);
 
 		await revert(env);
@@ -138,7 +138,7 @@ describe('revert', () => {
 describe('syncDraft', () => {
 	it('never advances the published version — only publish does that', async () => {
 		const { store, env } = fakeEnv();
-		store.set('bento:draft', JSON.stringify(doc(0, 'first', 'a')));
+		store.set('home:draft', JSON.stringify(doc(0, 'first', 'a')));
 		await publish(env);
 
 		const before = (await readPublished(env))!.v;

@@ -12,7 +12,7 @@
 
 	const NAV = [
 		{ href: '/admin', label: 'Links', icon: LinkIcon },
-		{ href: '/admin/bento', label: 'Bento', icon: LayoutGrid },
+		{ href: '/admin/home', label: 'Home', icon: LayoutGrid },
 		{ href: '/admin/analytics', label: 'Analytics', icon: ChartLine },
 		{ href: '/admin/api', label: 'API', icon: Terminal },
 		{ href: '/admin/security', label: 'Security', icon: KeyRound }
@@ -187,6 +187,14 @@
 			gap: 0.625rem;
 			border-radius: var(--radius-ui);
 			font-size: var(--text-sm);
+		}
+
+		/* An iPad or landscape phone is still touch; the sidebar links get the
+		   finger-minimum there too. */
+		@media (pointer: coarse) {
+			.nav-link {
+				min-height: 2.75rem;
+			}
 		}
 
 		.nav-link[aria-current='page'] {

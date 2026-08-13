@@ -1,5 +1,5 @@
 -- ij5.dev — homepage becomes a single Markdown document.
--- The bento block model is retired; `/` now renders `profile.content` (Markdown)
+-- The old block model is retired; `/` now renders `profile.content` (Markdown)
 -- as a minimalist prose page. Applied with:
 --   `wrangler d1 migrations apply ij5 --remote` (or `--local`).
 

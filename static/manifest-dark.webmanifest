@@ -1,0 +1,14 @@
+{
+	"name": "ij5.dev",
+	"short_name": "ij5",
+	"description": "Links, writing and work.",
+	"start_url": "/",
+	"display": "standalone",
+	"background_color": "#18181d",
+	"theme_color": "#18181d",
+	"icons": [
+		{ "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+		{ "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+		{ "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" }
+	]
+}

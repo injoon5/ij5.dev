@@ -1,10 +1,10 @@
 import type { PageServerLoad } from './$types';
-import { loadFromD1, readPublished } from '$lib/server/bento';
+import { loadFromD1, readPublished } from '$lib/server/home';
 import { planRefresh, readLive } from '$lib/server/live';
 import { renderMarkdown, findLiveRequests, imageKeysIn } from '$lib/markdown';
-import type { BentoDoc } from '$lib/types';
+import type { HomeDoc } from '$lib/types';
 
-const EMPTY: BentoDoc = {
+const EMPTY: HomeDoc = {
 	v: 0,
 	profile: { name: 'ij5', bio: null, tagline: null, avatar: null, links: [], content: null },
 	markdown: ''
@@ -48,11 +48,11 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
 		};
 	}
 
-	let doc: BentoDoc | null = null;
+	let doc: HomeDoc | null = null;
 	try {
 		// The hook already read this to build the cache key; reuse it rather than
 		// paying a second KV read on the page that matters most.
-		doc = locals.bento ?? (await readPublished(env));
+		doc = locals.home ?? (await readPublished(env));
 	} catch {
 		doc = null;
 	}

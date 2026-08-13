@@ -37,7 +37,7 @@ export type Profile = {
  * the edge cache key change everywhere at once. The homepage body lives on
  * `profile.content`; `markdown` mirrors it at the top level so the published
  * doc is self-describing without reaching through the profile. */
-export type BentoDoc = {
+export type HomeDoc = {
 	v: number;
 	profile: Profile;
 	markdown: string;

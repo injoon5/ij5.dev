@@ -40,10 +40,11 @@
 		danger: 'bg-danger-tint text-danger hover:bg-danger hover:text-white'
 	};
 
-	// 44px minimum on touch, tightened at `sm` where a pointer is available.
+	// 44px minimum on touch, at every width — a landscape phone or iPad is
+	// still touch. Compact only where a fine pointer is actually available.
 	const SIZE: Record<Size, string> = {
-		sm: 'h-11 px-3 text-sm sm:h-8',
-		md: 'h-11 px-4 text-sm sm:h-9'
+		sm: 'h-11 px-3 text-sm pointer-fine:h-8',
+		md: 'h-11 px-4 text-sm pointer-fine:h-9'
 	};
 
 	const base =
@@ -51,7 +52,7 @@
 
 	// Both labels share one grid cell: the button is sized to the longer of the
 	// two and cannot resize mid-press.
-	const stack = 'col-start-1 row-start-1 flex items-center gap-1.5 transition-opacity duration-150 ease-out';
+	const stack = 'col-start-1 row-start-1 flex items-center justify-center gap-1.5 transition-opacity duration-150 ease-out';
 </script>
 
 {#snippet label()}
