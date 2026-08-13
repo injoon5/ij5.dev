@@ -16,10 +16,15 @@ import type { HomeDoc, SlugRecord } from '$lib/types';
 
 const REDIRECT_TTL = 300;
 const DEV = import.meta.env.DEV;
+// Replaced at build time (`vite.config.ts`): the commit being deployed. It is
+// part of the homepage cache key and ETag so a deploy — which does not bump the
+// published document version — still invalidates `/` everywhere at once.
+const BUILD_ID = import.meta.env.VITE_BUILD_ID;
 
 /** Query-independent, so `/gh?utm_source=x` and `/gh` share one cache entry. */
 const slugCacheKey = (seg: string) => new Request(`https://cache.internal/s/${seg}`);
-const homeCacheKey = (v: number) => new Request(`https://cache.internal/home/v${v}/html`);
+const homeCacheKey = (v: number) =>
+	new Request(`https://cache.internal/home/v${v}/b${BUILD_ID}/html`);
 
 /**
  * A second, deliberately narrow policy. `frame-ancestors` and `base-uri` are
@@ -128,12 +133,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 			// under its old version key forever — fall through to the normal
 			// render instead, which falls back to D1.
 			if (doc?.markdown) {
-				const etag = `"home-v${doc.v}"`;
+				const etag = `"home-v${doc.v}-b${BUILD_ID}"`;
 				const key = homeCacheKey(doc.v);
 				// `vite dev` must re-render on every request. The cache key only
-				// moves on publish, so a template or CSS edit would otherwise
-				// sit behind the last HTML until `v` bumped — and a matching
-				// ETag would 304 the browser even after a hard refresh.
+				// moves on publish or on deploy, so a template or CSS edit is
+				// otherwise invisible until one of the two happens — and a
+				// matching ETag would 304 the browser even after a hard
+				// refresh.
 				if (!DEV) {
 					if (event.request.headers.get('if-none-match') === etag) {
 						return harden(
