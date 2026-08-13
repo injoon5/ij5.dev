@@ -35,7 +35,13 @@
 		behind a menu, and on a phone the thumb is at the bottom of the screen.
 	-->
 	<nav class="sidebar" aria-label="Admin">
-		<span class="hidden px-3 text-sm font-semibold md:block">ij5</span>
+		<a
+			href="/"
+			class="hidden px-3 text-sm font-semibold md:block"
+			aria-label="ij5.dev — back to the homepage"
+		>
+			ij5.dev
+		</a>
 
 		<ul class="nav-list">
 			{#each NAV as item (item.href)}

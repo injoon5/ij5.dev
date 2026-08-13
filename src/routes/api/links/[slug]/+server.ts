@@ -1,14 +1,18 @@
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
-import { deleteSlug, getSlug, purgeLocalCache, updateSlug } from '$lib/server/slugs';
+import { deleteSlug, getSlug, isTargetUrl, purgeLocalCache, updateSlug } from '$lib/server/slugs';
 import type { SlugRow } from '$lib/types';
 
 /** Item routes for the shortener API. */
 
 const patch = z
 	.object({
-		url: z.url('Must be an absolute URL including the scheme.').optional(),
+		url: z
+			.string()
+			.trim()
+			.refine(isTargetUrl, 'Must be a full URL — https://, mailto:, tel: or sms:')
+			.optional(),
 		status: z.union([z.literal(301), z.literal(302)]).optional(),
 		note: z.string().trim().max(200).nullish(),
 		expires_at: z.number().int().positive().nullish()

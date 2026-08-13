@@ -76,7 +76,12 @@
 		{/snippet}
 	</Field>
 
-	<Field id="target_url" label="Destination" error={fields.target_url}>
+	<Field
+		id="target_url"
+		label="Destination"
+		error={fields.target_url}
+		hint="Any scheme works — https://, mailto:, tel: or sms:."
+	>
 		{#snippet children({ id, describedBy, invalid })}
 			<input
 				{id}
@@ -87,7 +92,7 @@
 				aria-invalid={invalid || undefined}
 				required
 				spellcheck="false"
-				placeholder="https://"
+				placeholder="https:// or mailto:"
 				class={fieldClass(invalid)}
 			/>
 		{/snippet}

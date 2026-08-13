@@ -10,6 +10,28 @@ type Env = App.Platform['env'];
 
 const kvKey = (slug: string) => `slug:${slug}`;
 
+/**
+ * Schemes a link may point at. A short link is only ever a `Location:` header,
+ * so `mailto:` and friends are legitimate targets — but the allow-list stays,
+ * so a paste can never smuggle in `javascript:`, `data:` or anything else that
+ * turns a redirect into a payload.
+ */
+const TARGET_SCHEMES = new Set(['http', 'https', 'mailto', 'tel', 'sms']);
+
+/**
+ * Whether a destination is one the shortener will accept. `z.url()` only
+ * admits http(s); here the URL must parse and its scheme be allow-listed.
+ */
+export function isTargetUrl(value: string): boolean {
+	let url: URL;
+	try {
+		url = new URL(value);
+	} catch {
+		return false;
+	}
+	return TARGET_SCHEMES.has(url.protocol.slice(0, -1));
+}
+
 const toRecord = (row: Pick<SlugRow, 'target_url' | 'status' | 'expires_at'>): SlugRecord => ({
 	target: row.target_url,
 	status: row.status,

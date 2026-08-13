@@ -2,6 +2,7 @@ import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
 import {
+	clearCache,
 	hasPrevious,
 	publish,
 	readDraft,
@@ -164,6 +165,16 @@ export const actions: Actions = {
 		const doc = await revert(env);
 		if (!doc) return fail(400, { error: 'Nothing to revert to yet.' });
 		return { reverted: doc.v };
+	},
+
+	clear: async ({ platform }) => {
+		const env = platform?.env;
+		if (!env) return noEnv();
+		const doc = await clearCache(env);
+		if (!doc) {
+			return fail(400, { error: 'Nothing is published yet, so there is no cache to clear.' });
+		}
+		return { cleared: doc.v };
 	},
 
 	deleteFile: async ({ request, platform }) => {

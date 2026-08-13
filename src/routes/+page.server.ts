@@ -41,6 +41,7 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
 		const { html } = renderMarkdown(EMPTY.markdown, { assetsOrigin: '' });
 		return {
 			profile: EMPTY.profile,
+			v: EMPTY.v,
 			html,
 			needsScript: false,
 			assetsOrigin: '',
@@ -89,6 +90,7 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
 
 	return {
 		profile: doc.profile,
+		v: doc.v,
 		html,
 		needsScript,
 		assetsOrigin,

@@ -6,6 +6,7 @@ import {
 	createSlug,
 	deleteSlug,
 	getSlug,
+	isTargetUrl,
 	listSlugs,
 	purgeLocalCache,
 	updateSlug
@@ -17,7 +18,10 @@ const form = z.object({
 		.string()
 		.trim()
 		.regex(SLUG_PATTERN, 'Letters, numbers, hyphens and underscores. No dots or slashes.'),
-	target_url: z.url('Needs to be a full URL, including https://'),
+	target_url: z
+		.string()
+		.trim()
+		.refine(isTargetUrl, 'Needs a full URL — https://, mailto:, tel: or sms:'),
 	// 301 is browser-cached forever, so it is opt-in per link rather than the
 	// default: you will eventually want to repoint something.
 	status: z.coerce.number().int().refine((v) => v === 301 || v === 302, 'Pick 301 or 302'),

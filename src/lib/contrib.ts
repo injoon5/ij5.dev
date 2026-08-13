@@ -20,7 +20,7 @@ const numberFmt = new Intl.NumberFormat('en');
 /**
  * `data` is the stored live payload (may be empty/undefined before the first
  * refresh, in which case an empty lattice renders as a quiet year rather than a
- * hole). `user` labels the fallback and links the graph to a profile.
+ * hole). `user` labels the fallback and keys the live lookup.
  */
 export function renderContribGraph(data: ContribData | undefined, user: string): string {
 	const days = data?.days ?? [];
@@ -44,10 +44,12 @@ export function renderContribGraph(data: ContribData | undefined, user: string):
 			? `${numberFmt.format(data.total)} contributions in the last year`
 			: `@${escapeHtml(user)} on GitHub`;
 
-	const href = `https://github.com/${encodeURIComponent(user)}`;
+	// The site's own `/gh` short link, not the profile URL, so the click stays
+	// on whichever origin is serving the page (dev and prod alike).
+	const href = '/gh';
 
 	return (
-		`<a class="contrib" href="${href}" target="_blank" rel="noopener" aria-label="${escapeHtml(user)} on GitHub">` +
+		`<a class="contrib" href="${href}" aria-label="${escapeHtml(user)} on GitHub">` +
 		`<span class="contrib-grid" style="--weeks:${weeks}" aria-hidden="true">${grid}</span>` +
 		`<span class="contrib-cap">${label}</span>` +
 		`</a>`

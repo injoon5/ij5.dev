@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { hasPrevious, publish, readDraft, readPublished, revert, syncDraft } from './home';
+import {
+	clearCache,
+	hasPrevious,
+	publish,
+	readDraft,
+	readPublished,
+	revert,
+	syncDraft
+} from './home';
 import type { HomeDoc, Profile } from '$lib/types';
 
 /**
@@ -132,6 +140,29 @@ describe('revert', () => {
 	it('reports nothing to revert to rather than throwing', async () => {
 		const { env } = fakeEnv();
 		expect(await revert(env)).toBeNull();
+	});
+});
+
+describe('clearCache', () => {
+	it('bumps the version without touching content — the same key swap publish uses', async () => {
+		const { store, env } = fakeEnv();
+		store.set('home:draft', JSON.stringify(doc(0, 'first', 'a')));
+		await publish(env); // v1
+
+		// Unsaved edits sit in the draft; a cache clear must not disturb them.
+		store.set('home:draft', JSON.stringify(doc(1, 'edited but unpublished', 'edited')));
+
+		const cleared = await clearCache(env);
+
+		expect(cleared?.v).toBe(2);
+		expect(cleared?.profile.name).toBe('first');
+		expect(cleared?.markdown).toBe('a');
+		expect((await readDraft(env))?.profile.name).toBe('edited but unpublished');
+	});
+
+	it('reports nothing published rather than inventing a version', async () => {
+		const { env } = fakeEnv();
+		expect(await clearCache(env)).toBeNull();
 	});
 });
 

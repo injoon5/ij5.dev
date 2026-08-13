@@ -37,6 +37,7 @@
 		"wrangler": "^4.121.0"
 	},
 	"dependencies": {
+		"@ethercorps/sveltekit-og": "^4.3.0",
 		"@simplewebauthn/browser": "^13.3.0",
 		"@simplewebauthn/server": "^13.3.2",
 		"lucide-svelte": "^1.0.1",

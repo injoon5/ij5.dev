@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
 import { RESERVED, SLUG_PATTERN } from '$lib/reserved';
-import { createSlug, getSlug, listSlugs } from '$lib/server/slugs';
+import { createSlug, getSlug, isTargetUrl, listSlugs } from '$lib/server/slugs';
 import type { SlugRow } from '$lib/types';
 
 /**
@@ -19,7 +19,10 @@ const create = z.object({
 		.string()
 		.trim()
 		.regex(SLUG_PATTERN, 'Letters, numbers, hyphens and underscores; 1–64 characters.'),
-	url: z.url('Must be an absolute URL including the scheme.'),
+	url: z
+		.string()
+		.trim()
+		.refine(isTargetUrl, 'Must be a full URL — https://, mailto:, tel: or sms:'),
 	// 301 is cached by the browser indefinitely, so it stays opt-in: a permanent
 	// redirect you later want to repoint cannot be recalled from anyone who
 	// already followed it.

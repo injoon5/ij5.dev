@@ -2,6 +2,7 @@
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import Rocket from 'lucide-svelte/icons/rocket';
+	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import Undo from 'lucide-svelte/icons/undo-2';
 	import Button from '$lib/ui/Button.svelte';
 	import { pending } from '$lib/ui/pending.svelte';
@@ -36,6 +37,7 @@
 
 	const publishing = pending();
 	const reverting = pending();
+	const clearing = pending();
 
 	function onUploaded(meta: Omit<AssetRow, 'at'> & { at: number }) {
 		files = [meta, ...files];
@@ -98,6 +100,21 @@
 			</form>
 		{/if}
 
+		<form method="POST" action="?/clear" use:enhance={clearing.submit}>
+			<Button
+				type="submit"
+				variant="ghost"
+				size="sm"
+				disabled={data.publishedVersion === 0}
+				busy={clearing.busy}
+				busyLabel="Clearing…"
+				title="Re-render the homepage everywhere without publishing an edit"
+			>
+				<RefreshCw size={14} aria-hidden="true" />
+				Clear cache
+			</Button>
+		</form>
+
 		<form method="POST" action="?/publish" use:enhance={publishing.submit}>
 			<Button
 				type="submit"
@@ -121,6 +138,10 @@
 {:else if form?.reverted}
 	<p role="status" class="mb-4 rounded-[var(--radius-ui)] bg-accent-tint px-3 py-2 text-sm text-accent">
 		Rolled back. Version {form.reverted} is live.
+	</p>
+{:else if form?.cleared}
+	<p role="status" class="mb-4 rounded-[var(--radius-ui)] bg-accent-tint px-3 py-2 text-sm text-accent">
+		Cache cleared — version {form.cleared} is being re-rendered everywhere.
 	</p>
 {:else if form?.error}
 	<p role="alert" class="mb-4 rounded-[var(--radius-ui)] bg-danger-tint px-3 py-2 text-sm text-danger">

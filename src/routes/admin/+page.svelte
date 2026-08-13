@@ -31,9 +31,15 @@
 		);
 	});
 
+	// A mailto: or tel: destination has no hostname; show the whole thing
+	// rather than a blank cell where the host would be.
 	const host = (url: string) => {
 		try {
-			return new URL(url).hostname.replace(/^www\./, '');
+			const parsed = new URL(url);
+			if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+				return parsed.hostname.replace(/^www\./, '');
+			}
+			return url;
 		} catch {
 			return url;
 		}

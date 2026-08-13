@@ -115,6 +115,26 @@ export async function revert(env: Env): Promise<HomeDoc | null> {
 	return restored;
 }
 
+/**
+ * Bump the published version without changing the content — the "clear cache"
+ * escape hatch for the homepage.
+ *
+ * The edge cache is version-keyed (`home/v${v}` in the hook) precisely because
+ * `cache.delete()` only reaches the colo it runs in (§11): a bump swaps the
+ * key everywhere at once, so the next visitor to `/` misses, re-renders from
+ * scratch (live widgets included), and repopulates the cache. Content is
+ * untouched, and so is the draft — unsaved edits in the editor are not
+ * publishable and must not be disturbed.
+ */
+export async function clearCache(env: Env): Promise<HomeDoc | null> {
+	const current = await readPublished(env);
+	if (!current) return null;
+
+	const next: HomeDoc = { ...current, v: current.v + 1 };
+	await env.KV.put(PUBLISHED, JSON.stringify(next));
+	return next;
+}
+
 export async function hasPrevious(env: Env): Promise<boolean> {
 	return (await env.KV.get(PREV, { type: 'text' })) !== null;
 }
