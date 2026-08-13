@@ -1,28 +1,36 @@
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
-import { hasPrevious, publish, readDraft, readPublished, revert, syncDraft } from '$lib/server/bento';
-import { isKind, widgets, type WidgetKind } from '$lib/widgets/catalog';
-import { parseBlockData } from '$lib/widgets/form';
-import { parseLines } from '$lib/widgets/fields';
-import type { Span } from '$lib/types';
+import {
+	hasPrevious,
+	publish,
+	readDraft,
+	readPublished,
+	revert,
+	syncDraft
+} from '$lib/server/bento';
+import { parseLines } from '$lib/lines';
+import { imageKeysIn } from '$lib/markdown';
 
 const noEnv = () => fail(500, { error: 'No platform bindings.' });
 
-const newId = () => crypto.randomUUID().slice(0, 12);
+const MAX_CONTENT = 50_000;
 
 const profileForm = z.object({
 	name: z.string().trim().min(1, 'A name is required.').max(80),
 	tagline: z.string().trim().max(160),
-	bio: z.string().trim().max(1200),
 	avatar: z.string().trim().max(200)
 });
 
-export const load: PageServerLoad = async ({ platform, url }) => {
+export const load: PageServerLoad = async ({ platform }) => {
 	const env = platform?.env;
 	if (!env) {
 		return {
-			draft: { v: 0, profile: { name: '', bio: null, tagline: null, avatar: null, links: [] }, blocks: [] },
+			draft: {
+				v: 0,
+				profile: { name: '', bio: null, tagline: null, avatar: null, links: [], content: null },
+				markdown: ''
+			},
 			publishedVersion: 0,
 			dirty: false,
 			canRevert: false,
@@ -39,14 +47,13 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 	return {
 		draft,
 		publishedVersion: published?.v ?? 0,
-		// Comparing serialised documents is exact and cheap at this size, and
-		// it means the publish button is honest about whether it would change
-		// anything.
-		dirty: JSON.stringify(draft.blocks) !== JSON.stringify(published?.blocks ?? null)
-			|| JSON.stringify(draft.profile) !== JSON.stringify(published?.profile ?? null),
+		// Comparing serialised documents is exact and cheap at this size, and it
+		// keeps the publish button honest about whether it would change anything.
+		dirty:
+			draft.markdown !== (published?.markdown ?? '') ||
+			JSON.stringify(draft.profile) !== JSON.stringify(published?.profile ?? null),
 		canRevert,
-		assetsOrigin: env.ASSETS_ORIGIN ?? '',
-		selected: url.searchParams.get('b')
+		assetsOrigin: env.ASSETS_ORIGIN ?? ''
 	};
 };
 
@@ -59,7 +66,6 @@ export const actions: Actions = {
 		const parsed = profileForm.safeParse({
 			name: String(form.get('name') ?? ''),
 			tagline: String(form.get('tagline') ?? ''),
-			bio: String(form.get('bio') ?? ''),
 			avatar: String(form.get('avatar') ?? '')
 		});
 
@@ -78,20 +84,21 @@ export const actions: Actions = {
 			(l) => l.label && l.href
 		);
 
-		// The avatar is an asset like any other, so a replaced one is released
-		// on the same terms as a replaced block image.
+		// The avatar is an asset like any other, so a replaced one is released on
+		// the same terms as a replaced image in the body.
 		const before = await env.DB.prepare(`SELECT avatar FROM profile WHERE id = 1`).first<{
 			avatar: string | null;
 		}>();
 
 		const avatar = parsed.data.avatar || null;
 
+		// `bio` is deliberately left untouched: the page no longer renders it, but
+		// wiping the column on every save would be a silent data loss.
 		await env.DB.prepare(
-			`UPDATE profile SET name = ?, bio = ?, tagline = ?, avatar = ?, links = ? WHERE id = 1`
+			`UPDATE profile SET name = ?, tagline = ?, avatar = ?, links = ? WHERE id = 1`
 		)
 			.bind(
 				parsed.data.name,
-				parsed.data.bio || null,
 				parsed.data.tagline || null,
 				avatar,
 				JSON.stringify(links.map((l) => ({ ...l, icon: l.icon || 'globe' })))
@@ -106,114 +113,36 @@ export const actions: Actions = {
 		return { saved: 'profile' };
 	},
 
-	addBlock: async ({ request, platform }) => {
+	save: async ({ request, platform }) => {
 		const env = platform?.env;
 		if (!env) return noEnv();
 
-		const form = await request.formData();
-		const kind = String(form.get('kind') ?? '');
-		if (!isKind(kind)) return fail(400, { error: 'Unknown widget kind.' });
+		const content = String((await request.formData()).get('content') ?? '');
+		if (content.length > MAX_CONTENT) {
+			return fail(400, {
+				intent: 'content',
+				error: `That is longer than the editor supports (${MAX_CONTENT.toLocaleString()} characters).`
+			});
+		}
 
-		const def = widgets[kind];
-		const id = newId();
-		const next = await env.DB.prepare(`SELECT COALESCE(MAX(ord), -1) + 1 AS ord FROM blocks`).first<{
-			ord: number;
+		// Read what the body referenced before overwriting it: content-addressed
+		// keys mean an image dropped from the document would otherwise linger in
+		// R2 forever with nothing left pointing at it (§5).
+		const before = await env.DB.prepare(`SELECT content FROM profile WHERE id = 1`).first<{
+			content: string | null;
 		}>();
 
-		await env.DB.prepare(`INSERT INTO blocks (id, ord, kind, span, data) VALUES (?, ?, ?, ?, ?)`)
-			.bind(id, next?.ord ?? 0, kind, def.spans[0], JSON.stringify(def.defaults))
-			.run();
-
-		await syncDraft(env);
-		return { added: id };
-	},
-
-	updateBlock: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return noEnv();
-
-		const form = await request.formData();
-		const id = String(form.get('id') ?? '');
-		const kind = String(form.get('kind') ?? '');
-		const span = String(form.get('span') ?? '') as Span;
-
-		if (!id || !isKind(kind)) return fail(400, { error: 'Unknown block.' });
-		// Spans come from the registry, so an invalid combination is not
-		// expressible in the UI — this rejects a hand-crafted POST.
-		if (!(widgets[kind].spans as Span[]).includes(span)) {
-			return fail(400, { intent: 'block', id, error: 'That size is not available for this widget.' });
-		}
-
-		const parsed = parseBlockData(kind as WidgetKind, form);
-		if (!parsed.ok) {
-			return fail(400, { intent: 'block', id, errors: parsed.errors, raw: parsed.raw });
-		}
-
-		// §5 covers a replaced image as well as a deleted block. Swapping the
-		// cover on a link block used to leave the old object in R2 with nothing
-		// left pointing at it, and content-addressed keys mean nothing would ever
-		// collect it — so read what the block referred to before overwriting it.
-		const before = await env.DB.prepare(`SELECT data FROM blocks WHERE id = ?`)
-			.bind(id)
-			.first<{ data: string }>();
-
-		const next = JSON.stringify(parsed.data);
-
-		await env.DB.prepare(`UPDATE blocks SET span = ?, data = ? WHERE id = ?`)
-			.bind(span, next, id)
+		await env.DB.prepare(`UPDATE profile SET content = ? WHERE id = 1`)
+			.bind(content || null)
 			.run();
 
 		if (before) {
-			const kept = new Set(assetKeysIn(next));
-			await releaseAssets(
-				env,
-				assetKeysIn(before.data).filter((key) => !kept.has(key))
-			);
+			const kept = new Set(imageKeysIn(content));
+			await releaseAssets(env, imageKeysIn(before.content).filter((key) => !kept.has(key)));
 		}
 
 		await syncDraft(env);
-		return { saved: id };
-	},
-
-	deleteBlock: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return noEnv();
-
-		const form = await request.formData();
-		const id = String(form.get('id') ?? '');
-		if (!id) return fail(400, { error: 'No block given.' });
-
-		const row = await env.DB.prepare(`SELECT kind, data FROM blocks WHERE id = ?`)
-			.bind(id)
-			.first<{ kind: string; data: string }>();
-
-		await env.DB.prepare(`DELETE FROM blocks WHERE id = ?`).bind(id).run();
-
-		if (row) await releaseAssets(env, assetKeysIn(row.data));
-
-		await syncDraft(env);
-		return { deleted: id };
-	},
-
-	reorder: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return noEnv();
-
-		const ids = String((await request.formData()).get('ids') ?? '')
-			.split(',')
-			.map((s) => s.trim())
-			.filter(Boolean);
-
-		if (!ids.length) return fail(400, { error: 'Nothing to reorder.' });
-
-		await env.DB.batch(
-			ids.map((id, index) =>
-				env.DB.prepare(`UPDATE blocks SET ord = ? WHERE id = ?`).bind(index, id)
-			)
-		);
-
-		await syncDraft(env);
-		return { reordered: true };
+		return { saved: 'content' };
 	},
 
 	publish: async ({ platform }) => {
@@ -232,24 +161,7 @@ export const actions: Actions = {
 	}
 };
 
-/** Every field in the catalog that can hold an asset key. */
-const ASSET_FIELDS = ['src', 'image', 'poster', 'avatar'];
-
 const isAssetKey = (v: unknown): v is string => typeof v === 'string' && v.startsWith('img/');
-
-/**
- * The asset keys a block's stored JSON refers to. Not exported: a
- * `+page.server.ts` may only export the names SvelteKit knows, and anything
- * else makes the whole route a 500.
- */
-function assetKeysIn(rawData: string): string[] {
-	try {
-		const data = JSON.parse(rawData) as Record<string, unknown>;
-		return ASSET_FIELDS.map((k) => data[k]).filter(isAssetKey);
-	} catch {
-		return [];
-	}
-}
 
 /**
  * Deletes any R2 object in `keys` that nothing references any more (§5). No
@@ -265,8 +177,7 @@ async function releaseAssets(env: App.Platform['env'], keys: string[]) {
 
 	for (const key of keys) {
 		const stillUsed = await env.DB.prepare(
-			`SELECT 1 FROM blocks WHERE data LIKE ?1
-			 UNION ALL SELECT 1 FROM profile WHERE avatar = ?2 LIMIT 1`
+			`SELECT 1 FROM profile WHERE id = 1 AND (content LIKE ?1 OR avatar = ?2) LIMIT 1`
 		)
 			.bind(`%${key}%`, key)
 			.first();

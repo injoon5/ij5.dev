@@ -1,23 +1,35 @@
-import type { Block, LiveDoc } from '$lib/types';
-import { defFor, isKind } from '$lib/widgets/catalog';
+import type { LiveDoc, LiveRequest } from '$lib/types';
 
 /**
- * Live widgets (§7) without a cron job.
+ * Live shortcodes without a cron job.
  *
  * There is no scheduler in this design, so refresh happens the same way the
- * bento HTML does — lazily, behind the response. The first visitor after a
- * TTL expires sees slightly stale data and triggers the refresh; everyone
- * after sees fresh. No visitor ever waits on a third-party API.
+ * HTML does — lazily, behind the response. The first visitor after a TTL
+ * expires sees slightly stale data and triggers the refresh; everyone after
+ * sees fresh. No visitor ever waits on a third-party API.
  *
- * All live data lives under a single `live` key. Per-widget keys would cost
- * one KV read per widget on every render. The price of sharing is
- * last-write-wins when two refreshes overlap, which at this scale means a
- * widget occasionally waits one more TTL.
+ * All live data lives under a single `live` key. Per-source keys would cost one
+ * KV read each on every render. The price of sharing is last-write-wins when
+ * two refreshes overlap, which at this scale means a source occasionally waits
+ * one more TTL.
  */
 
 type Env = App.Platform['env'];
 
 const KEY = 'live';
+const HOUR = 60 * 60 * 1000;
+const MINUTE = 60 * 1000;
+
+/**
+ * Refresh cadence per kind. Kept here beside the fetchers rather than in a
+ * widget catalog, so the live path stands on its own.
+ */
+const TTL: Record<string, number> = {
+	github: 6 * HOUR,
+	grass: 6 * HOUR,
+	weather: 30 * MINUTE,
+	post: HOUR
+};
 
 type Fetcher = {
 	run: (data: Record<string, unknown>, env: Env) => Promise<unknown>;
@@ -235,15 +247,14 @@ const isStale = (entry: LiveDoc[string] | undefined, ttl: number) =>
  * Returns the work to do after this render, or null if there is none. The
  * caller hands the promise to `waitUntil` so nothing blocks the response.
  */
-export function planRefresh(blocks: Block[], live: LiveDoc | null, env: Env) {
-	const stale = blocks.filter((b) => {
-		if (!isKind(b.kind)) return false;
-		const def = defFor(b.kind);
-		if (def.tier !== 'live' || def.ttl === undefined) return false;
-		// A widget this deployment cannot fetch for is never scheduled, so a
+export function planRefresh(requests: LiveRequest[], live: LiveDoc | null, env: Env) {
+	const stale = requests.filter((r) => {
+		const ttl = TTL[r.kind];
+		if (ttl === undefined || !fetchers[r.kind]) return false;
+		// A source this deployment cannot fetch for is never scheduled, so a
 		// site with no third-party tokens does no background work at all.
-		if (!isLiveAvailable(b.kind, env)) return false;
-		return isStale(live?.[b.id], def.ttl);
+		if (!isLiveAvailable(r.kind, env)) return false;
+		return isStale(live?.[r.id], ttl);
 	});
 
 	if (!stale.length) return null;
@@ -253,15 +264,15 @@ export function planRefresh(blocks: Block[], live: LiveDoc | null, env: Env) {
 		const next: LiveDoc = { ...current };
 		let changed = false;
 
-		for (const block of stale) {
-			const fetcher = fetchers[block.kind];
+		for (const req of stale) {
+			const fetcher = fetchers[req.kind];
 			if (!fetcher) continue;
 			try {
-				next[block.id] = { at: Date.now(), data: await fetcher.run(block.data, env) };
+				next[req.id] = { at: Date.now(), data: await fetcher.run(req.data, env) };
 				changed = true;
 			} catch {
 				// Leave the previous entry in place. A stale value beats an empty
-				// one, and the widget's declared fallback covers the case where
+				// one, and the shortcode's own fallback covers the case where
 				// there has never been a value at all.
 			}
 		}

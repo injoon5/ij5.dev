@@ -1,59 +1,32 @@
 <script lang="ts">
-	import { setContext } from 'svelte';
 	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
-	import Plus from 'lucide-svelte/icons/plus';
 	import Rocket from 'lucide-svelte/icons/rocket';
 	import Undo from 'lucide-svelte/icons/undo-2';
-	import X from 'lucide-svelte/icons/x';
+	import ImagePlus from 'lucide-svelte/icons/image-plus';
 	import Button from '$lib/ui/Button.svelte';
-	import Empty from '$lib/ui/Empty.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import AssetInput from '$lib/ui/AssetInput.svelte';
 	import { card, fieldClass } from '$lib/ui/styles';
 	import { pending } from '$lib/ui/pending.svelte';
-	import BentoGrid from '$lib/widgets/BentoGrid.svelte';
-	import { KINDS, widgets, isKind, type WidgetKind } from '$lib/widgets/catalog';
-	import { serializeLines } from '$lib/widgets/fields';
-	import { toFormValues } from '$lib/widgets/form';
-	import BlockFields from './BlockFields.svelte';
-	import BlockCanvas from './BlockCanvas.svelte';
-	import BlockSheet from './BlockSheet.svelte';
+	import { serializeLines } from '$lib/lines';
+	import { renderMarkdown } from '$lib/markdown';
+	import { uploadImage } from '$lib/ui/upload';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	// Deployment configuration rather than page state — it cannot change while
-	// this page is alive.
+	// The editing buffer. Seeded once from the draft; a save round-trip does not
+	// overwrite what someone is still typing.
 	// svelte-ignore state_referenced_locally
-	setContext('assetsOrigin', data.assetsOrigin);
+	let content = $state(data.draft.markdown ?? '');
+	let textarea = $state<HTMLTextAreaElement | null>(null);
+	let uploadEl = $state<HTMLInputElement | null>(null);
+	let uploading = $state(false);
+	let uploadError = $state('');
 
-	let selected = $derived(page.url.searchParams.get('b'));
-	let selectedBlock = $derived(data.draft.blocks.find((b) => b.id === selected) ?? null);
-
-	/**
-	 * The element the sheet should appear to come from, so the panel expands out
-	 * of the card that was pressed and collapses back into it on close.
-	 */
-	let origin = $state<HTMLElement | null>(null);
-
-	const select = (id: string, from: HTMLElement) => {
-		origin = from;
-		goto(`/admin/bento?b=${id}`, { noScroll: true, keepFocus: true });
-	};
-
-	const deselect = () => goto('/admin/bento', { noScroll: true, keepFocus: true });
-
-	// Reordering posts the same form action the nudge buttons do, so drag is a
-	// faster way to do the one thing, not a second way that skips validation.
-	let reorderForm = $state<HTMLFormElement | null>(null);
-	let orderValue = $state('');
-
-	function reorder(ids: string[]) {
-		orderValue = ids.join(',');
-		queueMicrotask(() => reorderForm?.requestSubmit());
-	}
+	// The same renderer the public page uses, run in the browser. Live data
+	// (the contribution graph) shows its empty-lattice fallback in preview.
+	let preview = $derived(renderMarkdown(content, { assetsOrigin: data.assetsOrigin }).html);
 
 	let linksValue = $derived(
 		serializeLines(data.draft.profile.links as unknown as Array<Record<string, unknown>>, [
@@ -63,33 +36,64 @@
 		])
 	);
 
-	// Grouped by cost, because that is the real constraint: a static block is
-	// free to render, a live one spends a KV write every TTL, an embed brings a
-	// third party onto the page.
-	const GROUPS = [
-		{ tier: 'static' as const, label: 'Static', note: 'Renders from its own data. No network.' },
-		{ tier: 'live' as const, label: 'Live', note: 'Refreshed behind the response, never in front of it.' },
-		{ tier: 'embed' as const, label: 'Embed', note: 'A poster until someone presses play.' }
-	];
-
-	const kindsIn = (tier: 'static' | 'live' | 'embed') =>
-		KINDS.filter((k) => widgets[k].tier === tier);
-
-	let adding = $state(false);
-
-	// Adding a block needs no flag: the picker collapses on submit.
 	const publishing = pending();
 	const reverting = pending();
 	const savingProfile = pending();
-	const savingBlock = pending();
-	const deletingBlock = pending();
+	const savingContent = pending();
+
+	function insertAtCursor(snippet: string) {
+		const el = textarea;
+		if (!el) {
+			content += snippet;
+			return;
+		}
+		const start = el.selectionStart ?? content.length;
+		const end = el.selectionEnd ?? content.length;
+		content = content.slice(0, start) + snippet + content.slice(end);
+		queueMicrotask(() => {
+			el.focus();
+			const pos = start + snippet.length;
+			el.setSelectionRange(pos, pos);
+		});
+	}
+
+	async function uploadFile(file: File) {
+		uploading = true;
+		uploadError = '';
+		try {
+			const { key } = await uploadImage(file);
+			const alt = file.name.replace(/\.[^.]+$/, '');
+			insertAtCursor(`\n\n![${alt}](${key})\n\n`);
+		} catch (e) {
+			uploadError = e instanceof Error ? e.message : 'Upload failed.';
+		} finally {
+			uploading = false;
+		}
+	}
+
+	function onPaste(event: ClipboardEvent) {
+		const item = [...(event.clipboardData?.items ?? [])].find((i) => i.type.startsWith('image/'));
+		const file = item?.getAsFile();
+		if (file) {
+			event.preventDefault();
+			uploadFile(file);
+		}
+	}
+
+	function onDrop(event: DragEvent) {
+		const file = event.dataTransfer?.files?.[0];
+		if (file?.type.startsWith('image/')) {
+			event.preventDefault();
+			uploadFile(file);
+		}
+	}
 </script>
 
-<svelte:head><title>Bento</title></svelte:head>
+<svelte:head><title>Home</title></svelte:head>
 
 <header class="mb-6 flex flex-wrap items-center justify-between gap-3">
 	<div>
-		<h1 class="text-xl font-semibold">Bento</h1>
+		<h1 class="text-xl font-semibold">Home</h1>
 		<p class="mt-0.5 text-xs text-text-muted">
 			{#if data.dirty}
 				Draft has unpublished changes · live version {data.publishedVersion}
@@ -102,13 +106,7 @@
 	<div class="flex items-center gap-2">
 		{#if data.canRevert}
 			<form method="POST" action="?/revert" use:enhance={reverting.submit}>
-				<Button
-					type="submit"
-					variant="ghost"
-					size="sm"
-					busy={reverting.busy}
-					busyLabel="Reverting…"
-				>
+				<Button type="submit" variant="ghost" size="sm" busy={reverting.busy} busyLabel="Reverting…">
 					<Undo size={14} aria-hidden="true" />
 					Revert
 				</Button>
@@ -146,10 +144,9 @@
 {/if}
 
 <div class="editor">
-	<!-- The identity rail is not a block: always present, always first, never
-	     reordered — so it gets its own record, its own form and its own
-	     column. -->
-	<section class="{card} mb-8">
+	<!-- The masthead fields. Not part of the Markdown body: always present,
+	     always first, so they get their own record and their own form. -->
+	<section class="{card}">
 		<h2 class="text-sm font-semibold">Identity</h2>
 
 		<form
@@ -164,15 +161,9 @@
 				{/snippet}
 			</Field>
 
-			<Field id="p-tagline" label="Tagline" optional hint="One line. Allowed to wrap to two on a phone.">
+			<Field id="p-tagline" label="Tagline" optional hint="One line under your name.">
 				{#snippet children({ id, describedBy, invalid })}
 					<input {id} name="tagline" value={data.draft.profile.tagline ?? ''} aria-describedby={describedBy} aria-invalid={invalid || undefined} class={fieldClass(invalid)} />
-				{/snippet}
-			</Field>
-
-			<Field id="p-bio" label="Bio" optional hint="Two to four short paragraphs, separated by blank lines.">
-				{#snippet children({ id, describedBy, invalid })}
-					<textarea {id} name="bio" rows="5" value={data.draft.profile.bio ?? ''} aria-describedby={describedBy} aria-invalid={invalid || undefined} class="{fieldClass(invalid)} resize-y"></textarea>
 				{/snippet}
 			</Field>
 
@@ -184,9 +175,9 @@
 
 			<Field
 				id="p-links"
-				label="Footer links"
+				label="Quick links"
 				optional
-				hint="One per line: label | url | icon. Icons: github, x, linkedin, instagram, youtube, mail, rss, globe."
+				hint="For the :::links buttons. One per line: icon | label | url. Icons: github, x, linkedin, instagram, youtube, mail, rss, globe."
 			>
 				{#snippet children({ id, describedBy, invalid })}
 					<textarea
@@ -203,13 +194,7 @@
 			</Field>
 
 			<div>
-				<Button
-					type="submit"
-					variant="secondary"
-					size="sm"
-					busy={savingProfile.busy}
-					busyLabel="Saving…"
-				>
+				<Button type="submit" variant="secondary" size="sm" busy={savingProfile.busy} busyLabel="Saving…">
 					Save identity
 				</Button>
 			</div>
@@ -218,178 +203,119 @@
 
 	<section class="min-w-0">
 		<div class="mb-3 flex items-center justify-between gap-3">
-			<h2 class="text-sm font-semibold">Blocks</h2>
-			<Button variant="secondary" size="sm" onclick={() => (adding = !adding)} aria-expanded={adding}>
-				<Plus size={14} aria-hidden="true" />
-				Add block
+			<h2 class="text-sm font-semibold">Page</h2>
+			<Button
+				variant="secondary"
+				size="sm"
+				onclick={() => uploadEl?.click()}
+				busy={uploading}
+				busyLabel="Uploading…"
+			>
+				<ImagePlus size={14} aria-hidden="true" />
+				Insert image
 			</Button>
 		</div>
 
-		{#if adding}
-			<div class="{card} mb-4">
-				{#each GROUPS as group (group.tier)}
-					<div class="mb-4 last:mb-0">
-						<p class="text-xs font-semibold">{group.label}</p>
-						<p class="mb-2 text-xs text-text-subtle">{group.note}</p>
-						<div class="flex flex-wrap gap-1.5">
-							{#each kindsIn(group.tier) as kind (kind)}
-								<form method="POST" action="?/addBlock" use:enhance={() => {
-									adding = false;
-									return async ({ update }) => update({ reset: false });
-								}}>
-									<input type="hidden" name="kind" value={kind} />
-									<Button type="submit" variant="secondary" size="sm" title={widgets[kind].description}>
-										{widgets[kind].label}
-									</Button>
-								</form>
-							{/each}
-						</div>
-					</div>
-				{/each}
-			</div>
+		{#if uploadError}
+			<p role="alert" class="mb-2 text-xs text-danger">{uploadError}</p>
 		{/if}
 
-		{#if data.draft.blocks.length}
-			<!--
-				The canvas is the page, made editable: same components, same
-				spans, same sectioning. Drag a card to move it, press it to open
-				its fields. Editing a list beside a preview meant every change
-				was a guess about a card you were not looking at.
-			-->
-			<div class="bento-region canvas-frame">
-				<BlockCanvas
-					blocks={data.draft.blocks.filter((b) => isKind(b.kind))}
-					{selected}
-					onSelect={select}
-					onReorder={reorder}
-				/>
-			</div>
+		<input
+			bind:this={uploadEl}
+			type="file"
+			accept="image/png,image/jpeg,image/webp,image/avif"
+			class="sr-only"
+			onchange={(e) => {
+				const file = e.currentTarget.files?.[0];
+				if (file) uploadFile(file);
+				e.currentTarget.value = '';
+			}}
+		/>
 
-			<!-- Drag and the nudge buttons land on one action, which is also the
-			     one that works with JavaScript off. -->
-			<form method="POST" action="?/reorder" bind:this={reorderForm} use:enhance class="hidden">
-				<input type="hidden" name="ids" value={orderValue} />
+		<div class="panes">
+			<form method="POST" action="?/save" class="pane" use:enhance={savingContent.submit}>
+				<!-- Drop or paste an image straight onto the text to upload and
+				     insert it at the cursor. -->
+				<textarea
+					bind:this={textarea}
+					bind:value={content}
+					name="content"
+					spellcheck="false"
+					onpaste={onPaste}
+					ondrop={onDrop}
+					ondragover={(e) => e.preventDefault()}
+					class="editor-area"
+					aria-label="Page Markdown"
+				></textarea>
+
+				<div class="mt-3 flex flex-wrap items-center gap-2">
+					<Button type="submit" variant="secondary" size="sm" busy={savingContent.busy} busyLabel="Saving…">
+						Save draft
+					</Button>
+					<span class="text-xs text-text-subtle">
+						Markdown, plus <code>:::links</code>, <code>:github:</code>, <code>::contributions</code>.
+					</span>
+				</div>
 			</form>
-		{:else}
-			<Empty
-				title="No blocks yet"
-				body="Start with a link, a call to action and a short piece of text. Five well-made blocks read better than twenty half-made ones."
-			>
-				{#snippet action()}
-					<Button variant="primary" size="sm" onclick={() => (adding = true)}>Add the first block</Button>
-				{/snippet}
-			</Empty>
-		{/if}
+
+			<div class="pane preview" aria-label="Preview">
+				<article class="prose">{@html preview}</article>
+			</div>
+		</div>
 	</section>
 </div>
 
-{#if selectedBlock && isKind(selectedBlock.kind)}
-	{@const block = selectedBlock}
-	{@const kind = block.kind as WidgetKind}
-	{@const errors = form?.intent === 'block' && form.id === block.id ? form.errors : undefined}
-	{@const values =
-		form?.intent === 'block' && form.id === block.id && form.raw
-			? form.raw
-			: toFormValues(kind, block.data)}
-
-	<BlockSheet open title="Edit {widgets[kind].label}" {origin} onClose={deselect}>
-		<div class="mb-4 flex items-start justify-between gap-4">
-			<div class="min-w-0">
-				<h2 class="text-md font-semibold">{widgets[kind].label}</h2>
-				<p class="mt-0.5 text-xs text-pretty text-text-muted">{widgets[kind].description}</p>
-			</div>
-			<Button variant="ghost" size="sm" onclick={deselect} aria-label="Close">
-				<X size={16} aria-hidden="true" />
-			</Button>
-		</div>
-
-		<form
-			method="POST"
-			action="?/updateBlock"
-			class="flex flex-col gap-4"
-			use:enhance={savingBlock.submit}
-		>
-			<input type="hidden" name="id" value={block.id} />
-			<input type="hidden" name="kind" value={block.kind} />
-
-			<Field id="f-span" label="Size">
-				{#snippet children({ id, invalid })}
-					<select {id} name="span" aria-invalid={invalid || undefined} class={fieldClass(invalid)}>
-						{#each widgets[kind].spans as span (span)}
-							<option value={span} selected={block.span === span}>{span}</option>
-						{/each}
-					</select>
-				{/snippet}
-			</Field>
-
-			<BlockFields {kind} {values} {errors} assetsOrigin={data.assetsOrigin} />
-
-			<div class="sticky bottom-0 -mx-1 flex items-center gap-2 bg-bg px-1 pt-3 pb-1">
-				<Button
-					type="submit"
-					variant="primary"
-					size="sm"
-					busy={savingBlock.busy}
-					busyLabel="Saving…"
-				>
-					Save block
-				</Button>
-				<Button variant="ghost" size="sm" onclick={deselect}>Cancel</Button>
-			</div>
-		</form>
-
-		<form
-			method="POST"
-			action="?/deleteBlock"
-			class="mt-2 border-t border-border-subtle pt-4"
-			use:enhance={deletingBlock.submit}
-		>
-			<input type="hidden" name="id" value={block.id} />
-			<div class="flex items-center justify-between gap-4">
-				<p class="text-xs text-pretty text-text-muted">
-					Any image only this block used is deleted with it.
-				</p>
-				<Button
-					type="submit"
-					variant="danger"
-					size="sm"
-					busy={deletingBlock.busy}
-					busyLabel="Deleting…"
-				>
-					Delete
-				</Button>
-			</div>
-		</form>
-	</BlockSheet>
-{/if}
-
 <style>
 	.editor {
-		display: grid;
+		display: flex;
+		flex-direction: column;
 		gap: 2rem;
 	}
 
-	/*
-	 * The canvas sits on the page background rather than a panel, because it is
-	 * standing in for the page. A card on a card would read as a mock-up.
-	 */
-	.canvas-frame {
-		border-radius: var(--radius-ui-lg);
-		background-color: var(--bg);
-		padding: 1rem;
+	.panes {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.editor-area {
+		width: 100%;
+		min-height: 60vh;
+		padding: 1rem 1.1rem;
+		border-radius: var(--radius-ui);
+		background-color: var(--surface);
+		box-shadow: inset 0 0 0 1px var(--border-subtle);
+		font-family: var(--font-mono);
+		/* 16px on a phone so iOS does not zoom the field on focus. */
+		font-size: 16px;
+		line-height: 1.7;
+		resize: vertical;
+		transition: box-shadow 150ms var(--ease-out);
+	}
+	.editor-area:focus {
+		outline: none;
+		box-shadow: inset 0 0 0 1px var(--accent);
+	}
+
+	.preview {
+		min-height: 60vh;
+		max-height: 80vh;
+		padding: 1.75rem;
+		border-radius: var(--radius-ui);
+		background-color: var(--surface);
+		box-shadow: inset 0 0 0 1px var(--border-subtle);
+		overflow: auto;
+	}
+
+	@media (min-width: 640px) {
+		.editor-area {
+			font-size: 13px;
+		}
 	}
 
 	@media (min-width: 1024px) {
-		.editor {
-			/* Identity is a narrow column; the canvas takes the rest, at close to
-			   the width it will actually be published at. */
-			grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+		.panes {
+			grid-template-columns: 1fr 1fr;
 			align-items: start;
-			gap: 2.5rem;
-		}
-
-		.canvas-frame {
-			padding: 1.5rem;
 		}
 	}
 </style>

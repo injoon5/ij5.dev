@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { hasPrevious, publish, readDraft, readPublished, revert, syncDraft } from './bento';
-import type { BentoDoc, Block, Profile } from '$lib/types';
+import type { BentoDoc, Profile } from '$lib/types';
 
 /**
  * The publish invariant behind §11's edge cache: a new document is a new
@@ -34,15 +34,14 @@ const profile = (name: string): Profile => ({
 	bio: null,
 	tagline: null,
 	avatar: null,
-	links: []
+	links: [],
+	content: null
 });
 
-const block = (id: string): Block => ({ id, ord: 0, kind: 'text', span: '1x1', data: { body: id } });
-
-const doc = (v: number, name: string, ids: string[]): BentoDoc => ({
+const doc = (v: number, name: string, markdown: string): BentoDoc => ({
 	v,
 	profile: profile(name),
-	blocks: ids.map(block)
+	markdown
 });
 
 describe('publish', () => {
@@ -58,26 +57,26 @@ describe('publish', () => {
 	const seedDraft = (d: BentoDoc) => store.set('bento:draft', JSON.stringify(d));
 
 	it('bumps the version, which is what invalidates every colo at once', async () => {
-		seedDraft(doc(0, 'first', ['a']));
+		seedDraft(doc(0, 'first', '# hi'));
 		expect((await publish(env)).v).toBe(1);
 
-		seedDraft(doc(1, 'second', ['a', 'b']));
+		seedDraft(doc(1, 'second', '# hi there'));
 		expect((await publish(env)).v).toBe(2);
 	});
 
-	it('swaps the whole document, so no visitor sees a half-updated grid', async () => {
-		seedDraft(doc(0, 'first', ['a']));
+	it('swaps the whole document, so no visitor sees a half-updated page', async () => {
+		seedDraft(doc(0, 'first', 'one'));
 		await publish(env);
 
-		seedDraft(doc(1, 'second', ['a', 'b', 'c']));
+		seedDraft(doc(1, 'second', 'one two three'));
 		const published = await publish(env);
 
 		expect(published.profile.name).toBe('second');
-		expect(published.blocks.map((b) => b.id)).toEqual(['a', 'b', 'c']);
+		expect(published.markdown).toBe('one two three');
 	});
 
 	it('leaves the draft equal to what was published, so the editor is not dirty afterwards', async () => {
-		seedDraft(doc(0, 'first', ['a']));
+		seedDraft(doc(0, 'first', 'body'));
 		const published = await publish(env);
 
 		expect(await readDraft(env)).toEqual(published);
@@ -87,12 +86,12 @@ describe('publish', () => {
 	it('keeps the document it replaced', async () => {
 		expect(await hasPrevious(env)).toBe(false);
 
-		seedDraft(doc(0, 'first', ['a']));
+		seedDraft(doc(0, 'first', 'a'));
 		await publish(env);
 		// Nothing to fall back to yet: the first publish replaced nothing.
 		expect(await hasPrevious(env)).toBe(false);
 
-		seedDraft(doc(1, 'second', ['b']));
+		seedDraft(doc(1, 'second', 'b'));
 		await publish(env);
 		expect(await hasPrevious(env)).toBe(true);
 	});
@@ -102,9 +101,9 @@ describe('revert', () => {
 	it('restores the previous document under a new version', async () => {
 		const { store, env } = fakeEnv();
 
-		store.set('bento:draft', JSON.stringify(doc(0, 'first', ['a'])));
+		store.set('bento:draft', JSON.stringify(doc(0, 'first', 'a')));
 		await publish(env); // v1, 'first'
-		store.set('bento:draft', JSON.stringify(doc(1, 'second', ['b'])));
+		store.set('bento:draft', JSON.stringify(doc(1, 'second', 'b')));
 		await publish(env); // v2, 'second'
 
 		const reverted = await revert(env);
@@ -118,9 +117,9 @@ describe('revert', () => {
 	it('is itself revertible, so a mistaken revert is not a one-way door', async () => {
 		const { store, env } = fakeEnv();
 
-		store.set('bento:draft', JSON.stringify(doc(0, 'first', ['a'])));
+		store.set('bento:draft', JSON.stringify(doc(0, 'first', 'a')));
 		await publish(env);
-		store.set('bento:draft', JSON.stringify(doc(1, 'second', ['b'])));
+		store.set('bento:draft', JSON.stringify(doc(1, 'second', 'b')));
 		await publish(env);
 
 		await revert(env);
@@ -139,23 +138,34 @@ describe('revert', () => {
 describe('syncDraft', () => {
 	it('never advances the published version — only publish does that', async () => {
 		const { store, env } = fakeEnv();
-		store.set('bento:draft', JSON.stringify(doc(0, 'first', ['a'])));
+		store.set('bento:draft', JSON.stringify(doc(0, 'first', 'a')));
 		await publish(env);
 
 		const before = (await readPublished(env))!.v;
 
-		// D1 is the source of truth for a sync, so stand one in for this call.
+		// D1 is the source of truth for a sync, so stand one in for this call. The
+		// new loader reads a single profile row (content included) with `.all()`.
 		(env as { DB: unknown }).DB = {
-			batch: async () => [
-				{ results: [{ name: 'edited', bio: null, tagline: null, avatar: null, links: '[]' }] },
-				{ results: [{ id: 'a', ord: 0, kind: 'text', span: '1x1', data: '{"body":"a"}' }] }
-			],
-			prepare: () => ({})
+			prepare: () => ({
+				all: async () => ({
+					results: [
+						{
+							name: 'edited',
+							bio: null,
+							tagline: null,
+							avatar: null,
+							links: '[]',
+							content: 'edited body'
+						}
+					]
+				})
+			})
 		};
 
 		const draft = await syncDraft(env);
 
 		expect(draft.profile.name).toBe('edited');
+		expect(draft.markdown).toBe('edited body');
 		expect(draft.v).toBe(before);
 		expect((await readPublished(env))!.profile.name).toBe('first');
 	});

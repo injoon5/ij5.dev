@@ -2,6 +2,7 @@
 	import Upload from 'lucide-svelte/icons/upload';
 	import X from 'lucide-svelte/icons/x';
 	import { inputClass } from './styles';
+	import { uploadImage, MAX_EDGE } from './upload';
 
 	type Props = {
 		id: string;
@@ -19,58 +20,12 @@
 	let dragging = $state(false);
 	let fileEl = $state<HTMLInputElement | null>(null);
 
-	const MAX_EDGE = 1600;
-
-	/**
-	 * Downscale and re-encode before the upload rather than after it. R2 serves
-	 * originals and Cloudflare's image resizing is not free, so the work
-	 * belongs on the client — where CPU is unmetered — not on a Worker with a
-	 * 10ms budget.
-	 */
-	async function shrink(file: File): Promise<{ blob: Blob; w: number; h: number }> {
-		const bitmap = await createImageBitmap(file);
-		const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
-		const w = Math.round(bitmap.width * scale);
-		const h = Math.round(bitmap.height * scale);
-
-		const canvas = document.createElement('canvas');
-		canvas.width = w;
-		canvas.height = h;
-		const ctx = canvas.getContext('2d');
-		if (!ctx) throw new Error('Canvas is unavailable.');
-		ctx.drawImage(bitmap, 0, 0, w, h);
-		bitmap.close();
-
-		const blob = await new Promise<Blob | null>((resolve) =>
-			canvas.toBlob(resolve, 'image/webp', 0.82)
-		);
-		if (!blob) throw new Error('That image could not be re-encoded.');
-		return { blob, w, h };
-	}
-
 	async function upload(file: File) {
-		if (!file.type.startsWith('image/')) {
-			error = 'Images only.';
-			return;
-		}
-
 		busy = true;
 		error = '';
 		try {
-			const { blob, w, h } = await shrink(file);
-			const res = await fetch('/api/assets', {
-				method: 'POST',
-				headers: {
-					'content-type': blob.type,
-					'x-image-width': String(w),
-					'x-image-height': String(h)
-				},
-				body: blob
-			});
-
-			if (!res.ok) throw new Error(await res.text());
-			const json = (await res.json()) as { key: string };
-			value = json.key;
+			const { key } = await uploadImage(file);
+			value = key;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Upload failed.';
 		} finally {
