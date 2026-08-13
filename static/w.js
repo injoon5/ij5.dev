@@ -131,20 +131,41 @@
 			var s = (grass.getBoundingClientRect().left - grassGrid.getBoundingClientRect().left) / max;
 			if (s < 0) s = 0;
 			else if (s > 1) s = 1;
-			// Edge visibility: 1 = fully visible, 0 = faded out. Left is
-			// transparent at the newest position (older columns sit to its
-			// left), right at the oldest.
+			// Edge visibility, 1 = fully visible, 0 = faded out. Binary, so
+			// the fade is always the same full 0.75rem gradient and only its
+			// presence tracks the scroll: a side fades whenever columns are
+			// cut off there, and clears when the pan reaches its end. The
+			// epsilon absorbs sub-pixel geometry noise at the ends.
+			var l = s > 0.01 ? 0 : 1;
+			var r = s < 0.99 ? 0 : 1;
 			var mask =
 				'linear-gradient(to right, rgba(0,0,0,' +
-				(1 - s).toFixed(2) +
+				l +
 				'), black 0.75rem, black calc(100% - 0.75rem), rgba(0,0,0,' +
-				s.toFixed(2) +
+				r +
 				'))';
 			grassMask.style.maskImage = mask;
 			grassMask.style.webkitMaskImage = mask;
 		};
 		grass.addEventListener('scroll', paintGrass, { passive: true });
 		window.addEventListener('resize', paintGrass, { passive: true });
+		// With no visible scrollbar the wheel is the graph's only affordance,
+		// so a vertical wheel pans it horizontally and is blocked from
+		// scrolling the page — but only while there is anything to pan.
+		grass.addEventListener(
+			'wheel',
+			function (event) {
+				if (grass.scrollWidth - grass.clientWidth <= 0) return;
+				var d = event.deltaY;
+				if (event.deltaMode === 1) d *= 16;
+				else if (event.deltaMode === 2) d *= window.innerHeight;
+				if (event.deltaX) d += event.deltaX;
+				if (d === 0) return;
+				event.preventDefault();
+				grass.scrollLeft += d;
+			},
+			{ passive: false }
+		);
 		paintGrass();
 	}
 })();
