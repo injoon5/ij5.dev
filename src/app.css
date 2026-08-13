@@ -697,11 +697,6 @@
 		flex-shrink: 0;
 		width: 2.5rem;
 		height: 2.5rem;
-		/* §7.2 — inner = outer − padding, so the corners stay concentric with
-		   the button's. */
-		border-radius: calc(var(--radius-ui-lg) - var(--pad));
-		corner-shape: squircle;
-		background-color: var(--surface-sunken);
 		color: var(--text);
 	}
 
