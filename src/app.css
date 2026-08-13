@@ -806,15 +806,15 @@
 			mask-image: linear-gradient(
 				to right,
 				transparent,
-				black 0.75rem,
-				black calc(100% - 0.75rem),
+				black 0.6rem,
+				black calc(100% - 0.6rem),
 				transparent
 			);
 			-webkit-mask-image: linear-gradient(
 				to right,
 				transparent,
-				black 0.75rem,
-				black calc(100% - 0.75rem),
+				black 0.6rem,
+				black calc(100% - 0.6rem),
 				transparent
 			);
 		}
