@@ -179,13 +179,15 @@ withSqlite('hits', () => {
 		hit('2026-01-01', 'resume', '404', 'KR', 'direct', 'desktop');
 		hit('2026-01-01', 'resume', '404', 'US', 'direct', 'mobile');
 		hit('2026-01-01', '*', '404', 'US', 'direct', 'bot');
+		hit('2026-01-01', 'oneoff', '404', 'US', 'direct', 'mobile');
 
 		const found = rows<{ path: string; hits: number }>(
 			`SELECT slug AS path, SUM(n) AS hits FROM hits
 			 WHERE kind = '404' AND device != 'bot'
-			 GROUP BY path ORDER BY hits DESC LIMIT 20`
+			 GROUP BY path HAVING SUM(n) > 1 ORDER BY hits DESC LIMIT 5`
 		);
 
+		// A one-off 404 is a single typo, not a path worth creating.
 		expect(found).toEqual([{ path: 'resume', hits: 2 }]);
 	});
 

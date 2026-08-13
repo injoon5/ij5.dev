@@ -84,11 +84,13 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 				 GROUP BY browser ORDER BY hits DESC LIMIT 12`
 			).bind(offset),
 
-			// The query that earns its keep: paths people expected to exist.
+			// The query that earns its keep: the top 5 paths people expected to
+			// exist, each hit at least twice. A single 404 is usually a typo
+			// only one person made; two or more is a path worth creating.
 			env.DB.prepare(
 				`SELECT slug AS path, SUM(n) AS hits FROM hits
 				 WHERE kind = '404' AND day >= date('now', ?1) AND device != 'bot'
-				 GROUP BY path ORDER BY hits DESC LIMIT 20`
+				 GROUP BY path HAVING SUM(n) > 1 ORDER BY hits DESC LIMIT 5`
 			).bind(offset),
 
 			env.DB.prepare(
