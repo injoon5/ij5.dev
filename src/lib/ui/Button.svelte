@@ -37,7 +37,7 @@
 		secondary:
 			'bg-surface text-text shadow-[inset_0_0_0_1px_var(--border-subtle)] hover:bg-surface-hover',
 		ghost: 'text-text-muted hover:bg-surface hover:text-text',
-		danger: 'bg-danger-tint text-danger hover:bg-danger hover:text-white'
+		danger: 'bg-danger-tint text-danger hover:bg-danger hover:text-danger-contrast'
 	};
 
 	// 44px minimum on touch, tightened at `sm` where a pointer is available.

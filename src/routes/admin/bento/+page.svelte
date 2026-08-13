@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { setContext } from 'svelte';
+	import { fly, type FlyParams } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -76,6 +78,22 @@
 		KINDS.filter((k) => widgets[k].tier === tier);
 
 	let adding = $state(false);
+
+	/**
+	 * The block picker is a disclosure: it belongs to the button that opened it,
+	 * so it settles down out of that button rather than blinking into place, and
+	 * reverses back up on close. Transform and opacity only, and the same
+	 * `--ease-out` shape the rest of the app moves on. Svelte's transitions run
+	 * regardless of the OS setting, so reduced-motion is gated here by hand —
+	 * duration 0, which drops the movement while keeping enter and exit
+	 * symmetric and interruptible.
+	 */
+	function reveal(node: Element, params: FlyParams) {
+		const reduced =
+			typeof matchMedia === 'function' &&
+			matchMedia('(prefers-reduced-motion: reduce)').matches;
+		return fly(node, reduced ? { duration: 0 } : params);
+	}
 
 	// Adding a block needs no flag: the picker collapses on submit.
 	const publishing = pending();
@@ -226,7 +244,10 @@
 		</div>
 
 		{#if adding}
-			<div class="{card} mb-4">
+			<div
+				class="{card} mb-4 origin-top"
+				transition:reveal={{ y: -8, duration: 200, easing: cubicOut }}
+			>
 				{#each GROUPS as group (group.tier)}
 					<div class="mb-4 last:mb-0">
 						<p class="text-xs font-semibold">{group.label}</p>

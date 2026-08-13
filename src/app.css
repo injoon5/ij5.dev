@@ -55,6 +55,11 @@
 
 	--danger: oklch(0.545 0.196 27);
 	--danger-tint: oklch(0.955 0.026 27);
+	/* The readable foreground on a solid danger fill — the danger twin of
+	   `--accent-contrast`, so the destructive hover state is a token swap in
+	   dark mode rather than a hardcoded white that sinks to ~2.3:1 on the
+	   lighter red. */
+	--danger-contrast: oklch(0.99 0 0);
 	--success: oklch(0.55 0.13 152);
 	--warning: oklch(0.68 0.14 75);
 
@@ -103,6 +108,9 @@
 
 		--danger: oklch(0.7 0.17 25);
 		--danger-tint: oklch(0.3 0.07 25);
+		/* Inverted with the surface: the fill is light here, so its foreground
+		   is near-black. */
+		--danger-contrast: oklch(0.17 0.02 27);
 		--success: oklch(0.72 0.14 152);
 		--warning: oklch(0.79 0.14 75);
 
@@ -136,6 +144,7 @@
 	--accent-tint: oklch(0.3 0.06 262);
 	--danger: oklch(0.7 0.17 25);
 	--danger-tint: oklch(0.3 0.07 25);
+	--danger-contrast: oklch(0.17 0.02 27);
 	--success: oklch(0.72 0.14 152);
 	--warning: oklch(0.79 0.14 75);
 	--grass-0: oklch(0.27 0.008 265);
@@ -174,6 +183,7 @@
 
 	--color-danger: var(--danger);
 	--color-danger-tint: var(--danger-tint);
+	--color-danger-contrast: var(--danger-contrast);
 	--color-success: var(--success);
 	--color-warning: var(--warning);
 
