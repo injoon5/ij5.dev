@@ -748,24 +748,45 @@
 		color: inherit;
 		text-decoration: none;
 	}
+	/* One look at every size: cells always fill the reading column the way the
+	   max-width desktop state does, down to a minimum of 0.55rem. Narrower than
+	   that the year holds its size and pans instead of shrinking to a
+	   wireframe — the RTL wrapper's right edge is the LTR grid's end, so the
+	   scroll opens on the latest weeks, and the side masks fade the clipped
+	   edges as a scroll affordance. The `container-type` scopes the query to
+	   the graph's own column, not the viewport. */
+	.contrib-scroll {
+		display: block;
+		container-type: inline-size;
+		overflow-x: auto;
+		overscroll-behavior-inline: contain;
+	}
 	.contrib-grid {
 		display: grid;
-		grid-template-columns: repeat(var(--weeks), minmax(0, 1fr));
+		grid-template-columns: repeat(var(--weeks), minmax(0.55rem, 1fr));
 		grid-template-rows: repeat(7, minmax(0, 1fr));
 		grid-auto-flow: column;
 		gap: 3px;
+		/* `direction` inherits; the wrapper flips to rtl only when clipped. */
+		direction: ltr;
 	}
-	/* On a phone the reading column is too narrow for 53 columns — 3px gaps on
-	   3px cells read as a wireframe. Cells grow to a fixed, readable size and
-	   the year pans horizontally instead: the grid scrolls, the page does not. */
-	@media (max-width: 479px) {
-		.contrib-grid {
-			gap: 2px;
-			grid-template-columns: repeat(var(--weeks), 0.625rem);
-			width: max-content;
-			max-width: 100%;
-			overflow-x: auto;
-			overscroll-behavior-inline: contain;
+	@container (max-width: 622px) {
+		.contrib-scroll {
+			direction: rtl;
+			mask-image: linear-gradient(
+				to right,
+				transparent,
+				black 0.75rem,
+				black calc(100% - 0.75rem),
+				transparent
+			);
+			-webkit-mask-image: linear-gradient(
+				to right,
+				transparent,
+				black 0.75rem,
+				black calc(100% - 0.75rem),
+				transparent
+			);
 		}
 	}
 	.contrib .cell {
