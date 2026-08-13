@@ -21,6 +21,8 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 			referrers: [],
 			countries: [],
 			devices: [],
+			os: [],
+			browsers: [],
 			notFound: [],
 			totals: { hits: 0, visitors: 0, home: 0 },
 			detail: null
@@ -29,7 +31,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 
 	const offset = RANGES[range];
 
-	const [traffic, links, referrers, countries, devices, notFound, totals, uniques] =
+	const [traffic, links, referrers, countries, devices, os, browsers, notFound, totals, uniques] =
 		await env.DB.batch([
 			env.DB.prepare(
 				`SELECT day, SUM(n) AS hits FROM hits
@@ -66,6 +68,20 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 				`SELECT device, SUM(n) AS hits FROM hits
 				 WHERE day >= date('now', ?1)
 				 GROUP BY device ORDER BY hits DESC`
+			).bind(offset),
+
+			// `hits_device` holds no bots, so unlike the queries above there is
+			// nothing to filter out here.
+			env.DB.prepare(
+				`SELECT os, SUM(n) AS hits FROM hits_device
+				 WHERE day >= date('now', ?1)
+				 GROUP BY os ORDER BY hits DESC LIMIT 12`
+			).bind(offset),
+
+			env.DB.prepare(
+				`SELECT browser, SUM(n) AS hits FROM hits_device
+				 WHERE day >= date('now', ?1)
+				 GROUP BY browser ORDER BY hits DESC LIMIT 12`
 			).bind(offset),
 
 			// The query that earns its keep: paths people expected to exist.
@@ -110,6 +126,8 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 		referrers: referrers.results as Array<{ referrer: string; hits: number }>,
 		countries: countries.results as Array<{ country: string; hits: number }>,
 		devices: devices.results as Array<{ device: string; hits: number }>,
+		os: os.results as Array<{ os: string; hits: number }>,
+		browsers: browsers.results as Array<{ browser: string; hits: number }>,
 		notFound: notFound.results as Array<{ path: string; hits: number }>,
 		totals: {
 			hits: totalRow?.redirects ?? 0,
@@ -123,7 +141,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 };
 
 async function loadDetail(env: App.Platform['env'], slug: string, offset: string) {
-	const [referrers, countries, devices] = await env.DB.batch([
+	const [referrers, countries, devices, os, browsers] = await env.DB.batch([
 		env.DB.prepare(
 			`SELECT referrer, SUM(n) AS hits FROM hits
 			 WHERE slug = ?1 AND day >= date('now', ?2) AND device != 'bot'
@@ -138,6 +156,16 @@ async function loadDetail(env: App.Platform['env'], slug: string, offset: string
 			`SELECT device, SUM(n) AS hits FROM hits
 			 WHERE slug = ?1 AND day >= date('now', ?2)
 			 GROUP BY device ORDER BY hits DESC`
+		).bind(slug, offset),
+		env.DB.prepare(
+			`SELECT os, SUM(n) AS hits FROM hits_device
+			 WHERE slug = ?1 AND day >= date('now', ?2)
+			 GROUP BY os ORDER BY hits DESC LIMIT 12`
+		).bind(slug, offset),
+		env.DB.prepare(
+			`SELECT browser, SUM(n) AS hits FROM hits_device
+			 WHERE slug = ?1 AND day >= date('now', ?2)
+			 GROUP BY browser ORDER BY hits DESC LIMIT 12`
 		).bind(slug, offset)
 	]);
 
@@ -145,6 +173,8 @@ async function loadDetail(env: App.Platform['env'], slug: string, offset: string
 		slug,
 		referrers: referrers.results as Array<{ referrer: string; hits: number }>,
 		countries: countries.results as Array<{ country: string; hits: number }>,
-		devices: devices.results as Array<{ device: string; hits: number }>
+		devices: devices.results as Array<{ device: string; hits: number }>,
+		os: os.results as Array<{ os: string; hits: number }>,
+		browsers: browsers.results as Array<{ browser: string; hits: number }>
 	};
 }

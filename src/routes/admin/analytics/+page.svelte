@@ -105,6 +105,18 @@
 			rows={data.devices.map((d) => ({ label: d.device, value: d.hits }))}
 			empty="No devices recorded yet."
 		/>
+
+		<BarList
+			title="Operating systems"
+			rows={data.os.map((o) => ({ label: o.os, value: o.hits }))}
+			empty="No OS data recorded yet."
+		/>
+
+		<BarList
+			title="Browsers"
+			rows={data.browsers.map((b) => ({ label: b.browser, value: b.hits }))}
+			empty="No browser data recorded yet."
+		/>
 	</div>
 
 	{#if data.notFound.length}
@@ -155,6 +167,18 @@
 						title="Devices"
 						rows={detail.devices.map((d) => ({ label: d.device, value: d.hits }))}
 						empty="No devices for this link."
+					/>
+					<BarList
+						level={3}
+						title="Operating systems"
+						rows={detail.os.map((o) => ({ label: o.os, value: o.hits }))}
+						empty="No OS data for this link."
+					/>
+					<BarList
+						level={3}
+						title="Browsers"
+						rows={detail.browsers.map((b) => ({ label: b.browser, value: b.hits }))}
+						empty="No browser data for this link."
 					/>
 				</div>
 			</section>

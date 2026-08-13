@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { HITS_UPSERT, VISITORS_INSERT } from './track';
+import { DEVICE_UPSERT, HITS_UPSERT, MIGRATE_VISITOR, VISITORS_INSERT } from './track';
 
 /**
  * §13, test 3 — the `hits` upsert increments rather than duplicating.
@@ -15,9 +15,13 @@ import { HITS_UPSERT, VISITORS_INSERT } from './track';
 // The schema is the sum of every migration, so the suite applies all of them
 // in order rather than pinning one file. A test that stops at 0001 would keep
 // asserting a `blocks` table long after it was retired.
-const MIGRATIONS = ['0001_init.sql', '0002_markdown.sql', '0003_passkeys.sql', '0004_cleanup.sql'].map(
-	(name) => fileURLToPath(new URL(`../../../migrations/${name}`, import.meta.url))
-);
+const MIGRATIONS = [
+	'0001_init.sql',
+	'0002_markdown.sql',
+	'0003_passkeys.sql',
+	'0004_cleanup.sql',
+	'0005_fingerprint.sql'
+].map((name) => fileURLToPath(new URL(`../../../migrations/${name}`, import.meta.url)));
 
 // `node:sqlite` is unflagged from Node 22.5 onwards. If a runtime does not have
 // it, skip rather than fail — the suite should never go red for that reason.
@@ -50,8 +54,8 @@ withSqlite('hits', () => {
 		).map((r) => r.name);
 
 		// `blocks` was retired by 0004; `passkeys` arrived with 0003. Everything
-		// else is 0001's original shape.
-		expect(tables).toEqual(['assets', 'hits', 'passkeys', 'profile', 'slugs', 'visitors']);
+		// else is 0001's original shape, plus `hits_device` from 0005.
+		expect(tables).toEqual(['assets', 'hits', 'hits_device', 'passkeys', 'profile', 'slugs', 'visitors']);
 	});
 
 	it('creates the two indexes that keep per-slug queries off a full scan', () => {
@@ -69,6 +73,44 @@ withSqlite('hits', () => {
 		hit(...HIT);
 
 		expect(rows<{ n: number }>(`SELECT n FROM hits`)).toEqual([{ n: 3 }]);
+	});
+
+	it('tracks the OS/browser breakdown in its own table, keyed off the same day/slug/kind', () => {
+		const device = db.prepare(DEVICE_UPSERT);
+		device.run('2026-01-01', 'gh', 'redirect', 'Windows', 'Chrome');
+		device.run('2026-01-01', 'gh', 'redirect', 'Windows', 'Chrome');
+		device.run('2026-01-01', 'gh', 'redirect', 'macOS', 'Safari');
+		device.run('2026-01-01', 'cv', 'redirect', 'Windows', 'Chrome');
+
+		expect(rows<{ n: number }>(`SELECT SUM(n) AS n FROM hits_device`)[0].n).toBe(4);
+		expect(rows<{ n: number }>(`SELECT COUNT(*) AS n FROM hits_device`)[0].n).toBe(3);
+	});
+
+	it('folds a cookie-less identity into the fingerprint identity for the whole day', () => {
+		// The visitor hit two slugs before the beacon ran; both rows share the
+		// cookie-less hash. The migration moves every row for the day at once,
+		// so the per-slug uniques do not double count after the beacon fires.
+		db.prepare(VISITORS_INSERT).run('2026-01-01', 'gh', 'old');
+		db.prepare(VISITORS_INSERT).run('2026-01-01', 'cv', 'old');
+
+		db.prepare(MIGRATE_VISITOR).run('2026-01-01', 'new', 'old');
+
+		expect(rows<{ vh: string; slug: string }>(`SELECT vh, slug FROM visitors ORDER BY slug`)).toEqual([
+			{ vh: 'new', slug: 'cv' },
+			{ vh: 'new', slug: 'gh' }
+		]);
+	});
+
+	it('leaves the next day untouched when it migrates an identity', () => {
+		db.prepare(VISITORS_INSERT).run('2026-01-01', 'gh', 'old');
+		db.prepare(VISITORS_INSERT).run('2026-01-02', 'gh', 'old');
+
+		db.prepare(MIGRATE_VISITOR).run('2026-01-01', 'new', 'old');
+
+		const rows = db
+			.prepare(`SELECT vh FROM visitors WHERE day = '2026-01-02'`)
+			.all() as unknown as Array<{ vh: string }>;
+		expect(rows).toEqual([{ vh: 'old' }]);
 	});
 
 	it('starts a new row when any single dimension differs', () => {

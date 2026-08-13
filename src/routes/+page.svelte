@@ -81,6 +81,11 @@
 	{#if data.needsScript}
 		<script src="/w.js" defer></script>
 	{/if}
+
+	<!-- Always, not gated like w.js: the fingerprint is for visitor counting,
+	     not for anything on the page that needs a script. `defer` keeps it off
+	     the render path; the beacon itself is a single keepalive POST. -->
+	<script src="/a.js" defer></script>
 </svelte:head>
 
 <main class="doc">

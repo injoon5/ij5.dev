@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { OTHER, bucket404, deviceClass, referrerHost, today, visitorHash } from './track';
+import {
+	classify,
+	fingerprint,
+	OTHER,
+	bucket404,
+	deviceClass,
+	parseBeacon,
+	readCookie,
+	referrerHost,
+	today,
+	visitorHash
+} from './track';
 
 /**
  * §6's bucketing, which is the whole defence against the `hits` table growing
@@ -84,6 +95,109 @@ describe('bucket404', () => {
 	it('bounds the column: a kept path is at most 64 characters', () => {
 		expect(bucket404('a'.repeat(64), 'mobile')).toHaveLength(64);
 		expect(bucket404('a'.repeat(65), 'mobile')).toBe(OTHER);
+	});
+});
+
+describe('classify', () => {
+	it('reads the OS and browser out of real user agents', () => {
+		expect(
+			classify(
+				'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+			)
+		).toEqual({ os: 'Windows', browser: 'Chrome' });
+
+		expect(
+			classify(
+				'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15'
+			)
+		).toEqual({ os: 'macOS', browser: 'Safari' });
+
+		expect(
+			classify(
+				'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+			)
+		).toEqual({ os: 'iOS', browser: 'Safari' });
+
+		expect(
+			classify(
+				'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.105 Mobile Safari/537.36'
+			)
+		).toEqual({ os: 'Android', browser: 'Chrome' });
+
+		expect(
+			classify('Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:123.0) Gecko/20100101 Firefox/123.0')
+		).toEqual({ os: 'Ubuntu', browser: 'Firefox' });
+	});
+
+	it('does not let a Chromium skin pass as Chrome', () => {
+		expect(
+			classify(
+				'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0'
+			)
+		).toEqual({ os: 'Windows', browser: 'Edge' });
+
+		expect(
+			classify(
+				'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 OPR/107.0.0.0'
+			)
+		).toEqual({ os: 'Linux', browser: 'Opera' });
+	});
+
+	it('reports Unknown rather than guessing', () => {
+		expect(classify('')).toEqual({ os: 'Unknown', browser: 'Unknown' });
+		expect(classify('Googlebot/2.1')).toEqual({ os: 'Unknown', browser: 'Unknown' });
+	});
+});
+
+describe('readCookie', () => {
+	it('picks a named cookie out of the header', () => {
+		expect(readCookie('a=1; f=abc; sid=xyz', 'f')).toBe('abc');
+	});
+
+	it('returns null when absent', () => {
+		expect(readCookie('a=1; sid=xyz', 'f')).toBeNull();
+		expect(readCookie(null, 'f')).toBeNull();
+	});
+
+	it('matches the name, not a prefix of a longer one', () => {
+		expect(readCookie('ff=zz; f=abc', 'f')).toBe('abc');
+		expect(readCookie('ff=zz', 'f')).toBeNull();
+	});
+});
+
+describe('parseBeacon', () => {
+	it('accepts a well-formed payload', () => {
+		const sigs = parseBeacon(
+			'{"b":["Chrome 122"],"p":"macOS","m":false,"t":0,"l":"en-US","z":"UTC","s":"1440x900","d":2}'
+		);
+		expect(sigs).not.toBeNull();
+		expect(sigs!.l).toBe('en-US');
+	});
+
+	it('rejects non-objects and wrong field types', () => {
+		expect(parseBeacon('nope')).toBeNull();
+		expect(parseBeacon('[]')).toBeNull();
+		expect(parseBeacon('{"b":["ok", 3]}')).toBeNull();
+		expect(parseBeacon('{"d":"high"}')).toBeNull();
+	});
+});
+
+describe('fingerprint', () => {
+	it('is stable for the same device', async () => {
+		const sigs = { p: 'macOS', l: 'en-US', z: 'UTC', s: '1440x900', d: 2 };
+		expect(await fingerprint('salt', sigs, 'UA')).toBe(await fingerprint('salt', sigs, 'UA'));
+	});
+
+	it('depends on the salt and the signals', async () => {
+		const a = await fingerprint('salt-a', { p: 'macOS' }, 'UA');
+		const b = await fingerprint('salt-b', { p: 'macOS' }, 'UA');
+		const c = await fingerprint('salt-a', { p: 'Linux' }, 'UA');
+		expect(a).not.toBe(b);
+		expect(a).not.toBe(c);
+	});
+
+	it('stores 16 bytes — enough to be unique in practice', async () => {
+		expect(await fingerprint('salt', {}, 'UA')).toMatch(/^[0-9a-f]{32}$/);
 	});
 });
 
