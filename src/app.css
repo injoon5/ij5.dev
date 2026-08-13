@@ -747,19 +747,30 @@
 		margin-top: 1.5rem;
 		color: inherit;
 		text-decoration: none;
+		/* Scopes the `@container` query below to the graph's own column width
+		   rather than the viewport. */
+		container-type: inline-size;
 	}
 	/* One look at every size: cells always fill the reading column the way the
 	   max-width desktop state does, down to a minimum of 0.55rem. Narrower than
 	   that the year holds its size and pans instead of shrinking to a
 	   wireframe — the RTL wrapper's right edge is the LTR grid's end, so the
 	   scroll opens on the latest weeks, and the side masks fade the clipped
-	   edges as a scroll affordance. The `container-type` scopes the query to
-	   the graph's own column, not the viewport. */
+	   edges as a scroll affordance. A container query can only match
+	   descendants of the container (`.contrib` above), never the container
+	   itself, so these rules live on `.contrib-scroll`. */
 	.contrib-scroll {
 		display: block;
-		container-type: inline-size;
 		overflow-x: auto;
 		overscroll-behavior-inline: contain;
+	}
+	/* The side fades live on this wrapper, not the scroll container: a mask on
+	   a scroll container is anchored to the scrolled content in Chromium, so it
+	   fades the data's true ends (which sit off-screen) instead of the visible
+	   edges. Masking the wrapper — which never moves — keeps the fade pinned
+	   to the viewport while the year pans beneath it. */
+	.contrib-mask {
+		display: block;
 	}
 	.contrib-grid {
 		display: grid;
@@ -773,6 +784,16 @@
 	@container (max-width: 622px) {
 		.contrib-scroll {
 			direction: rtl;
+		}
+		.contrib-grid {
+			/* Auto width would pin the box to the wrapper and leave the tracks
+			   overflowing *inside* it — overflow a scroll container never
+			   sees. Making the box its natural width is what actually
+			   overflows the wrapper, and in RTL the scroll opens on the
+			   latest weeks. */
+			width: max-content;
+		}
+		.contrib-mask {
 			mask-image: linear-gradient(
 				to right,
 				transparent,

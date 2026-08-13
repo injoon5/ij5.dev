@@ -52,7 +52,7 @@ function buildId() {
 		if (!diff) return head;
 		const diffHash = execSync('git hash-object --stdin', {
 			input: diff,
-			stdio: ['ignore', 'pipe', 'ignore']
+			stdio: ['pipe', 'pipe', 'ignore']
 		})
 			.toString()
 			.trim()

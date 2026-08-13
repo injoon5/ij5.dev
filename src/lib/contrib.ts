@@ -50,7 +50,9 @@ export function renderContribGraph(data: ContribData | undefined, user: string):
 
 	return (
 		`<a class="contrib" href="${href}" aria-label="${escapeHtml(user)} on GitHub">` +
+		`<span class="contrib-mask">` +
 		`<span class="contrib-scroll"><span class="contrib-grid" style="--weeks:${weeks}" aria-hidden="true">${grid}</span></span>` +
+		`</span>` +
 		`<span class="contrib-cap">${label}</span>` +
 		`</a>`
 	);
