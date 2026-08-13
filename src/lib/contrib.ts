@@ -37,7 +37,12 @@ export function renderContribGraph(data: ContribData | undefined, user: string):
 	// don't push the grid out of its 7-row shape.
 	const weeks = Math.ceil(cells.length / 7);
 
-	const grid = cells.map((day) => `<i class="cell" data-level="${day.l}"></i>`).join('');
+	// 369 rows of `<i data-l="N">` add up: a short attribute name and an
+	// unquoted single-digit value keep the year's markup a third smaller than
+	// a class plus `data-level`. The grid is aria-hidden, so there is no
+	// accessible name to preserve. `<i>` is not a void element, so it needs
+	// its closing tag — an omitted one nests every cell inside the first.
+	const grid = cells.map((day) => `<i data-l=${day.l}></i>`).join('');
 
 	const label =
 		hasData && data?.total !== undefined

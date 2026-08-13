@@ -819,21 +819,21 @@
 			);
 		}
 	}
-	.contrib .cell {
+	.contrib-grid > i {
 		aspect-ratio: 1;
 		border-radius: 2px;
 		background-color: var(--grass-0);
 	}
-	.contrib .cell[data-level='1'] {
+	.contrib-grid > i[data-l='1'] {
 		background-color: var(--grass-1);
 	}
-	.contrib .cell[data-level='2'] {
+	.contrib-grid > i[data-l='2'] {
 		background-color: var(--grass-2);
 	}
-	.contrib .cell[data-level='3'] {
+	.contrib-grid > i[data-l='3'] {
 		background-color: var(--grass-3);
 	}
-	.contrib .cell[data-level='4'] {
+	.contrib-grid > i[data-l='4'] {
 		background-color: var(--grass-4);
 	}
 	.contrib-cap {

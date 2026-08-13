@@ -132,6 +132,16 @@ describe('renderMarkdown — contribution graph', () => {
 		expect(html).toContain('class="contrib"');
 		expect(html).toContain('octocat on GitHub');
 	});
+
+	it('renders flat, closed cells so the grid does not nest them', () => {
+		const { html } = renderMarkdown('::contributions user=octocat', { assetsOrigin: ORIGIN });
+		// The compact `<i data-l=N></i>` form must be a sibling sequence — an
+		// omitted closing tag nests every cell inside the first and breaks the
+		// 7-row grid.
+		const cells = html.match(/<i data-l=\d><\/i>/g) ?? [];
+		expect(cells.length).toBe(53 * 7);
+		expect(html).not.toContain('<i data-l=0><i');
+	});
 });
 
 describe('findLiveRequests', () => {
