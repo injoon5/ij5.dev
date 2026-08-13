@@ -530,6 +530,18 @@ export function needsScriptFor(kind: string): boolean {
 }
 
 /**
+ * Whether any block on the page is a live widget — one that refreshes behind
+ * the response and rewrites the shared `live` KV without bumping the document
+ * version (§7). The `/` hook uses this to keep such a page out of the
+ * version-keyed HTML cache, which is built on a version change being the only
+ * thing that can make the rendered HTML stale — true for static content, false
+ * the moment live data can change underneath a fixed version.
+ */
+export function hasLiveBlock(blocks: Array<{ kind: string }>): boolean {
+	return blocks.some((b) => isKind(b.kind) && defFor(b.kind).tier === 'live');
+}
+
+/**
  * One discriminated union over every kind, derived from the registry rather
  * than maintained beside it. A malformed block cannot be saved, so the
  * renderer never has to defend against bad data.

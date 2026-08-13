@@ -113,41 +113,59 @@ export const handle: Handle = async ({ event, resolve }) => {
 		try {
 			const doc = await env.KV.get<BentoDoc>('bento', { type: 'json', cacheTtl: 60 });
 			if (doc) {
-				const etag = `"bento-v${doc.v}"`;
+				// A live widget refreshes behind the response and rewrites the
+				// shared `live` KV without bumping `doc.v` (§7). The version-keyed
+				// HTML cache below assumes a version change is the only thing that
+				// can stale the HTML — so caching a page that carries a live widget
+				// would freeze its first render (with whatever live data existed
+				// then, often none) until the next publish, and the widget's
+				// refreshes would never reach a visitor. Such a page is therefore
+				// left uncached and renders fresh every request, which is what
+				// lets each background refresh show up. The catalog is imported
+				// here, not at module top, so the redirect fast-path never loads
+				// it (nor the zod graph it pulls in).
+				const { hasLiveBlock } = await import('$lib/widgets/catalog');
+				if (hasLiveBlock(doc.blocks)) {
+					// Reuse the document the page load would otherwise read again.
+					event.locals.bento = doc;
+				} else {
+					const etag = `"bento-v${doc.v}"`;
 
-				if (event.request.headers.get('if-none-match') === etag) {
-					return harden(
-						new Response(null, {
-							status: 304,
-							headers: { ETag: etag, 'Cache-Control': 'public, max-age=0, must-revalidate' }
-						})
-					);
+					if (event.request.headers.get('if-none-match') === etag) {
+						return harden(
+							new Response(null, {
+								status: 304,
+								headers: { ETag: etag, 'Cache-Control': 'public, max-age=0, must-revalidate' }
+							})
+						);
+					}
+
+					const key = bentoCacheKey(doc.v);
+					const cached = await cache?.match(key);
+					if (cached) return harden(browserFacing(cached, etag));
+
+					event.locals.authed = false;
+					event.locals.bento = doc;
+					const res = await resolve(event);
+					// Store from GET only. A HEAD is served from an entry a GET put
+					// there, but must never be the request that fills it: the entry is
+					// shared, and a body-less response in it would blank the page for
+					// everyone else until the next publish.
+					if (res.status === 200 && cache && method === 'GET') {
+						const copy = res.clone();
+						const store = new Response(copy.body, {
+							status: 200,
+							headers: new Headers(copy.headers)
+						});
+						store.headers.delete('set-cookie');
+						// The key is version-scoped and this branch is static-only,
+						// so staleness is impossible and the entry can live as long
+						// as the colo will keep it.
+						store.headers.set('Cache-Control', 'public, s-maxage=31536000');
+						platform?.context?.waitUntil?.(cache.put(key, store));
+					}
+					return harden(browserFacing(res, etag));
 				}
-
-				const key = bentoCacheKey(doc.v);
-				const cached = await cache?.match(key);
-				if (cached) return harden(browserFacing(cached, etag));
-
-				event.locals.authed = false;
-				event.locals.bento = doc;
-				const res = await resolve(event);
-				// Store from GET only. A HEAD is served from an entry a GET put
-				// there, but must never be the request that fills it: the entry is
-				// shared, and a body-less response in it would blank the page for
-				// everyone else until the next publish.
-				if (res.status === 200 && cache && method === 'GET') {
-					const copy = res.clone();
-					const store = new Response(copy.body, {
-						status: 200,
-						headers: new Headers(copy.headers)
-					});
-					store.headers.delete('set-cookie');
-					// The key is version-scoped, so staleness is impossible and
-					// the entry can live as long as the colo will keep it.
-					store.headers.set('Cache-Control', 'public, s-maxage=31536000');
-					platform?.context?.waitUntil?.(cache.put(key, store));
-				}
-				return harden(browserFacing(res, etag));
 			}
 		} catch {
 			// Fall through to a normal render; the page load falls back to D1.
