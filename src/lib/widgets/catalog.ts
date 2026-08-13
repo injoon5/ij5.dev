@@ -354,8 +354,9 @@ export const widgets = {
 	clock: {
 		label: 'Clock',
 		tier: 'static',
-		description: 'Renders the offset, not the time. A ticking clock needs JS and goes wrong in caches.',
+		description: 'The offset renders in the cache; a script upgrades it to the live local time.',
 		spans: ['1x1'],
+		needsScript: true,
 		schema: z.object({
 			place: shortText,
 			offset: z.string().trim().min(1).max(12)

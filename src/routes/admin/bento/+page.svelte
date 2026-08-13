@@ -277,13 +277,15 @@
 				its fields. Editing a list beside a preview meant every change
 				was a guess about a card you were not looking at.
 			-->
-			<div class="bento-region canvas-frame">
-				<BlockCanvas
-					blocks={data.draft.blocks.filter((b) => isKind(b.kind))}
-					{selected}
-					onSelect={select}
-					onReorder={reorder}
-				/>
+			<div class="canvas-frame">
+				<div class="bento-region canvas-stage">
+					<BlockCanvas
+						blocks={data.draft.blocks.filter((b) => isKind(b.kind))}
+						{selected}
+						onSelect={select}
+						onReorder={reorder}
+					/>
+				</div>
 			</div>
 
 			<!-- Drag and the nudge buttons land on one action, which is also the
@@ -398,6 +400,32 @@
 		border-radius: var(--radius-ui-lg);
 		background-color: var(--bg);
 		padding: 1rem;
+	}
+
+	/*
+	 * Below `lg` the editor is a single column, so a tablet-width canvas would
+	 * otherwise reflow to the two-column phone layout — a preview of a screen
+	 * nobody with this width sees. Instead the frame becomes a viewport and the
+	 * stage holds the published four-column layout at its real proportions,
+	 * scrolled horizontally. The container query lives on the stage, not the
+	 * frame, so `100cqw` is the stage's own width and every `1x1` stays square
+	 * against the scrolled width rather than the visible one.
+	 */
+	@media (min-width: 768px) and (max-width: 1023.98px) {
+		.canvas-frame {
+			overflow-x: auto;
+			overscroll-behavior-x: contain;
+		}
+
+		.canvas-stage {
+			width: 60rem;
+		}
+
+		.canvas-stage :global(.bento-grid) {
+			--bento-gap: 0.875rem;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			grid-auto-rows: minmax(calc((100cqw - 3 * var(--bento-gap)) / 4), auto);
+		}
 	}
 
 	@media (min-width: 1024px) {

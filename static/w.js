@@ -96,6 +96,39 @@
 		}
 	});
 
+	// Live local clocks. The server rendered each clock's offset — correct for
+	// as long as the cache holds the page — and this upgrades it to the actual
+	// wall-clock time at that place, held on the minute. A clock whose offset
+	// did not parse carries no `data-tz-offset` and is left as written.
+	(function clocks() {
+		var els = document.querySelectorAll('[data-clock][data-tz-offset]');
+		if (!els.length) return;
+
+		function pad(n) {
+			return n < 10 ? '0' + n : '' + n;
+		}
+
+		function tick() {
+			var now = Date.now();
+			for (var i = 0; i < els.length; i++) {
+				var off = parseInt(els[i].getAttribute('data-tz-offset'), 10);
+				if (isNaN(off)) continue;
+				// Shift the UTC instant by the offset, then read UTC parts: that is
+				// the place's wall time without re-applying the viewer's own zone.
+				var t = new Date(now + off * 60000);
+				els[i].textContent = pad(t.getUTCHours()) + ':' + pad(t.getUTCMinutes());
+			}
+		}
+
+		tick();
+		// Land the first update on the next minute boundary, then keep to it, so
+		// every clock flips its minute together rather than on load-time phase.
+		setTimeout(function () {
+			tick();
+			setInterval(tick, 60000);
+		}, 60000 - (Date.now() % 60000));
+	})();
+
 	// `error` does not bubble, so this listens in the capture phase. A missing
 	// R2 object then collapses to the widget surface rather than showing a
 	// broken-image glyph.
