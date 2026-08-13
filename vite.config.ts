@@ -34,12 +34,30 @@ const shim = (file: string) => fileURLToPath(new URL(`./shims/${file}`, import.m
  * browsers refetch instead of 304ing. Rebuilding the same commit reuses the
  * same ID and the cache survives, which is correct: the code is identical.
  * Falls back to a timestamp outside a git checkout.
+ *
+ * An uncommitted tree is not "the same code", but HEAD is unchanged — a dirty
+ * build keyed on the SHA alone would ship new HTML under the previous deploy's
+ * key and the cache would keep serving stale markup. So a hash of the diff
+ * rides along whenever the tree is dirty, and every dirty build gets its own
+ * key whether or not it was committed.
  */
 function buildId() {
 	try {
-		return execSync('git rev-parse --short HEAD', {
+		const head = execSync('git rev-parse --short HEAD', {
 			stdio: ['ignore', 'pipe', 'ignore']
 		}).toString().trim();
+		const diff = execSync('git diff HEAD', {
+			stdio: ['ignore', 'pipe', 'ignore']
+		}).toString();
+		if (!diff) return head;
+		const diffHash = execSync('git hash-object --stdin', {
+			input: diff,
+			stdio: ['ignore', 'pipe', 'ignore']
+		})
+			.toString()
+			.trim()
+			.slice(0, 7);
+		return `${head}-${diffHash}`;
 	} catch {
 		return new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
 	}
