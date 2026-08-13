@@ -25,10 +25,7 @@ const MINUTE = 60 * 1000;
  * widget catalog, so the live path stands on its own.
  */
 const TTL: Record<string, number> = {
-	github: 6 * HOUR,
-	grass: 6 * HOUR,
-	weather: 30 * MINUTE,
-	post: HOUR
+	grass: 6 * HOUR
 };
 
 type Fetcher = {
@@ -54,36 +51,6 @@ const LEVELS: Record<string, number> = {
 };
 
 const fetchers: Record<string, Fetcher> = {
-	github: {
-		// The REST repo endpoint answers anonymous requests; a token only raises
-		// the rate limit. So this one stays on without any configuration.
-		async run(data, env) {
-			const headers: Record<string, string> = {
-				accept: 'application/vnd.github+json',
-				// GitHub rejects requests without one.
-				'user-agent': 'ij5.dev'
-			};
-			if (env.GITHUB_TOKEN) headers.authorization = `Bearer ${env.GITHUB_TOKEN}`;
-
-			const res = await fetch(`https://api.github.com/repos/${data.owner}/${data.repo}`, {
-				headers
-			});
-			if (!res.ok) throw new Error(`github ${res.status}`);
-
-			const json = (await res.json()) as {
-				stargazers_count?: number;
-				language?: string;
-				description?: string;
-			};
-
-			return {
-				stars: json.stargazers_count,
-				language: json.language,
-				description: json.description
-			};
-		}
-	},
-
 	grass: {
 		/**
 		 * The contribution calendar is GraphQL-only, and GitHub's GraphQL API
@@ -161,75 +128,8 @@ const fetchers: Record<string, Fetcher> = {
 				)
 			};
 		}
-	},
-
-	weather: {
-		// Open-Meteo needs no key, so this one is always on. Worth stating: "live"
-		// and "needs a credential" are not the same thing.
-		async run(data) {
-			const url = new URL('https://api.open-meteo.com/v1/forecast');
-			url.searchParams.set('latitude', String(data.lat ?? ''));
-			url.searchParams.set('longitude', String(data.lon ?? ''));
-			url.searchParams.set('current', 'temperature_2m,weather_code');
-			url.searchParams.set('timezone', 'auto');
-
-			const res = await fetch(url);
-			if (!res.ok) throw new Error(`weather ${res.status}`);
-
-			const json = (await res.json()) as {
-				current?: { temperature_2m?: number; weather_code?: number };
-				current_units?: { temperature_2m?: string };
-			};
-			if (json.current?.temperature_2m === undefined) throw new Error('weather returned nothing');
-
-			return {
-				temp: Math.round(json.current.temperature_2m),
-				unit: json.current_units?.temperature_2m ?? '°C',
-				code: json.current.weather_code ?? 0
-			};
-		}
-	},
-
-	post: {
-		// A feed is a public URL. No key, always on.
-		async run(data) {
-			const res = await fetch(String(data.feed ?? ''), {
-				headers: { accept: 'application/atom+xml, application/rss+xml, application/xml' }
-			});
-			if (!res.ok) throw new Error(`post ${res.status}`);
-
-			// Deliberately not an XML parser: workerd has no DOMParser, and pulling
-			// one in would put a parser on the cold-start path of every request the
-			// Worker serves (§11). Two regexes over the first entry is enough for a
-			// title and a link, and a feed that defeats them renders the fallback.
-			const xml = await res.text();
-			const entry = xml.split(/<(?:item|entry)[\s>]/)[1] ?? '';
-
-			const title = firstTag(entry, 'title');
-			if (!title) throw new Error('post found no entry');
-
-			const link =
-				firstTag(entry, 'link') || entry.match(/<link[^>]*href=["']([^"']+)["']/i)?.[1] || '';
-
-			return { title, url: link, at: firstTag(entry, 'pubDate') || firstTag(entry, 'updated') };
-		}
 	}
 };
-
-/** Innermost text of a tag, CDATA unwrapped and entities decoded. */
-function firstTag(xml: string, tag: string): string {
-	const match = xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i'));
-	if (!match) return '';
-	return match[1]
-		.replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/, '$1')
-		.replace(/&lt;/g, '<')
-		.replace(/&gt;/g, '>')
-		.replace(/&quot;/g, '"')
-		.replace(/&#39;/g, "'")
-		.replace(/&amp;/g, '&')
-		.trim()
-		.slice(0, 200);
-}
 
 /** Whether this deployment is configured to run a given live kind. */
 export function isLiveAvailable(kind: string, env: Env): boolean {

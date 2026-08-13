@@ -93,8 +93,12 @@ Roll back by deploying the previous version the same way.
 npx wrangler tail          # live logs
 ```
 
-Then check `/` renders, `/login` accepts the admin token, and an image upload in
-the editor returns an `assets.ij5.dev` URL.
+Then check `/` renders, `/login` accepts the admin token, `/admin/security` can add
+a passkey, and an image upload in the editor returns an `assets.ij5.dev` URL.
+
+Passkeys are scoped to a domain: a key registered against `localhost` in dev will
+not work against `ij5.dev` in production, and vice versa. Register one on each
+origin you actually sign in from.
 
 Observability is on in `wrangler.jsonc`; watch **CPU time** in the dashboard, not
 wall-clock — wall-clock includes waiting on KV and D1 and will look alarming for

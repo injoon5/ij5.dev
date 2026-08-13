@@ -15,6 +15,7 @@ import type { BentoDoc, SlugRecord } from '$lib/types';
  */
 
 const REDIRECT_TTL = 300;
+const DEV = import.meta.env.DEV;
 
 /** Query-independent, so `/gh?utm_source=x` and `/gh` share one cache entry. */
 const slugCacheKey = (seg: string) => new Request(`https://cache.internal/s/${seg}`);
@@ -112,21 +113,30 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 		try {
 			const doc = await env.KV.get<BentoDoc>('bento', { type: 'json', cacheTtl: 60 });
-			if (doc) {
+			// A document that predates the Markdown format carries `blocks`, not
+			// `markdown`. Treating it as published would cache an empty body
+			// under its old version key forever — fall through to the normal
+			// render instead, which falls back to D1.
+			if (doc?.markdown) {
 				const etag = `"bento-v${doc.v}"`;
-
-				if (event.request.headers.get('if-none-match') === etag) {
-					return harden(
-						new Response(null, {
-							status: 304,
-							headers: { ETag: etag, 'Cache-Control': 'public, max-age=0, must-revalidate' }
-						})
-					);
-				}
-
 				const key = bentoCacheKey(doc.v);
-				const cached = await cache?.match(key);
-				if (cached) return harden(browserFacing(cached, etag));
+				// `vite dev` must re-render on every request. The cache key only
+				// moves on publish, so a template or CSS edit would otherwise
+				// sit behind the last HTML until `v` bumped — and a matching
+				// ETag would 304 the browser even after a hard refresh.
+				if (!DEV) {
+					if (event.request.headers.get('if-none-match') === etag) {
+						return harden(
+							new Response(null, {
+								status: 304,
+								headers: { ETag: etag, 'Cache-Control': 'public, max-age=0, must-revalidate' }
+							})
+						);
+					}
+
+					const cached = await cache?.match(key);
+					if (cached) return harden(browserFacing(cached, etag));
+				}
 
 				event.locals.authed = false;
 				event.locals.bento = doc;
@@ -135,7 +145,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 				// there, but must never be the request that fills it: the entry is
 				// shared, and a body-less response in it would blank the page for
 				// everyone else until the next publish.
-				if (res.status === 200 && cache && method === 'GET') {
+				if (!DEV && res.status === 200 && cache && method === 'GET') {
 					const copy = res.clone();
 					const store = new Response(copy.body, {
 						status: 200,
@@ -147,7 +157,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 					store.headers.set('Cache-Control', 'public, s-maxage=31536000');
 					platform?.context?.waitUntil?.(cache.put(key, store));
 				}
-				return harden(browserFacing(res, etag));
+				return harden(DEV ? res : browserFacing(res, etag));
 			}
 		} catch {
 			// Fall through to a normal render; the page load falls back to D1.
@@ -167,8 +177,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	 * of CSRF, while a bearer token has to be supplied by the caller. Letting
 	 * the cookie in here would hand any page on any origin the shortener.
 	 *
-	 * Everything else under `/api` — today, the binary asset upload — is called
-	 * by the admin UI with the session and is guarded here.
+	 * `/api/passkey/login/*` are the two steps of passkey sign-in. They are the
+	 * login page's own start: a session is exactly what the caller does not
+	 * have yet, so guarding them with one would lock the door from outside.
+	 * Everything else under `/api` — today, registration and the binary asset
+	 * upload — is called by the admin UI with the session and is guarded here.
 	 *
 	 * The prefix is matched with its trailing slash. `startsWith('/api')` also
 	 * matches `/apitest`, `/apiary` and every other slug that happens to begin
@@ -177,8 +190,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	 */
 	const isApi = path === '/api' || path.startsWith('/api/');
 	const isBearerApi = path === '/api/links' || path.startsWith('/api/links/');
+	const isPasskeyLogin =
+		path === '/api/passkey/login/begin' || path === '/api/passkey/login/complete';
 
-	if (isApi && !isBearerApi && !event.locals.authed) {
+	if (isApi && !isBearerApi && !isPasskeyLogin && !event.locals.authed) {
 		return new Response('Unauthorized', { status: 401 });
 	}
 

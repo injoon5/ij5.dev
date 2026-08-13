@@ -5,6 +5,7 @@
 	import LinkIcon from 'lucide-svelte/icons/link-2';
 	import ChartLine from 'lucide-svelte/icons/chart-line';
 	import Terminal from 'lucide-svelte/icons/terminal';
+	import KeyRound from 'lucide-svelte/icons/key-round';
 	import LogOut from 'lucide-svelte/icons/log-out';
 
 	let { children }: { children: Snippet } = $props();
@@ -13,7 +14,8 @@
 		{ href: '/admin', label: 'Links', icon: LinkIcon },
 		{ href: '/admin/bento', label: 'Bento', icon: LayoutGrid },
 		{ href: '/admin/analytics', label: 'Analytics', icon: ChartLine },
-		{ href: '/admin/api', label: 'API', icon: Terminal }
+		{ href: '/admin/api', label: 'API', icon: Terminal },
+		{ href: '/admin/security', label: 'Security', icon: KeyRound }
 	];
 
 	let current = $derived(page.url.pathname);

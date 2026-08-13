@@ -3,43 +3,36 @@
 	"name": "ij5",
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"compatibility_date": "2025-08-01",
-
 	// §11: `nodejs_compat` measurably increases cold start. Nothing here needs it.
 	"compatibility_flags": [],
-
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
 	},
-
 	// §11: watch CPU time, not wall-clock. Wall-clock includes KV/D1 waits.
 	"observability": {
 		"enabled": true
 	},
-
 	"kv_namespaces": [
 		{
 			"binding": "KV",
-			"id": "PLACEHOLDER_KV_ID"
+			"id": "125d0978bef8444fad1c426fdeb8c8f6"
 		}
 	],
-
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "ij5",
-			"database_id": "PLACEHOLDER_D1_ID",
+			"database_id": "36fa7080-54d2-4f7a-b883-4386b5f76d27",
 			"migrations_dir": "migrations"
 		}
 	],
-
 	"r2_buckets": [
 		{
 			"binding": "BUCKET",
 			"bucket_name": "ij5-assets"
 		}
 	],
-
 	"vars": {
 		// Origin allowlist for the binary upload endpoint (§5). Secrets live in
 		// `wrangler secret put`, never here.

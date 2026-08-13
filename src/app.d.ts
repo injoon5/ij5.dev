@@ -35,9 +35,8 @@ declare global {
 				 * with none of these set.
 				 */
 
-				/** Optional for `github` (raises the rate limit), required for
-				 * `grass` — the contribution calendar is GraphQL-only and GitHub
-				 * refuses anonymous GraphQL outright. */
+				/** Required for `grass` — the contribution calendar is GraphQL-only
+				 * and GitHub refuses anonymous GraphQL outright. */
 				GITHUB_TOKEN?: string;
 
 			};

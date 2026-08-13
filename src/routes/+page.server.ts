@@ -57,9 +57,11 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
 		doc = null;
 	}
 
-	if (!doc) {
-		// KV is unavailable or nothing has been published yet. Fall back to the
-		// source of truth rather than serving an error.
+	if (!doc?.markdown) {
+		// KV is unavailable, nothing has been published yet, or the published
+		// document predates the Markdown format (the old one carried `blocks`,
+		// not a body). All three are the same thing from here: fall back to the
+		// source of truth rather than serving an error or a blank page.
 		try {
 			const { profile, markdown } = await loadFromD1(env);
 			doc = { v: 0, profile, markdown };

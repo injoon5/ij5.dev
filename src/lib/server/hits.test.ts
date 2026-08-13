@@ -12,7 +12,12 @@ import { HITS_UPSERT, VISITORS_INSERT } from './track';
  * that stopped existing, fails right here.
  */
 
-const MIGRATION = fileURLToPath(new URL('../../../migrations/0001_init.sql', import.meta.url));
+// The schema is the sum of every migration, so the suite applies all of them
+// in order rather than pinning one file. A test that stops at 0001 would keep
+// asserting a `blocks` table long after it was retired.
+const MIGRATIONS = ['0001_init.sql', '0002_markdown.sql', '0003_passkeys.sql', '0004_cleanup.sql'].map(
+	(name) => fileURLToPath(new URL(`../../../migrations/${name}`, import.meta.url))
+);
 
 // `node:sqlite` is unflagged from Node 22.5 onwards. If a runtime does not have
 // it, skip rather than fail — the suite should never go red for that reason.
@@ -32,7 +37,7 @@ withSqlite('hits', () => {
 
 	beforeEach(() => {
 		db = new sqlite!.DatabaseSync(':memory:');
-		db.exec(readFileSync(MIGRATION, 'utf8'));
+		for (const file of MIGRATIONS) db.exec(readFileSync(file, 'utf8'));
 	});
 
 	const hit = (...args: readonly string[]) => db.prepare(HITS_UPSERT).run(...args);
@@ -44,7 +49,9 @@ withSqlite('hits', () => {
 			`SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name`
 		).map((r) => r.name);
 
-		expect(tables).toEqual(['assets', 'blocks', 'hits', 'profile', 'slugs', 'visitors']);
+		// `blocks` was retired by 0004; `passkeys` arrived with 0003. Everything
+		// else is 0001's original shape.
+		expect(tables).toEqual(['assets', 'hits', 'passkeys', 'profile', 'slugs', 'visitors']);
 	});
 
 	it('creates the two indexes that keep per-slug queries off a full scan', () => {
