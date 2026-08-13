@@ -264,6 +264,8 @@ md.renderer.rules.contrib_block = (tokens: any, idx: number, _o: any, env: any) 
 	const e = env as RenderEnv;
 	const meta = tokens[idx].meta as { user: string; id: string };
 	const data = e.live?.[meta.id]?.data as ContribData | undefined;
+	// The edge fades track the scroll position, which wants `/w.js`.
+	e.needsScript = true;
 	return renderContribGraph(data, meta.user) + '\n';
 };
 

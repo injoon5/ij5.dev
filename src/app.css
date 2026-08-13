@@ -773,7 +773,9 @@
 	   a scroll container is anchored to the scrolled content in Chromium, so it
 	   fades the data's true ends (which sit off-screen) instead of the visible
 	   edges. Masking the wrapper — which never moves — keeps the fade pinned
-	   to the viewport while the year pans beneath it. */
+	   to the viewport while the year pans beneath it. The rule below is the
+	   no-script fallback (both edges always faded); `/w.js` repaints the same
+	   gradient with per-side alphas driven by the scroll position. */
 	.contrib-mask {
 		display: block;
 	}
@@ -806,15 +808,15 @@
 			mask-image: linear-gradient(
 				to right,
 				transparent,
-				black 0.6rem,
-				black calc(100% - 0.6rem),
+				black 0.75rem,
+				black calc(100% - 0.75rem),
 				transparent
 			);
 			-webkit-mask-image: linear-gradient(
 				to right,
 				transparent,
-				black 0.6rem,
-				black calc(100% - 0.6rem),
+				black 0.75rem,
+				black calc(100% - 0.75rem),
 				transparent
 			);
 		}

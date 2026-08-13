@@ -110,4 +110,41 @@
 		},
 		true
 	);
+
+	// Contribution graph: fade the side with the hidden columns, so the fade
+	// appears and disappears with the scroll position instead of staying
+	// painted on both edges forever. Geometry, not `scrollLeft`, because RTL
+	// scroll offsets disagree between engines. The mask is written here, not
+	// in CSS, because a per-side alpha wants a single gradient that no
+	// `mask-composite` expression reproduced consistently across engines.
+	var grass = document.querySelector('.contrib-scroll');
+	if (grass) {
+		var grassGrid = grass.firstElementChild;
+		var grassMask = grass.parentElement;
+		var paintGrass = function () {
+			var max = grass.scrollWidth - grass.clientWidth;
+			if (max <= 0 || !grassGrid || !grassMask) {
+				grassMask.style.maskImage = 'none';
+				grassMask.style.webkitMaskImage = 'none';
+				return;
+			}
+			var s = (grass.getBoundingClientRect().left - grassGrid.getBoundingClientRect().left) / max;
+			if (s < 0) s = 0;
+			else if (s > 1) s = 1;
+			// Edge visibility: 1 = fully visible, 0 = faded out. Left is
+			// transparent at the newest position (older columns sit to its
+			// left), right at the oldest.
+			var mask =
+				'linear-gradient(to right, rgba(0,0,0,' +
+				(1 - s).toFixed(2) +
+				'), black 0.75rem, black calc(100% - 0.75rem), rgba(0,0,0,' +
+				s.toFixed(2) +
+				'))';
+			grassMask.style.maskImage = mask;
+			grassMask.style.webkitMaskImage = mask;
+		};
+		grass.addEventListener('scroll', paintGrass, { passive: true });
+		window.addEventListener('resize', paintGrass, { passive: true });
+		paintGrass();
+	}
 })();
