@@ -763,6 +763,11 @@
 		display: block;
 		overflow-x: auto;
 		overscroll-behavior-inline: contain;
+		/* A thin, quiet scrollbar that sits under the grid. The thumb is gray
+		   on a transparent track; `scrollbar-color` is the standard pair for
+		   `scrollbar-width`. */
+		scrollbar-width: thin;
+		scrollbar-color: gray transparent;
 	}
 	/* The side fades live on this wrapper, not the scroll container: a mask on
 	   a scroll container is anchored to the scrolled content in Chromium, so it
@@ -784,6 +789,10 @@
 	@container (max-width: 622px) {
 		.contrib-scroll {
 			direction: rtl;
+			/* Reserve room for the thin scrollbar below the rows, so it never
+			   floats over the grass (overlay scrollbars would otherwise cover
+			   the bottom row). */
+			padding-bottom: 0.5rem;
 		}
 		.contrib-grid {
 			/* Auto width would pin the box to the wrapper and leave the tracks
