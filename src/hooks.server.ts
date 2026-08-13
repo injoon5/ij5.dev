@@ -19,7 +19,7 @@ const DEV = import.meta.env.DEV;
 
 /** Query-independent, so `/gh?utm_source=x` and `/gh` share one cache entry. */
 const slugCacheKey = (seg: string) => new Request(`https://cache.internal/s/${seg}`);
-const homeCacheKey = (v: number) => new Request(`https://cache.internal/home/v${v}`);
+const homeCacheKey = (v: number) => new Request(`https://cache.internal/home/v${v}/html`);
 
 /**
  * A second, deliberately narrow policy. `frame-ancestors` and `base-uri` are
@@ -104,6 +104,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// serving stale content. A version-keyed entry makes every colo miss at
 	// once, with nothing to purge.
 	if (env && path === '/' && readOnly) {
+		// A `__data.json` request (the client router's navigation fetch) arrives
+		// here with its suffix already stripped, so `path` is `/`. It must
+		// bypass this whole block and answer straight from `resolve()`: caching
+		// a data response under the home key is what poisoned the site, serving
+		// the cached HTML back to it makes client-side navigation explode on
+		// `response.json()`, and `browserFacing()`'s public Cache-Control would
+		// let the adapter layer cache it under the public URL. `isDataRequest`
+		// is the reliable discriminator — the client sends `Accept: */*`, not
+		// `application/json`.
+		if (event.isDataRequest) return harden(await resolve(event));
 		// Outside the KV read and above the cache check, deliberately. A cache
 		// hit is still a visit, and so is a visit to a homepage that has never
 		// been published — that page renders from D1 and used to be counted
@@ -129,13 +139,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 						return harden(
 							new Response(null, {
 								status: 304,
-								headers: { ETag: etag, 'Cache-Control': 'public, max-age=0, must-revalidate' }
+								headers: { ETag: etag, 'Cache-Control': 'private, max-age=0, must-revalidate' }
 							})
 						);
 					}
 
 					const cached = await cache?.match(key);
-					if (cached) return harden(browserFacing(cached, etag));
+					// Defense in depth: only ever serve HTML out of this key. A
+					// data response that somehow lands here must not reach a
+					// browser — skipping it makes the next HTML request render
+					// fresh and overwrite the entry under the same key.
+					if (cached && isHtml(cached)) return harden(browserFacing(cached, etag));
 				}
 
 				event.locals.home = doc;
@@ -144,7 +158,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 				// there, but must never be the request that fills it: the entry is
 				// shared, and a body-less response in it would blank the page for
 				// everyone else until the next publish.
-				if (!DEV && res.status === 200 && cache && method === 'GET') {
+				if (!DEV && res.status === 200 && isHtml(res) && cache && method === 'GET') {
 					const copy = res.clone();
 					const store = new Response(copy.body, {
 						status: 200,
@@ -199,9 +213,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 	return harden(await resolve(event));
 };
 
+function isHtml(res: Response) {
+	return res.headers.get('content-type')?.startsWith('text/html') ?? false;
+}
+
 /**
- * The edge cache is doing the real work, so what the browser gets stays
- * conservative — an unchanged homepage then costs a 304 with no body.
+ * The internal, version-keyed edge cache does the real work, so what the
+ * browser gets stays conservative — an unchanged homepage then costs a 304
+ * with no body. `private` is deliberate: it keeps the adapter's worktop layer
+ * (which caches any `Cache-Control` response under the public URL) from
+ * storing a copy that survives the version key and masks a future publish.
  */
 function browserFacing(res: Response, etag: string) {
 	const out = new Response(res.body, {
@@ -209,7 +230,7 @@ function browserFacing(res: Response, etag: string) {
 		statusText: res.statusText,
 		headers: new Headers(res.headers)
 	});
-	out.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+	out.headers.set('Cache-Control', 'private, max-age=0, must-revalidate');
 	out.headers.set('ETag', etag);
 	return out;
 }
