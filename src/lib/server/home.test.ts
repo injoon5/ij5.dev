@@ -175,20 +175,16 @@ describe('syncDraft', () => {
 		const before = (await readPublished(env))!.v;
 
 		// D1 is the source of truth for a sync, so stand one in for this call. The
-		// new loader reads a single profile row (content included) with `.all()`.
+		// new loader reads a single profile row (content included) with `.first()`.
 		(env as { DB: unknown }).DB = {
 			prepare: () => ({
-				all: async () => ({
-					results: [
-						{
-							name: 'edited',
-							bio: null,
-							tagline: null,
-							avatar: null,
-							links: '[]',
-							content: 'edited body'
-						}
-					]
+				first: async () => ({
+					name: 'edited',
+					bio: null,
+					tagline: null,
+					avatar: null,
+					links: '[]',
+					content: 'edited body'
 				})
 			})
 		};

@@ -63,22 +63,63 @@ export async function createSlug(env: Env, row: Omit<SlugRow, 'created_at'>): Pr
 		.bind(row.slug, row.target_url, row.status, row.note, created, row.expires_at)
 		.run();
 
-	await env.KV.put(kvKey(row.slug), JSON.stringify(toRecord(row)));
+	// A D1 row with no KV mirror is a link that 404s forever, and a retry then
+	// bounces off "slug taken". If the mirror fails, undo the insert so the two
+	// stores stay in lockstep and the caller can try again cleanly.
+	try {
+		await env.KV.put(kvKey(row.slug), JSON.stringify(toRecord(row)));
+	} catch (e) {
+		await env.DB.prepare(`DELETE FROM slugs WHERE slug = ?`).bind(row.slug).run().catch(() => {});
+		throw e;
+	}
 }
 
 export async function updateSlug(env: Env, row: Omit<SlugRow, 'created_at'>): Promise<void> {
+	const prev = await getSlug(env, row.slug);
 	await env.DB.prepare(
 		`UPDATE slugs SET target_url = ?, status = ?, note = ?, expires_at = ? WHERE slug = ?`
 	)
 		.bind(row.target_url, row.status, row.note, row.expires_at, row.slug)
 		.run();
 
-	await env.KV.put(kvKey(row.slug), JSON.stringify(toRecord(row)));
+	try {
+		await env.KV.put(kvKey(row.slug), JSON.stringify(toRecord(row)));
+	} catch (e) {
+		if (prev) {
+			await env.DB.prepare(
+				`UPDATE slugs SET target_url = ?, status = ?, note = ?, expires_at = ? WHERE slug = ?`
+			)
+				.bind(prev.target_url, prev.status, prev.note, prev.expires_at, prev.slug)
+				.run()
+				.catch(() => {});
+		} else {
+			await env.DB.prepare(`DELETE FROM slugs WHERE slug = ?`).bind(row.slug).run().catch(() => {});
+		}
+		throw e;
+	}
 }
 
 export async function deleteSlug(env: Env, slug: string): Promise<void> {
+	const prev = await getSlug(env, slug);
 	await env.DB.prepare(`DELETE FROM slugs WHERE slug = ?`).bind(slug).run();
-	await env.KV.delete(kvKey(slug));
+
+	try {
+		await env.KV.delete(kvKey(slug));
+	} catch (e) {
+		// A KV entry with no D1 row is a link that still resolves but can no
+		// longer be edited or deleted. Restore the row so the stores agree and
+		// the caller can retry.
+		if (prev) {
+			await env.DB.prepare(
+				`INSERT INTO slugs (slug, target_url, status, note, created_at, expires_at)
+				 VALUES (?, ?, ?, ?, ?, ?)`
+			)
+				.bind(prev.slug, prev.target_url, prev.status, prev.note, prev.created_at, prev.expires_at)
+				.run()
+				.catch(() => {});
+		}
+		throw e;
+	}
 }
 
 /**

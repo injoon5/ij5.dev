@@ -4,10 +4,12 @@
  * drift apart.
  *
  * `login` is on the list because `/login` is a real route — omitting it lets a
- * slug shadow the sign-in page.
+ * slug shadow the sign-in page. `analytics` guards `/analytics/beacon`, the
+ * fingerprint endpoint, the same way.
  */
 export const RESERVED = new Set([
 	'admin',
+	'analytics',
 	'api',
 	'login',
 	'logout',

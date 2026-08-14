@@ -51,7 +51,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const env = platform?.env;
 	const cache = platform?.caches?.default;
 	const path = event.url.pathname;
-	const seg = path.slice(1);
+	// A slug typed with a trailing slash is the same link: `/gh/` redirects like
+	// `/gh` instead of falling through to the 404 page. Multi-segment paths keep
+	// their slashes, so `/a/b/` still never reaches KV.
+	const seg = path.slice(1).replace(/\/$/, '');
 	const method = event.request.method;
 	// A redirect answers a navigation. Anything else arriving at a slug is a
 	// scanner, and answering it with a 302 would file the probe as a click.

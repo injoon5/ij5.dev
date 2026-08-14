@@ -31,11 +31,10 @@ const EMPTY_PROFILE: Profile = {
 
 /** Rebuilds the document from the source of truth. One row, one query. */
 export async function loadFromD1(env: Env): Promise<{ profile: Profile; markdown: string }> {
-	const profileRes = await env.DB.prepare(
+	const row = (await env.DB.prepare(
 		`SELECT name, bio, tagline, avatar, links, content FROM profile WHERE id = 1`
-	).all();
+	).first()) as Record<string, string | null> | null;
 
-	const row = (profileRes.results as Array<Record<string, string | null>>)[0];
 	const profile: Profile = row
 		? {
 				name: row.name ?? 'ij5',

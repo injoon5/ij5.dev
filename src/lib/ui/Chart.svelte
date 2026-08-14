@@ -1,3 +1,8 @@
+<script module lang="ts">
+	/** Module-scoped so two charts on one page never share a gradient id. */
+	let washSeq = 0;
+</script>
+
 <script lang="ts">
 	/**
 	 * A line chart, in the shape of the sparkline on injoon5/web: no gridlines,
@@ -13,9 +18,6 @@
 	 */
 
 	type Point = { day: string; hits: number };
-
-	/** Incremented per render so every chart instance gets its own gradient id. */
-	let washSeq = 0;
 
 	let { data, label = 'hits' }: { data: Point[]; label?: string } = $props();
 

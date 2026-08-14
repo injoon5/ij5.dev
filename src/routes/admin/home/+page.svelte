@@ -64,11 +64,15 @@
 	}
 
 	function insertGalleryRow(key: string) {
-		// Inside an existing :::gallery block the key is just another row;
-		// otherwise seed a fresh block so the button is never a no-op.
-		const open = content.indexOf(':::gallery');
+		// If the cursor sits inside a :::gallery block the key is just another
+		// row, so append it there; otherwise seed a fresh block at the cursor.
+		// `lastIndexOf` finds the gallery nearest the cursor rather than blindly
+		// using the first one in the document, and `close > start` confirms the
+		// cursor is actually inside it before appending.
+		const start = textarea?.selectionStart ?? content.length;
+		const open = content.lastIndexOf(':::gallery', start);
 		const close = open >= 0 ? content.indexOf('\n:::', open + 9) : -1;
-		if (close >= 0) {
+		if (open >= 0 && close > start) {
 			content = content.slice(0, close + 1) + key + '\n' + content.slice(close + 1);
 		} else {
 			insertAtCursor(`\n\n:::gallery\n${key}\n:::\n\n`);

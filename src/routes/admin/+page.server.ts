@@ -89,7 +89,13 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 		recent[row.slug] = row.hits;
 	}
 
-	const slugs = links.results as SlugRow[];
+	const slugs = (links.results as SlugRow[]).map((row) => ({
+		...row,
+		// Expiry is judged on the server, never the visitor's clock — a client a
+		// few hours behind the UTC boundary would otherwise badge a link expired
+		// early.
+		expired: row.expires_at !== null && row.expires_at < Date.now()
+	}));
 	const wanted = url.searchParams.get('s');
 
 	return {

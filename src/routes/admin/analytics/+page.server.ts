@@ -35,7 +35,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 		await env.DB.batch([
 			env.DB.prepare(
 				`SELECT day, SUM(n) AS hits FROM hits
-				 WHERE day >= date('now', ?1) AND device != 'bot'
+				 WHERE day >= date('now', ?1) AND device != 'bot' AND kind != '404'
 				 GROUP BY day ORDER BY day`
 			).bind(offset),
 

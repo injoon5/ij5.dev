@@ -27,17 +27,14 @@ const config = {
 				'script-src': ['self'],
 				// SvelteKit inlines critical CSS, so styles need it. Scripts do not.
 				'style-src': ['self', 'unsafe-inline'],
-				'img-src': ['self', 'https://assets.ij5.dev', 'data:'],
+				// `https:` because the Markdown renderer accepts absolute external
+				// image URLs (prose and gallery alike) — the renderer emits them,
+				// so the policy must not block them.
+				'img-src': ['self', 'https://assets.ij5.dev', 'data:', 'https:'],
 				'font-src': ['self'],
 				'connect-src': ['self'],
 				'form-action': ['self'],
-				'object-src': ['none'],
-				// Embeds are facades (§7): a poster until someone presses play,
-				// at which point one iframe is injected. That injection needs a
-				// frame-src entry, so the two providers the `video` widget can
-				// build an embed URL for are listed explicitly. Never a
-				// wildcard, and nothing else gets in.
-				'frame-src': ['https://www.youtube-nocookie.com', 'https://player.vimeo.com']
+				'object-src': ['none']
 			}
 		},
 

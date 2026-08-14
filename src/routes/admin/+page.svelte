@@ -45,9 +45,6 @@
 		}
 	};
 
-	const isExpired = (row: { expires_at: number | null }) =>
-		row.expires_at !== null && row.expires_at < Date.now();
-
 	function onKeydown(event: KeyboardEvent) {
 		// `Cmd+N`, `Ctrl+/` and friends belong to the browser.
 		if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -142,7 +139,7 @@
 						>
 							<span class="row-slug">
 								/{row.slug}
-								{#if isExpired(row)}
+								{#if row.expired}
 									<span class="badge">Expired</span>
 								{:else if row.status === 301}
 									<span class="badge">301</span>
@@ -396,15 +393,6 @@
 	 * `prefers-reduced-motion` zeroes the duration globally (app.css), so the
 	 * pane simply appears there.
 	 */
-	/* The drill-down entrance. Below `lg` the pane is a new screen that the
-	   router hides with `display: none` when no link is selected — and a CSS
-	   animation restarts the moment an element becomes rendered, so this plays
-	   every time a row opens, with no JavaScript. On a wide screen the pane is
-	   always present, so the animation is gated off entirely.
-
-	   Transform and opacity only, 180ms, the same ease the surfaces press
-	   with. `prefers-reduced-motion` zeroes the duration globally (app.css),
-	   so the pane simply appears there. */
 	@media (max-width: 1023px) {
 		.detail-pane {
 			animation: pane-rise 180ms var(--ease-out);

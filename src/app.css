@@ -233,18 +233,8 @@
 	--text-2xl--line-height: 1.2;
 	--text-2xl--letter-spacing: -0.021em;
 
-	--text-3xl: 2.25rem;
-	--text-3xl--line-height: 1.1;
-	--text-3xl--letter-spacing: -0.026em;
-
-	--text-4xl: 3rem;
-	--text-4xl--line-height: 1.05;
-	--text-4xl--letter-spacing: -0.03em;
-
 	/* §7.2 — concentric radii. Inner = outer − padding, every time. */
 	--radius-widget: 22px;
-	--radius-widget-md: 26px;
-	--radius-widget-lg: 30px;
 	--radius-inner: 6px;
 	--radius-inner-md: 10px;
 	--radius-inner-lg: 14px;
@@ -255,13 +245,10 @@
 	--radius-pill: 999px;
 
 	--spacing-widget: 16px;
-	--spacing-rail: 380px;
 
 	/* Motion. Built-in easings are too weak to read as intentional. */
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-	--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 	--ease-press: cubic-bezier(0.2, 0, 0, 1);
-	--ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
 	--shadow-widget: var(--sh-widget);
 	--shadow-widget-lift: var(--sh-widget-lift);

@@ -24,7 +24,7 @@
 	};
 
 	let copy = $derived(
-		COPY[page.status] ?? { title: 'Something went wrong', body: page.error?.message ?? '' }
+		COPY[page.status] ?? { title: 'Something went wrong', body: 'Trying again in a moment usually works.' }
 	);
 </script>
 
