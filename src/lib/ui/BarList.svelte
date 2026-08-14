@@ -167,7 +167,7 @@
 
 	.foot {
 		min-height: 2.75rem;
-		margin-top: 0.5rem;
+		margin-top: 0.25rem;
 	}
 
 	@media (pointer: fine) {
