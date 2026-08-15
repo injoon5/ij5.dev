@@ -22,7 +22,7 @@ export type SlugRow = {
  * renders it in one `<pre>` without hanging. */
 export const MAX_PASTE_CHARS = 250_000;
 
-/** A paste — plaintext served at a root slug instead of a redirect. */
+/** A paste — plaintext served at `/p/{slug}` instead of a redirect. */
 export type PasteRow = {
 	slug: string;
 	body: string;
@@ -31,18 +31,6 @@ export type PasteRow = {
 	expires_at: number | null;
 	/** Opt-out of edge caching. A `false` paste is served `no-store` and never
 	 *  fills the Cache API, so edits show up on the next request everywhere. */
-	cache: boolean;
-};
-
-/** The KV value behind `paste:{slug}`, read on every uncached paste view.
- * `body` is what the hook serves; the metadata lets the view render a header
- * without a second read. */
-export type PasteRecord = {
-	body: string;
-	note: string | null;
-	created_at: number;
-	/** Epoch ms. Expiry is lazy, same as `SlugRecord.exp`. */
-	exp: number | null;
 	cache: boolean;
 };
 

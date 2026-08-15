@@ -6,9 +6,13 @@ import { bumpDownloads, getFile } from '$lib/server/files';
  * browser always downloads rather than renders — which is what makes the
  * client-declared MIME safe to pass through. Expiry is judged lazily here
  * too, the same way the landing page judges it.
+ *
+ * Deliberately `no-store`: a file download must be truthful. Caching the
+ * bytes would keep serving a deleted or expired file for the cache TTL, and
+ * it would swallow download counts (a cache hit never reaches this handler).
+ * R2 serves from the edge anyway, so the only thing caching would buy is a
+ * little latency.
  */
-
-const TTL = 300;
 
 export const GET: RequestHandler = async (event) => {
 	const { params, platform } = event;
@@ -32,7 +36,7 @@ export const GET: RequestHandler = async (event) => {
 			'content-type': file.mime || 'application/octet-stream',
 			// ASCII fallback for strict clients, RFC 5987 for the real name.
 			'content-disposition': `attachment; filename="${file.name}"; filename*=UTF-8''${encodeURIComponent(file.name)}`,
-			'cache-control': `public, s-maxage=${TTL}, max-age=0`,
+			'cache-control': 'no-store',
 			'content-length': String(file.bytes)
 		}
 	});

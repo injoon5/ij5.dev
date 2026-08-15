@@ -124,15 +124,6 @@
 	.nav-list {
 		display: flex;
 		flex: 1;
-		/* Seven destinations do not fit 320px, so the bar pans rather than
-		   squeezes: items hold their natural width and the strip scrolls.
-		   The sidebar never needs this. */
-		overflow-x: auto;
-		scrollbar-width: none;
-	}
-
-	.nav-list::-webkit-scrollbar {
-		display: none;
 	}
 
 	.signout {
@@ -140,7 +131,7 @@
 	}
 
 	.nav-list :global(li) {
-		flex: 0 0 auto;
+		flex: 1;
 	}
 
 	.nav-link {
@@ -150,15 +141,22 @@
 		gap: 0.5rem;
 		/* 44px minimum, made of padding rather than a bigger icon. */
 		min-height: 3.25rem;
-		/* Seven destinations have to clear 320px, so the bar sets its own
-		   inline padding and lets the label do the spacing. */
-		padding-inline: 0.5rem;
+		/* Seven destinations with labels cannot clear 320px, so below `md`
+		   the bar is icons only (labels stay for screen readers and return in
+		   the sidebar) and every stop is visible at once. */
+		padding-inline: 0.25rem;
 		font-size: var(--text-2xs);
 		font-weight: 500;
 		color: var(--text-muted);
 		flex-direction: column;
 		gap: 0.25rem;
 		transition: color 150ms var(--ease-out);
+	}
+
+	@media (max-width: 767.98px) {
+		.nav-link span {
+			display: none;
+		}
 	}
 
 	.nav-link[aria-current='page'] {
