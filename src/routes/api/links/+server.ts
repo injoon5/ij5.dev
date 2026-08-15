@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
 import { RESERVED, SLUG_PATTERN } from '$lib/reserved';
+import { getFile } from '$lib/server/files';
 import { getPaste } from '$lib/server/pastes';
 import { createSlug, getSlug, isTargetUrl, listSlugs } from '$lib/server/slugs';
 import type { SlugRow } from '$lib/types';
@@ -86,6 +87,10 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	}
 
 	if (await getPaste(env, parsed.data.slug)) {
+		return apiError(409, 'That slug is taken.');
+	}
+
+	if (await getFile(env, parsed.data.slug)) {
 		return apiError(409, 'That slug is taken.');
 	}
 

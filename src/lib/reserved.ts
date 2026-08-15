@@ -16,6 +16,8 @@ export const RESERVED = new Set([
 	// The paste namespace: `/p/{slug}` is a real route, so a link named `p`
 	// would shadow its root.
 	'p',
+	// The file namespace: `/d/{slug}` is a real route, same rule.
+	'd',
 	'_app',
 	'.well-known'
 ]);

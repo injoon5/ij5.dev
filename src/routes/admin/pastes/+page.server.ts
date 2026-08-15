@@ -2,6 +2,7 @@ import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
 import { RESERVED, SLUG_PATTERN } from '$lib/reserved';
+import { getFile } from '$lib/server/files';
 import {
 	createPaste,
 	deletePaste,
@@ -143,6 +144,14 @@ export const actions: Actions = {
 			return fail(409, {
 				intent: 'create',
 				fields: { slug: 'That slug is taken.' },
+				values: Object.fromEntries(data) as Record<string, string>
+			});
+		}
+
+		if (await getFile(env, parsed.row.slug)) {
+			return fail(409, {
+				intent: 'create',
+				fields: { slug: 'That name is taken by a file.' },
 				values: Object.fromEntries(data) as Record<string, string>
 			});
 		}

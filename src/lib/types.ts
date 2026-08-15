@@ -46,6 +46,27 @@ export type PasteRecord = {
 	cache: boolean;
 };
 
+/** Maximum bytes a shared file may be. A Workers form upload has to fit the
+ * request body, so this stays well under the platform ceiling — big enough
+ * for documents, archives and photos, too small for ISOs. Shared with the
+ * admin form so the stated limit can never drift from the enforced one. */
+export const MAX_FILE_BYTES = 25 * 1024 * 1024;
+
+/** A shared file — bytes in R2, this row as its catalog entry. */
+export type FileRow = {
+	slug: string;
+	/** R2 object key (`dl/{slug}`). */
+	key: string;
+	/** Original filename, for display and `Content-Disposition`. */
+	name: string;
+	mime: string;
+	bytes: number;
+	created_at: number;
+	expires_at: number | null;
+	/** Incremented on every served download. */
+	downloads: number;
+};
+
 export type ProfileLink = {
 	label: string;
 	href: string;
