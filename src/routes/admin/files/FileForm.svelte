@@ -23,13 +23,24 @@
 	let fileEl = $state<HTMLInputElement | null>(null);
 	let dragging = $state(false);
 	let chosen = $state<{ name: string; size: number } | null>(null);
+	let fileError = $state('');
 
 	function pick(file: File | undefined | null) {
 		if (!file) return;
 		if (file.size > MAX_FILE_BYTES) {
+			// The input keeps nothing on error so a corrected pick starts clean.
 			chosen = null;
+			fileError = `Files are capped at ${(MAX_FILE_BYTES / 1024 / 1024).toFixed(0)} MB.`;
+			if (fileEl) fileEl.value = '';
 			return;
 		}
+		if (file.size === 0) {
+			chosen = null;
+			fileError = 'That file is empty.';
+			if (fileEl) fileEl.value = '';
+			return;
+		}
+		fileError = '';
 		chosen = { name: file.name, size: file.size };
 	}
 </script>
@@ -37,6 +48,7 @@
 <form
 	method="POST"
 	action="?/create"
+	enctype="multipart/form-data"
 	class="flex flex-col gap-4"
 	use:enhance={saving.submit}
 >
@@ -52,12 +64,9 @@
 					name="file"
 					type="file"
 					aria-describedby={describedBy}
-					aria-invalid={invalid || undefined}
+					aria-invalid={invalid || Boolean(fileError) || undefined}
 					class="sr-only"
-					onchange={(e) => {
-						pick(e.currentTarget.files?.[0]);
-						e.currentTarget.value = '';
-					}}
+					onchange={(e) => pick(e.currentTarget.files?.[0])}
 				/>
 
 				{#if chosen}
@@ -66,7 +75,10 @@
 						<p class="tnum shrink-0 text-xs text-text-muted">{fmtBytes(chosen.size)}</p>
 						<button
 							type="button"
-							onclick={() => (chosen = null)}
+							onclick={() => {
+								chosen = null;
+								if (fileEl) fileEl.value = '';
+							}}
 							aria-label="Remove file"
 							class="grid size-8 shrink-0 place-items-center rounded-[var(--radius-ui)] text-text-subtle transition-colors duration-150 ease-out hover:bg-surface-sunken hover:text-text"
 						>
@@ -99,6 +111,10 @@
 						Choose a file<span class="hidden sm:inline"> or drop one here</span>
 					</button>
 				</div>
+
+				{#if fileError}
+					<p class="text-xs text-danger">{fileError}</p>
+				{/if}
 			</div>
 		{/snippet}
 	</Field>

@@ -8,10 +8,8 @@ import { track } from '$lib/server/track';
  * single-segment fast path never sees it — this resolves through SvelteKit
  * and the same D1 source of truth the admin edits.
  *
- * The bare slug already serves raw text to anything that does not ask for
- * HTML (`?raw=1`, or an Accept header with no `text/html` — i.e. curl); this
- * route exists so the raw URL is stable and predictable rather than a header
- * negotiation.
+ * The rendered view lives at `/p/{slug}`; this is its one predictable,
+ * header-free counterpart, so `curl ij5.dev/raw/{slug}` always just works.
  */
 
 const TTL = 300;

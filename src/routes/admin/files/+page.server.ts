@@ -29,12 +29,6 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 	};
 };
 
-type UploadError = {
-	error?: string;
-	fields?: Record<string, string>;
-	values?: Record<string, string>;
-};
-
 function expiresAt(raw: string): number | null {
 	const v = raw.trim();
 	return v ? Date.parse(`${v}T23:59:59Z`) || null : null;
@@ -93,7 +87,7 @@ export const actions: Actions = {
 			expires_at: expiresAt(values.expires)
 		};
 
-		await createFile(env, row, file.stream());
+		await createFile(env, row, await file.arrayBuffer());
 		return { created: slug };
 	},
 

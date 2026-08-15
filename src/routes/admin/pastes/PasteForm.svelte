@@ -125,7 +125,7 @@
 		<!--
 			Caching is the default; the checkbox is the opt-out. Checked means
 			"cache this paste" (checked by default), unchecked means every view
-			hits KV fresh and edits propagate instantly.
+			re-renders from D1 and edits propagate instantly.
 		-->
 		<div class="flex flex-col justify-end gap-1.5 pb-0.5">
 			<label for="cache" class="flex items-center gap-2.5 text-sm font-medium">
@@ -140,7 +140,7 @@
 			</label>
 			<p id="cache-hint" class="pl-6.5 text-xs text-text-subtle">
 				Off answers every request no-store, so edits win immediately — at the cost of a
-				KV read per view.
+				database read per view.
 			</p>
 		</div>
 	</div>

@@ -66,7 +66,7 @@ export async function getFile(env: Env, slug: string): Promise<FileRow | null> {
 export async function createFile(
 	env: Env,
 	row: Omit<FileRow, 'created_at' | 'downloads'>,
-	body: ReadableStream | ArrayBuffer
+	body: ArrayBuffer
 ): Promise<void> {
 	const created = Date.now();
 	await env.BUCKET.put(r2Key(row.slug), body, { httpMetadata: { contentType: row.mime } });
