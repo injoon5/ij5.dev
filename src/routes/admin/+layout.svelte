@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import LayoutGrid from 'lucide-svelte/icons/layout-grid';
 	import LinkIcon from 'lucide-svelte/icons/link-2';
+	import FileText from 'lucide-svelte/icons/file-text';
 	import ChartLine from 'lucide-svelte/icons/chart-line';
 	import Terminal from 'lucide-svelte/icons/terminal';
 	import KeyRound from 'lucide-svelte/icons/key-round';
@@ -12,6 +13,7 @@
 
 	const NAV = [
 		{ href: '/admin', label: 'Links', icon: LinkIcon },
+		{ href: '/admin/pastes', label: 'Pastes', icon: FileText },
 		{ href: '/admin/home', label: 'Home', icon: LayoutGrid },
 		{ href: '/admin/analytics', label: 'Analytics', icon: ChartLine },
 		{ href: '/admin/api', label: 'API', icon: Terminal },
@@ -83,7 +85,7 @@
 		min-height: 100dvh;
 	}
 
-	/* Five nav stops sit before the content on every screen. */
+	/* Six nav stops sit before the content on every screen. */
 	.skip {
 		position: fixed;
 		top: 0.5rem;
@@ -137,7 +139,7 @@
 		gap: 0.5rem;
 		/* 44px minimum, made of padding rather than a bigger icon. */
 		min-height: 3.25rem;
-		/* Five destinations have to clear 320px, so the bar sets its own inline
+		/* Six destinations have to clear 320px, so the bar sets its own inline
 		   padding and lets the label do the spacing. */
 		padding-inline: 0.25rem;
 		font-size: var(--text-2xs);

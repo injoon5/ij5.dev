@@ -42,7 +42,7 @@ CREATE TABLE assets (
 CREATE TABLE hits (
   day      TEXT    NOT NULL,            -- 'YYYY-MM-DD'
   slug     TEXT    NOT NULL,            -- slug for redirects, '' for home, path for 404s
-  kind     TEXT    NOT NULL,            -- redirect | home | 404
+  kind     TEXT    NOT NULL,            -- redirect | paste | home | 404
   country  TEXT    NOT NULL,
   referrer TEXT    NOT NULL,            -- hostname only, 'direct' if none
   device   TEXT    NOT NULL,            -- mobile | desktop | bot

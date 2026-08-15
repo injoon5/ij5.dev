@@ -18,7 +18,7 @@ import { SLUG_PATTERN } from '$lib/reserved';
  * it with the day and the salt, so it is useless across days.
  */
 
-export type Kind = 'redirect' | 'home' | '404';
+export type Kind = 'redirect' | 'paste' | 'home' | '404';
 
 const BOT =
 	/bot|crawl|spider|slurp|facebookexternalhit|embedly|quora link preview|pinterest|vkshare|whatsapp|telegram|discord|slackbot|preview|headless|monitor|curl|wget|python-requests|axios|node-fetch/i;

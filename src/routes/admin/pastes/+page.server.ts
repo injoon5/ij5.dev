@@ -2,30 +2,33 @@ import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
 import { RESERVED, SLUG_PATTERN } from '$lib/reserved';
-import { getPaste } from '$lib/server/pastes';
 import {
-	createSlug,
-	deleteSlug,
-	getSlug,
-	isTargetUrl,
-	listSlugs,
-	purgeLocalCache,
-	updateSlug
-} from '$lib/server/slugs';
-import type { SlugRow } from '$lib/types';
+	createPaste,
+	deletePaste,
+	getPaste,
+	listPastes,
+	purgePasteCache,
+	updatePaste
+} from '$lib/server/pastes';
+import { getSlug } from '$lib/server/slugs';
+import { MAX_PASTE_CHARS, type PasteRow } from '$lib/types';
+
+/**
+ * The admin's pastes screen: a master–detail list like the links screen, with
+ * the body edited in a textarea. D1 stays the source of truth; every write
+ * mirrors into KV through `pastes.ts`, and the hook picks the change up on
+ * the next request.
+ */
 
 const form = z.object({
 	slug: z
 		.string()
 		.trim()
 		.regex(SLUG_PATTERN, 'Letters, numbers, hyphens and underscores. No dots or slashes.'),
-	target_url: z
+	body: z
 		.string()
-		.trim()
-		.refine(isTargetUrl, 'Needs a full URL — https://, mailto:, tel: or sms:'),
-	// 301 is browser-cached forever, so it is opt-in per link rather than the
-	// default: you will eventually want to repoint something.
-	status: z.coerce.number().int().refine((v) => v === 301 || v === 302, 'Pick 301 or 302'),
+		.min(1, 'A paste needs at least one character.')
+		.max(MAX_PASTE_CHARS, `Keep it under ${MAX_PASTE_CHARS.toLocaleString('en')} characters.`),
 	note: z
 		.string()
 		.trim()
@@ -36,14 +39,20 @@ const form = z.object({
 		.string()
 		.trim()
 		.optional()
-		.transform((v) => (v ? Date.parse(`${v}T23:59:59Z`) || null : null))
+		.transform((v) => (v ? Date.parse(`${v}T23:59:59Z`) || null : null)),
+	// A checkbox sends "on" or nothing. Default is cached — the flag is the
+	// opt-out, so an unchecked box must mean "cache on", never the reverse.
+	cache: z
+		.enum(['on', ''])
+		.optional()
+		.transform((v) => v === 'on')
 });
 
 type FormError = { error?: string; fields?: Record<string, string>; values?: Record<string, string> };
 
-function parse(data: FormData): { ok: true; row: Omit<SlugRow, 'created_at'> } | { ok: false } & FormError {
+function parse(data: FormData): { ok: true; row: Omit<PasteRow, 'created_at'> } | ({ ok: false } & FormError) {
 	const values = Object.fromEntries(
-		['slug', 'target_url', 'status', 'note', 'expires'].map((k) => [k, String(data.get(k) ?? '')])
+		['slug', 'body', 'note', 'expires', 'cache'].map((k) => [k, String(data.get(k) ?? '')])
 	);
 
 	const result = form.safeParse(values);
@@ -60,27 +69,26 @@ function parse(data: FormData): { ok: true; row: Omit<SlugRow, 'created_at'> } |
 		ok: true,
 		row: {
 			slug: result.data.slug,
-			target_url: result.data.target_url,
-			status: result.data.status,
+			body: result.data.body,
 			note: result.data.note,
-			expires_at: result.data.expires
+			expires_at: result.data.expires,
+			cache: result.data.cache
 		}
 	};
 }
 
 export const load: PageServerLoad = async ({ platform, url }) => {
 	const env = platform?.env;
-	if (!env) return { slugs: [], recent: {}, selected: null };
+	if (!env) return { pastes: [], recent: {}, selected: null };
 
-	// One round trip, not two. The same rule holds on every admin screen.
-	const [links, stats] = await env.DB.batch([
+	const [rows, stats] = await env.DB.batch([
 		env.DB.prepare(
-			`SELECT slug, target_url, status, note, created_at, expires_at
-			 FROM slugs ORDER BY created_at DESC`
+			`SELECT slug, body, note, created_at, expires_at, cache
+			 FROM pastes ORDER BY created_at DESC`
 		),
 		env.DB.prepare(
 			`SELECT slug, SUM(n) AS hits FROM hits
-			 WHERE kind = 'redirect' AND device != 'bot' AND day >= date('now','-7 day')
+			 WHERE kind = 'paste' AND device != 'bot' AND day >= date('now','-7 day')
 			 GROUP BY slug`
 		)
 	]);
@@ -90,19 +98,17 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 		recent[row.slug] = row.hits;
 	}
 
-	const slugs = (links.results as SlugRow[]).map((row) => ({
+	const pastes = (rows.results as PasteRow[]).map((row) => ({
 		...row,
-		// Expiry is judged on the server, never the visitor's clock — a client a
-		// few hours behind the UTC boundary would otherwise badge a link expired
-		// early.
+		// Expiry is judged on the server, never the visitor's clock.
 		expired: row.expires_at !== null && row.expires_at < Date.now()
 	}));
 	const wanted = url.searchParams.get('s');
 
 	return {
-		slugs,
+		pastes,
 		recent,
-		selected: wanted ? (slugs.find((s) => s.slug === wanted) ?? null) : null
+		selected: wanted ? (pastes.find((p) => p.slug === wanted) ?? null) : null
 	};
 };
 
@@ -115,9 +121,6 @@ export const actions: Actions = {
 		const parsed = parse(data);
 		if (!parsed.ok) return fail(400, { intent: 'create', ...parsed });
 
-		// The hook skips reserved names, so a slug that shadowed one would
-		// simply never resolve. Reject it here instead of creating a link that
-		// silently does nothing.
 		if (RESERVED.has(parsed.row.slug)) {
 			return fail(400, {
 				intent: 'create',
@@ -126,7 +129,17 @@ export const actions: Actions = {
 			});
 		}
 
+		// The hook checks links before pastes, so a paste that shares a name
+		// with a link would silently never resolve.
 		if (await getSlug(env, parsed.row.slug)) {
+			return fail(409, {
+				intent: 'create',
+				fields: { slug: 'That name is taken by a link.' },
+				values: Object.fromEntries(data) as Record<string, string>
+			});
+		}
+
+		if (await getPaste(env, parsed.row.slug)) {
 			return fail(409, {
 				intent: 'create',
 				fields: { slug: 'That slug is taken.' },
@@ -134,17 +147,7 @@ export const actions: Actions = {
 			});
 		}
 
-		// The hook checks links before pastes, so a link that shares a name
-		// with a paste would shadow it silently. Reject here instead.
-		if (await getPaste(env, parsed.row.slug)) {
-			return fail(409, {
-				intent: 'create',
-				fields: { slug: 'That name is taken by a paste.' },
-				values: Object.fromEntries(data) as Record<string, string>
-			});
-		}
-
-		await createSlug(env, parsed.row);
+		await createPaste(env, parsed.row);
 		return { created: parsed.row.slug };
 	},
 
@@ -155,12 +158,12 @@ export const actions: Actions = {
 		const parsed = parse(await request.formData());
 		if (!parsed.ok) return fail(400, { intent: 'update', ...parsed });
 
-		if (!(await getSlug(env, parsed.row.slug))) {
-			return fail(404, { intent: 'update', error: 'That link no longer exists.' });
+		if (!(await getPaste(env, parsed.row.slug))) {
+			return fail(404, { intent: 'update', error: 'That paste no longer exists.' });
 		}
 
-		await updateSlug(env, parsed.row);
-		await purgeLocalCache(platform, parsed.row.slug);
+		await updatePaste(env, parsed.row);
+		await purgePasteCache(platform, parsed.row.slug, new URL(request.url).origin);
 		return { updated: parsed.row.slug };
 	},
 
@@ -171,8 +174,8 @@ export const actions: Actions = {
 		const slug = String((await request.formData()).get('slug') ?? '');
 		if (!slug) return fail(400, { error: 'No slug given.' });
 
-		await deleteSlug(env, slug);
-		await purgeLocalCache(platform, slug);
+		await deletePaste(env, slug);
+		await purgePasteCache(platform, slug, new URL(request.url).origin);
 		return { deleted: slug };
 	}
 };

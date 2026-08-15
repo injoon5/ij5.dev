@@ -8,7 +8,7 @@
 CREATE TABLE hits_device (
   day     TEXT NOT NULL,            -- 'YYYY-MM-DD'
   slug    TEXT NOT NULL,            -- slug for redirects, '' for home, path for 404s
-  kind    TEXT NOT NULL,            -- redirect | home | 404
+  kind    TEXT NOT NULL,            -- redirect | paste | home | 404
   os      TEXT NOT NULL,            -- Windows | macOS | iOS | Android | …
   browser TEXT NOT NULL,            -- Chrome | Safari | Firefox | …
   n       INTEGER NOT NULL DEFAULT 0,

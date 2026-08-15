@@ -13,6 +13,9 @@ export const RESERVED = new Set([
 	'api',
 	'login',
 	'logout',
+	// The paste namespace: `/p/{slug}` is a real route, so a link named `p`
+	// would shadow its root.
+	'p',
 	'_app',
 	'.well-known'
 ]);
