@@ -657,25 +657,81 @@
 		margin-top: 1.75rem;
 	}
 
+	/* The whole card is the link, so the label is strong body text — not the
+	   blue underlined string `.prose a` would otherwise make of it. The tinted
+	   chip and the arrow carry the "this goes somewhere" affordance. The `:hover`
+	   pairing beats `.prose a:hover` on its own specificity. */
+	.link-buttons a,
+	.link-buttons a:hover {
+		color: var(--text);
+		text-decoration: none;
+	}
+
+	/* Rounder and chunkier reads friendlier: the shell keeps the widget's own
+	   squircle radius rather than clipping it back to the tighter UI radius. */
 	.link-button {
 		flex-direction: row;
 		align-items: center;
 		gap: 0.85rem;
-		/* The icon's inset — one value on the top, bottom and left so the icon
-		   squircle sits at the same distance vertically and horizontally; the
-		   right keeps a little more room for the arrow. */
-		--pad: 0.7rem;
-		padding: var(--pad) 0.9rem var(--pad) var(--pad);
-		border-radius: var(--radius-ui-lg);
+		/* The chip's inset — equal on top, bottom and left so its squircle sits
+		   the same distance from each edge; the right keeps room for the arrow. */
+		--pad: 0.6rem;
+		padding: var(--pad) 1rem var(--pad) var(--pad);
 	}
 
+	/* A filled, tinted sticker rather than a bare glyph. Each chip mixes a muted
+	   brand hue into the current surface and text, so a single rule per tint
+	   adapts to dark mode for free — the mark stays a readable, saturated version
+	   of its own colour sitting on a soft wash of it. */
 	.lb-icon {
 		display: grid;
 		place-items: center;
 		flex-shrink: 0;
-		width: 2.5rem;
-		height: 2.5rem;
+		width: 2.75rem;
+		height: 2.75rem;
+		border-radius: 13px;
+		corner-shape: squircle;
+		background-color: var(--surface-sunken);
 		color: var(--text);
+		transition:
+			scale 220ms var(--ease-out),
+			rotate 220ms var(--ease-out);
+	}
+	.lb-icon[data-tint] {
+		background-color: color-mix(in oklab, var(--chip) 16%, var(--surface));
+		color: color-mix(in oklab, var(--chip) 90%, var(--text));
+	}
+	.lb-icon[data-tint='blue'] {
+		--chip: oklch(0.62 0.19 250);
+	}
+	.lb-icon[data-tint='sky'] {
+		--chip: oklch(0.66 0.15 230);
+	}
+	.lb-icon[data-tint='violet'] {
+		--chip: oklch(0.6 0.22 300);
+	}
+	.lb-icon[data-tint='pink'] {
+		--chip: oklch(0.64 0.23 350);
+	}
+	.lb-icon[data-tint='amber'] {
+		--chip: oklch(0.74 0.15 70);
+	}
+	.lb-icon[data-tint='green'] {
+		--chip: oklch(0.64 0.16 155);
+	}
+	.lb-icon[data-tint='red'] {
+		--chip: oklch(0.62 0.24 25);
+	}
+	.lb-icon[data-tint='zinc'] {
+		--chip: oklch(0.55 0.02 265);
+	}
+	/* The sticker tips and grows a touch on hover — the one playful beat, and
+	   only where a real pointer can trigger it. */
+	@media (hover: hover) and (pointer: fine) {
+		.link-button:hover .lb-icon {
+			scale: 1.06;
+			rotate: -4deg;
+		}
 	}
 
 	.lb-body {
@@ -685,9 +741,9 @@
 		min-width: 0;
 	}
 	.lb-label {
-		font-size: var(--text-base);
-		font-weight: 560;
-		letter-spacing: -0.006em;
+		font-size: var(--text-md);
+		font-weight: 600;
+		letter-spacing: -0.011em;
 	}
 	.lb-sub {
 		overflow: hidden;
