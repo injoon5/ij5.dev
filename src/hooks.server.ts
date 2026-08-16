@@ -228,10 +228,14 @@ function isHtml(res: Response) {
 
 /**
  * The internal, version-keyed edge cache does the real work, so what the
- * browser gets stays conservative — an unchanged homepage then costs a 304
- * with no body. `private` is deliberate: it keeps the adapter's worktop layer
- * (which caches any `Cache-Control` response under the public URL) from
- * storing a copy that survives the version key and masks a future publish.
+ * browser gets is never cached anywhere else. `no-store` is stronger than
+ * `private` on purpose: the zone carries a cache rule that was observed
+ * caching `/` under `private` for hours, masking publishes and serving stale
+ * HTML against freshly-deployed asset hashes. `no-store` is the one directive
+ * that rule respects — the paste and raw routes already rely on it — and it
+ * also keeps the adapter's worktop layer (which caches any cacheable
+ * response under the public URL) out of the picture. The cost is losing the
+ * browser's 304 revalidation; the version-keyed cache makes a re-render cheap.
  */
 function browserFacing(res: Response, etag: string) {
 	const out = new Response(res.body, {
@@ -239,7 +243,8 @@ function browserFacing(res: Response, etag: string) {
 		statusText: res.statusText,
 		headers: new Headers(res.headers)
 	});
-	out.headers.set('Cache-Control', 'private, max-age=0, must-revalidate');
+	out.headers.set('Cache-Control', 'no-store');
+	out.headers.set('CDN-Cache-Control', 'no-store');
 	out.headers.set('ETag', etag);
 	return out;
 }
