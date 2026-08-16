@@ -185,6 +185,104 @@ function renderGallery(content: string, cols: number, e: RenderEnv): string {
 	return `<div class="gallery" data-cols="${cols}">${cells}</div>\n`;
 }
 
+/* --------------------------------------------------- narrative blocks
+   Two recognisable shortcodes — `:::messages` (an iMessage-style thread, used
+   as a narrative device) and `:::poll` (result bars). Both are pure
+   server-rendered HTML + CSS: nothing here needs the browser to run a line of
+   script, so `/` keeps its no-JS promise. Every value is escaped author text. */
+
+/** `:::messages` (alias `:::chat`) — a short thread told in bubbles. Each line
+ *  is a message; prefix a line with `me |` (or `i |` / `나 |`) to send it from
+ *  the right (blue) side, otherwise it arrives on the left (grey). Consecutive
+ *  messages from one side are a run, and only the last of a run grows a tail. */
+function renderChat(content: string): string {
+	const msgs = content
+		.split('\n')
+		.map((l) => l.trim())
+		.filter(Boolean)
+		.map((l) => {
+			const bar = l.indexOf('|');
+			const who = bar < 0 ? '' : l.slice(0, bar).trim();
+			const text = (bar < 0 ? l : l.slice(bar + 1)).trim();
+			return { out: /^(me|i|나)$/i.test(who), text };
+		})
+		.filter((m) => m.text);
+	if (!msgs.length) return '';
+
+	const rows = msgs
+		.map((m, i) => {
+			const startRun = !msgs[i - 1] || msgs[i - 1].out !== m.out;
+			const endRun = !msgs[i + 1] || msgs[i + 1].out !== m.out;
+			const cls = `chat-row ${m.out ? 'chat-out' : 'chat-in'}${startRun ? ' chat-start' : ''}`;
+			return `<div class="${cls}"><p class="bubble${endRun ? ' chat-tail' : ''}">${escapeHtml(m.text)}</p></div>`;
+		})
+		.join('');
+	return `<div class="chat">${rows}</div>\n`;
+}
+
+/** `:::poll` — result bars. A `# ` line is the question; every other line is
+ *  `option | percent`. The leading option(s) at the max are highlighted. */
+function renderPoll(content: string): string {
+	const lines = content
+		.split('\n')
+		.map((l) => l.trim())
+		.filter(Boolean);
+	let question = '';
+	const rows: { label: string; pct: number }[] = [];
+	for (const l of lines) {
+		if (l.startsWith('#')) {
+			question = l.replace(/^#\s*/, '');
+			continue;
+		}
+		const bar = l.lastIndexOf('|');
+		if (bar < 0) continue;
+		const label = l.slice(0, bar).trim();
+		const pct = Math.max(0, Math.min(100, parseFloat(l.slice(bar + 1)) || 0));
+		if (label) rows.push({ label, pct });
+	}
+	if (!rows.length) return '';
+	const max = Math.max(...rows.map((r) => r.pct));
+	const q = question ? `<div class="poll-q">${escapeHtml(question)}</div>` : '';
+	const body = rows
+		.map((r) => {
+			const win = r.pct === max ? ' poll-win' : '';
+			return (
+				`<div class="poll-row${win}"><span class="poll-fill" style="width:${r.pct}%"></span>` +
+				`<span class="poll-label">${escapeHtml(r.label)}</span>` +
+				`<span class="poll-pct">${Math.round(r.pct)}%</span></div>`
+			);
+		})
+		.join('');
+	return `<div class="poll">${q}<div class="poll-rows">${body}</div></div>\n`;
+}
+
+const COMPONENTS = new Set(['messages', 'chat', 'poll']);
+
+function componentRule(state: any, startLine: number, endLine: number, silent: boolean): boolean {
+	const pos = state.bMarks[startLine] + state.tShift[startLine];
+	const line = state.src.slice(pos, state.eMarks[startLine]).trim();
+	const m = /^:::([a-z]+)(?:\s+(.*))?$/.exec(line);
+	if (!m || !COMPONENTS.has(m[1])) return false;
+	if (silent) return true;
+
+	let next = startLine + 1;
+	let closed = false;
+	for (; next < endLine; next++) {
+		const p = state.bMarks[next] + state.tShift[next];
+		if (state.src.slice(p, state.eMarks[next]).trim() === ':::') {
+			closed = true;
+			break;
+		}
+	}
+
+	const token = state.push('component_block', '', 0);
+	token.content = state.getLines(startLine + 1, next, 0, false);
+	token.meta = { name: m[1], arg: m[2] ?? '' };
+	token.map = [startLine, closed ? next + 1 : next];
+	state.line = closed ? next + 1 : next;
+	return true;
+}
+
 function galleryRule(state: any, startLine: number, endLine: number, silent: boolean): boolean {
 	const pos = state.bMarks[startLine] + state.tShift[startLine];
 	const line = state.src.slice(pos, state.eMarks[startLine]).trim();
@@ -270,9 +368,24 @@ const md = new MarkdownIt({ html: false, linkify: true, typographer: true, break
 md.block.ruler.before('fence', 'contrib', contribRule);
 md.block.ruler.before('fence', 'links', linksRule);
 md.block.ruler.before('fence', 'gallery', galleryRule);
+md.block.ruler.before('fence', 'component', componentRule);
 md.inline.ruler.after('escape', 'icon', iconRule);
 
 md.renderer.rules.links_block = (tokens: any, idx: number) => renderLinks(tokens[idx].content);
+
+md.renderer.rules.component_block = (tokens: any, idx: number) => {
+	const { name } = tokens[idx].meta as { name: string };
+	const content = tokens[idx].content as string;
+	switch (name) {
+		case 'messages':
+		case 'chat':
+			return renderChat(content);
+		case 'poll':
+			return renderPoll(content);
+		default:
+			return '';
+	}
+};
 
 md.renderer.rules.gallery_block = (tokens: any, idx: number, _o: any, env: any) => {
 	const e = env as RenderEnv;

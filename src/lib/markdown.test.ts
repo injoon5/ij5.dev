@@ -172,3 +172,33 @@ describe('imageKeysIn', () => {
 		expect(imageKeysIn('![x](https://example.com/y.png)')).toHaveLength(0);
 	});
 });
+
+describe('renderMarkdown — narrative blocks', () => {
+	it('renders :::messages as sent/received bubbles, one tail per run', () => {
+		const { html } = renderMarkdown([':::messages', 'hi', 'me | yo', 'me | sup', ':::'].join('\n'), {
+			assetsOrigin: ''
+		});
+		expect(html).toContain('class="chat"');
+		expect(html).toContain('chat-in');
+		expect(html).toContain('chat-out');
+		// received run of 1 + sent run of 2 → two tails
+		expect((html.match(/chat-tail/g) ?? []).length).toBe(2);
+	});
+
+	it('accepts :::chat as an alias and escapes message text', () => {
+		const { html } = renderMarkdown([':::chat', '<script>x', ':::'].join('\n'), { assetsOrigin: '' });
+		expect(html).toContain('class="chat"');
+		expect(html).not.toContain('<script>x');
+		expect(html).toContain('&lt;script&gt;x');
+	});
+
+	it('renders :::poll with a clamped, highlighted winner', () => {
+		const { html } = renderMarkdown([':::poll', '# q', 'A | 70', 'B | 150', ':::'].join('\n'), {
+			assetsOrigin: ''
+		});
+		expect(html).toContain('class="poll"');
+		expect(html).toContain('poll-win');
+		expect(html).toContain('width:100%');
+		expect(html).toContain('70%');
+	});
+});

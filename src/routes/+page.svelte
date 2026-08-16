@@ -104,7 +104,7 @@
 		{/if}
 		<!-- text-2xl and text-md carry their own tracking + leading from the type
 		     scale, so a display heading never falls back to body leading. -->
-		<h1 class="text-2xl font-semibold">{data.profile.name}</h1>
+		<h1 class="text-2xl font-bold">{data.profile.name}</h1>
 		{#if data.profile.tagline}
 			<p class="mt-2 max-w-[40ch] text-md text-text-muted">{data.profile.tagline}</p>
 		{/if}
