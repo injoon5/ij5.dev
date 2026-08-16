@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Copy from 'lucide-svelte/icons/copy';
+	import Check from 'lucide-svelte/icons/check';
 	import Button from '$lib/ui/Button.svelte';
 	import { fmtDate } from '$lib/format';
 	import type { PageData } from './$types';
@@ -45,128 +47,47 @@
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
-<main class="paste">
-	<header class="paste-top">
-		<a href="/" class="paste-brand">ij5.dev</a>
-		<a href="/raw/{data.paste.slug}" class="paste-raw" rel="nofollow">Raw</a>
+<main
+	class="mx-auto flex min-h-dvh max-w-[46rem] flex-col pt-[clamp(1.5rem,5vh,3.5rem)] pr-[max(1.25rem,env(safe-area-inset-right))] pb-[calc(2.5rem+env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]"
+>
+	<header class="mb-9 flex items-center justify-between">
+		<a
+			href="/"
+			class="text-[15px] font-semibold tracking-[-0.01em] transition-colors duration-150 ease-out hover:text-accent"
+		>
+			ij5.dev
+		</a>
+		<a
+			href="/raw/{data.paste.slug}"
+			rel="nofollow"
+			class="rounded-[var(--radius-ui-sm)] px-3 py-1.5 font-mono text-xs text-text-muted transition-colors duration-150 ease-out hover:bg-surface hover:text-text"
+		>
+			Raw
+		</a>
 	</header>
 
-	<header class="paste-meta">
+	<header class="mb-4 flex items-start justify-between gap-4">
 		<div class="min-w-0">
-			<h1 class="paste-slug">/{data.paste.slug}</h1>
-			<p class="mt-1 truncate text-xs text-text-muted">{sub || '\u200b'}</p>
+			<h1 class="font-mono text-lg font-semibold tracking-[-0.014em]">/{data.paste.slug}</h1>
+			<p class="mt-1 truncate text-xs text-text-muted">{sub || '​'}</p>
 		</div>
-		<Button variant="primary" size="sm" onclick={copy} aria-live="polite">
-			{copied ? 'Copied' : 'Copy'}
+		<!-- Fixed width so the label swap from Copy → Copied never resizes the
+		     button mid-press; the icon morphs alongside it. -->
+		<Button variant="primary" size="sm" onclick={copy} aria-live="polite" class="min-w-[6rem]">
+			{#if copied}
+				<Check size={15} aria-hidden="true" />Copied
+			{:else}
+				<Copy size={15} aria-hidden="true" />Copy
+			{/if}
 		</Button>
 	</header>
 
-	<pre class="paste-body">{data.paste.body}</pre>
+	<!-- The body is escaped by Svelte's default text interpolation, so a paste
+	     can never turn itself into markup here. -->
+	<pre
+		class="animate-rise m-0 flex-1 rounded-[var(--radius-widget)] bg-surface px-5 py-[1.1rem] font-mono text-[13.5px] leading-[1.6] whitespace-pre-wrap shadow-[var(--shadow-widget)] [corner-shape:squircle] [overflow-wrap:anywhere] [word-break:break-word]">{data.paste.body}</pre>
 
-	<footer class="paste-foot">
-		<a href="/">a paste on ij5.dev</a>
+	<footer class="pt-10 font-mono text-xs text-text-muted">
+		<a href="/" class="transition-colors duration-150 ease-out hover:text-text">a paste on ij5.dev</a>
 	</footer>
 </main>
-
-<style>
-	.paste {
-		display: flex;
-		flex-direction: column;
-		min-height: 100dvh;
-		max-width: 46rem;
-		margin-inline: auto;
-		padding:
-			clamp(1.5rem, 5vh, 3.5rem) max(1.25rem, env(safe-area-inset-right))
-			calc(2.5rem + env(safe-area-inset-bottom))
-			max(1.25rem, env(safe-area-inset-left));
-	}
-
-	.paste-top {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 2.25rem;
-	}
-
-	.paste-brand {
-		font-size: 15px;
-		font-weight: 600;
-		letter-spacing: -0.01em;
-		color: var(--text);
-		text-decoration: none;
-		transition: color 150ms var(--ease-out);
-	}
-
-	.paste-brand:hover {
-		color: var(--accent);
-	}
-
-	.paste-raw {
-		border-radius: var(--radius-ui-sm);
-		padding: 0.375rem 0.75rem;
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		color: var(--text-muted);
-		text-decoration: none;
-		transition:
-			color 150ms var(--ease-out),
-			background-color 150ms var(--ease-out);
-	}
-
-	@media (hover: hover) and (pointer: fine) {
-		.paste-raw:hover {
-			color: var(--text);
-			background-color: var(--surface);
-		}
-	}
-
-	.paste-meta {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 1rem;
-		margin-bottom: 1rem;
-	}
-
-	.paste-slug {
-		font-family: var(--font-mono);
-		font-size: var(--text-lg);
-		font-weight: 600;
-		letter-spacing: -0.014em;
-	}
-
-	/* The body is escaped by Svelte's default text interpolation, so a paste
-	   can never turn itself into markup here. */
-	.paste-body {
-		flex: 1;
-		margin: 0;
-		padding: 1.1rem 1.25rem;
-		border-radius: var(--radius-widget);
-		background-color: var(--surface);
-		box-shadow: var(--shadow-widget);
-		font-family: var(--font-mono);
-		font-size: 13.5px;
-		line-height: 1.6;
-		white-space: pre-wrap;
-		word-break: break-word;
-		overflow-wrap: anywhere;
-	}
-
-	.paste-foot {
-		padding-top: 2.5rem;
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		letter-spacing: 0.004em;
-		color: var(--text-muted);
-	}
-
-	.paste-foot a {
-		color: inherit;
-		text-decoration: none;
-		transition: color 150ms var(--ease-out);
-	}
-
-	.paste-foot a:hover {
-		color: var(--text);
-	}
-</style>

@@ -250,9 +250,26 @@
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 	--ease-press: cubic-bezier(0.2, 0, 0, 1);
 
+	/* The one shared entrance: opacity plus a short rise, for a hero object on a
+	   rarely-seen screen (the paste/file pages, an opened admin detail pane).
+	   `both` holds the from-state before it plays so there is no flash of the
+	   settled position. Reduced motion collapses it to instant (see base). */
+	--animate-rise: rise 420ms var(--ease-out) both;
+
 	--shadow-widget: var(--sh-widget);
 	--shadow-widget-lift: var(--sh-widget-lift);
 	--shadow-pop: var(--sh-pop);
+}
+
+@keyframes rise {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.99);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
 }
 
 /* ---------------------------------------------------------------------------
@@ -385,58 +402,6 @@
 			box-shadow: var(--shadow-widget-lift);
 			background-color: var(--surface-hover);
 		}
-	}
-
-	/* ---------------------------------------------------------------------
-	   The document
-	   `/` is one centred reading column: a small masthead, the Markdown body,
-	   a quiet footer. Its layout lives here, not in a scoped route `<style>`,
-	   so Svelte does not stamp a class onto every node in `<svelte:head>` —
-	   bytes on the one page whose byte count is a ship gate.
-	--------------------------------------------------------------------- */
-	.doc {
-		display: flex;
-		flex-direction: column;
-		min-height: 100dvh;
-		max-width: 42rem;
-		margin-inline: auto;
-		padding:
-			clamp(4rem, 12vh, 7rem) max(1.5rem, env(safe-area-inset-right))
-			calc(2.5rem + env(safe-area-inset-bottom))
-			max(1.5rem, env(safe-area-inset-left));
-	}
-
-	.masthead {
-		margin-bottom: 2.75rem;
-	}
-
-	.avatar {
-		display: block;
-		width: 4rem;
-		height: 4rem;
-		margin-bottom: 1.15rem;
-		border-radius: var(--radius-pill);
-		object-fit: cover;
-		background-color: var(--surface-sunken);
-	}
-
-	.masthead-name {
-		/* text-2xl, from the theme. The two companions — line-height and
-		   tracking — are set here too: these classes bypass the utilities, and
-		   a display heading at body leading is the one thing that reads off. */
-		font-size: var(--text-2xl);
-		line-height: 1.2;
-		letter-spacing: -0.021em;
-		font-weight: 600;
-	}
-
-	.masthead-tagline {
-		margin-top: 0.5rem;
-		max-width: 40ch;
-		color: var(--text-muted);
-		font-size: var(--text-md);
-		line-height: 1.5;
-		letter-spacing: -0.009em;
 	}
 
 	/* ---------------------------------------------------------------------
@@ -833,15 +798,5 @@
 		.contrib:hover .contrib-cap {
 			color: var(--text);
 		}
-	}
-
-	/* ------------------------------------------------------------- Footer */
-	.foot {
-		margin-top: auto;
-		padding-top: 4rem;
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		letter-spacing: 0.004em;
-		color: var(--text-muted);
 	}
 }
