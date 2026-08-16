@@ -941,8 +941,8 @@
 		   page gutter by that much and pad it back, so a tail on a bubble sitting
 		   at the column edge has room instead of being clipped — the bubbles stay
 		   aligned with the prose. */
-		margin-inline: -0.5rem;
-		padding-inline: 0.5rem;
+		margin-inline: -0.75rem;
+		padding-inline: 0.75rem;
 	}
 	.chat-row {
 		display: flex;
@@ -974,35 +974,39 @@
 		background-color: var(--msg-sent);
 		color: #fff;
 	}
-	/* The tail: a filled curve on the run's last bubble, and a page-coloured
-	   cut-out that carves the iMessage flick out of it. */
+	/* The tail — the classic two-piece flick on the run's last bubble: a
+	   coloured corner (::before) that merges into the bubble, then a
+	   page-coloured bite (::after) that carves the hook out of its outer edge. */
 	.chat-tail::before,
 	.chat-tail::after {
 		content: '';
 		position: absolute;
 		bottom: 0;
-		width: 0.85rem;
-		height: 0.9rem;
+		height: 20px;
 	}
 	.chat-out .chat-tail::before {
-		right: -0.3rem;
+		right: -8px;
+		width: 20px;
 		background-color: var(--msg-sent);
-		border-bottom-left-radius: 0.8rem;
+		border-bottom-left-radius: 16px 14px;
 	}
 	.chat-out .chat-tail::after {
-		right: -0.62rem;
+		right: -18px;
+		width: 18px;
 		background-color: var(--bg);
-		border-bottom-left-radius: 0.7rem;
+		border-bottom-left-radius: 10px;
 	}
 	.chat-in .chat-tail::before {
-		left: -0.3rem;
+		left: -8px;
+		width: 20px;
 		background-color: var(--msg-recv);
-		border-bottom-right-radius: 0.8rem;
+		border-bottom-right-radius: 16px 14px;
 	}
 	.chat-in .chat-tail::after {
-		left: -0.62rem;
+		left: -18px;
+		width: 18px;
 		background-color: var(--bg);
-		border-bottom-right-radius: 0.7rem;
+		border-bottom-right-radius: 10px;
 	}
 
 	/* Poll */
