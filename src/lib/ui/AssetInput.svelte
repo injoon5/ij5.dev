@@ -84,8 +84,9 @@
 		picker below is the whole affordance, and it is not hidden behind hover.
 	-->
 	<div
-		class="dropzone"
-		class:dragging
+		class="rounded-[var(--radius-ui)] border border-dashed transition-colors duration-150 ease-out {dragging
+			? 'border-accent bg-accent-tint'
+			: 'border-border-subtle'}"
 		ondragover={(e) => {
 			e.preventDefault();
 			dragging = true;
@@ -128,18 +129,3 @@
 		</p>
 	{/if}
 </div>
-
-<style>
-	.dropzone {
-		border-radius: var(--radius-ui);
-		border: 1px dashed var(--border-subtle);
-		transition:
-			border-color 150ms var(--ease-out),
-			background-color 150ms var(--ease-out);
-	}
-
-	.dropzone.dragging {
-		border-color: var(--accent);
-		background-color: var(--accent-tint);
-	}
-</style>
