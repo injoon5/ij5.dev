@@ -75,8 +75,8 @@
 	     \u003c so the JSON can never terminate the element early. -->
 	{@html `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`}
 
-	<meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
-	<meta name="theme-color" content="#18181d" media="(prefers-color-scheme: dark)" />
+	<meta name="theme-color" content="#f5f5f5" media="(prefers-color-scheme: light)" />
+	<meta name="theme-color" content="#181818" media="(prefers-color-scheme: dark)" />
 
 	{#if data.needsScript}
 		<script src="/w.js" defer></script>

@@ -50,35 +50,35 @@
 
 /* ---------------------------------------------------------------------------
    Palette
-   Near-neutrals on a single cool hue with one accent. Defined as raw values
-   here and exposed to Tailwind through `@theme inline` below, so dark mode is
-   a token swap in a media query — no class sweep, no JS, correct at first
-   paint. That is what lets `/` ship with `csr = false`.
+   Neutral grays with one accent. Defined as raw values here and exposed to
+   Tailwind through `@theme inline` below, so dark mode is a token swap in a
+   media query — no class sweep, no JS, correct at first paint. That is what
+   lets `/` ship with `csr = false`.
 --------------------------------------------------------------------------- */
 
 :root {
 	color-scheme: light dark;
 
-	/* Surfaces. The page is faintly tinted and widgets are pure white, so
-	   separation comes from the tint difference rather than a stroke. */
-	--bg: oklch(0.968 0.003 265);
+	/* Surfaces. The page is a soft gray and widgets are pure white, so
+	   separation comes from the lightness difference rather than a stroke. */
+	--bg: oklch(0.968 0 0);
 	--surface: oklch(1 0 0);
-	--surface-hover: oklch(0.988 0.002 265);
-	--surface-sunken: oklch(0.941 0.004 265);
-	--surface-inverse: oklch(0.22 0.012 265);
+	--surface-hover: oklch(0.988 0 0);
+	--surface-sunken: oklch(0.941 0 0);
+	--surface-inverse: oklch(0.22 0 0);
 
 	/* Text */
-	--text: oklch(0.22 0.012 265);
-	--text-muted: oklch(0.512 0.014 265);
-	--text-subtle: oklch(0.58 0.012 265);
-	--text-inverse: oklch(0.98 0.002 265);
+	--text: oklch(0.22 0 0);
+	--text-muted: oklch(0.512 0 0);
+	--text-subtle: oklch(0.58 0 0);
+	--text-inverse: oklch(0.98 0 0);
 
 	/* Lines. Used sparingly and never on a widget. */
-	--border-subtle: oklch(0.905 0.005 265);
-	--border-strong: oklch(0.845 0.007 265);
+	--border-subtle: oklch(0.905 0 0);
+	--border-strong: oklch(0.845 0 0);
 
-	/* An image outline is pure black at low alpha, never the cool near-neutral
-	   the rest of the UI draws lines in — a tinted stroke picks up the surface
+	/* An image outline is pure black at low alpha, never the neutral gray the
+	   rest of the UI draws lines in — a tinted stroke picks up the surface
 	   beneath a photo's edge and reads as a rim of dirt. Flips to white in dark
 	   for the same reason. */
 	--img-outline: oklch(0 0 0 / 0.1);
@@ -98,7 +98,7 @@
 	   accent is the rule, and a second hue for a single widget is exactly the
 	   decoration-without-purpose the rest of the page avoids. Empty days are a
 	   sunken surface, not a pale accent, so "nothing" reads as nothing. */
-	--grass-0: oklch(0.93 0.004 265);
+	--grass-0: oklch(0.93 0 0);
 	--grass-1: color-mix(in oklab, var(--accent) 22%, var(--surface));
 	--grass-2: color-mix(in oklab, var(--accent) 45%, var(--surface));
 	--grass-3: color-mix(in oklab, var(--accent) 70%, var(--surface));
@@ -118,19 +118,19 @@
 
 @media (prefers-color-scheme: dark) {
 	:root:not([data-theme='light']) {
-		--bg: oklch(0.163 0.008 265);
-		--surface: oklch(0.216 0.009 265);
-		--surface-hover: oklch(0.246 0.01 265);
-		--surface-sunken: oklch(0.185 0.008 265);
-		--surface-inverse: oklch(0.95 0.004 265);
+		--bg: oklch(0.163 0 0);
+		--surface: oklch(0.216 0 0);
+		--surface-hover: oklch(0.246 0 0);
+		--surface-sunken: oklch(0.185 0 0);
+		--surface-inverse: oklch(0.95 0 0);
 
-		--text: oklch(0.955 0.004 265);
-		--text-muted: oklch(0.712 0.011 265);
-		--text-subtle: oklch(0.6 0.012 265);
-		--text-inverse: oklch(0.19 0.01 265);
+		--text: oklch(0.955 0 0);
+		--text-muted: oklch(0.712 0 0);
+		--text-subtle: oklch(0.6 0 0);
+		--text-inverse: oklch(0.19 0 0);
 
-		--border-subtle: oklch(0.28 0.01 265);
-		--border-strong: oklch(0.36 0.012 265);
+		--border-subtle: oklch(0.28 0 0);
+		--border-strong: oklch(0.36 0 0);
 
 		--img-outline: oklch(1 0 0 / 0.1);
 
@@ -146,7 +146,7 @@
 
 		/* The empty cell lifts off the widget surface rather than sinking, the
 		   same inversion the shadows make in dark mode. */
-		--grass-0: oklch(0.27 0.008 265);
+		--grass-0: oklch(0.27 0 0);
 
 		/* §7.5 — shadows on a dark ground read as grime. The surface is
 		   already lighter than the page; that lift is the separation. */
@@ -157,17 +157,17 @@
 }
 
 [data-theme='dark'] {
-	--bg: oklch(0.163 0.008 265);
-	--surface: oklch(0.216 0.009 265);
-	--surface-hover: oklch(0.246 0.01 265);
-	--surface-sunken: oklch(0.185 0.008 265);
-	--surface-inverse: oklch(0.95 0.004 265);
-	--text: oklch(0.955 0.004 265);
-	--text-muted: oklch(0.712 0.011 265);
-	--text-subtle: oklch(0.6 0.012 265);
-	--text-inverse: oklch(0.19 0.01 265);
-	--border-subtle: oklch(0.28 0.01 265);
-	--border-strong: oklch(0.36 0.012 265);
+	--bg: oklch(0.163 0 0);
+	--surface: oklch(0.216 0 0);
+	--surface-hover: oklch(0.246 0 0);
+	--surface-sunken: oklch(0.185 0 0);
+	--surface-inverse: oklch(0.95 0 0);
+	--text: oklch(0.955 0 0);
+	--text-muted: oklch(0.712 0 0);
+	--text-subtle: oklch(0.6 0 0);
+	--text-inverse: oklch(0.19 0 0);
+	--border-subtle: oklch(0.28 0 0);
+	--border-strong: oklch(0.36 0 0);
 	--img-outline: oklch(1 0 0 / 0.1);
 	--accent: oklch(0.72 0.142 262);
 	--accent-hover: oklch(0.78 0.13 262);
@@ -177,7 +177,7 @@
 	--danger-tint: oklch(0.3 0.07 25);
 	--success: oklch(0.72 0.14 152);
 	--warning: oklch(0.79 0.14 75);
-	--grass-0: oklch(0.27 0.008 265);
+	--grass-0: oklch(0.27 0 0);
 	--sh-widget: none;
 	--sh-widget-lift: none;
 	--sh-pop: 0 0 0 1px oklch(1 0 0 / 0.07), 0 16px 40px -12px oklch(0 0 0 / 0.6);
@@ -740,7 +740,7 @@
 		--chip: oklch(0.62 0.24 25);
 	}
 	.lb-icon[data-tint='zinc'] {
-		--chip: oklch(0.55 0.02 265);
+		--chip: oklch(0.55 0 0);
 	}
 	/* The sticker tips and grows a touch on hover — the one playful beat, and
 	   only where a real pointer can trigger it. */
