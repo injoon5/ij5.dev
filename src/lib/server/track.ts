@@ -115,8 +115,19 @@ export const DEVICE_UPSERT = `INSERT INTO hits_device (day, slug, kind, os, brow
 
 export const VISITORS_INSERT = `INSERT OR IGNORE INTO visitors (day, slug, vh) VALUES (?, ?, ?)`;
 
-/** Fold a cookie-less identity into the fingerprint identity for the whole day. */
-export const MIGRATE_VISITOR = `UPDATE visitors SET vh = ?2 WHERE day = ?1 AND vh = ?3`;
+/**
+ * Fold a cookie-less identity into the fingerprint identity for the whole day.
+ * `OR IGNORE` because a row for the fingerprint identity may already exist on
+ * the same (day, slug) — the page's own deferred `track()` can land after the
+ * beacon — and a plain UPDATE onto that existing primary key would abort the
+ * whole batch. Rows that cannot move are cleared by `PURGE_VISITOR` below, so
+ * the old identity never lingers as a duplicate.
+ */
+export const MIGRATE_VISITOR = `UPDATE OR IGNORE visitors SET vh = ?2 WHERE day = ?1 AND vh = ?3`;
+
+/** Remove any cookie-less rows the migration could not move (their fingerprint
+ *  row already existed), so the two identities never double count. */
+export const PURGE_VISITOR = `DELETE FROM visitors WHERE day = ?1 AND vh = ?2`;
 
 /** First-party fingerprint cookie. HttpOnly: the page never needs to read it. */
 export const FP_COOKIE = 'f';

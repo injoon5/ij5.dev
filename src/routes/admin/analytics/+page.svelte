@@ -19,6 +19,10 @@
 		}
 	};
 
+	// `mobile` / `desktop` / `bot` are stored lower-case; title-case them so the
+	// Devices list reads like the Countries, OS and Browser lists beside it.
+	const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
 	let hasData = $derived(data.traffic.length > 0 || data.totals.hits > 0 || data.totals.home > 0);
 
 	const rangeHref = (key: string) =>
@@ -102,7 +106,7 @@
 
 		<BarList
 			title="Devices"
-			rows={data.devices.map((d) => ({ label: d.device, value: d.hits }))}
+			rows={data.devices.map((d) => ({ label: cap(d.device), value: d.hits }))}
 			empty="No devices recorded yet."
 		/>
 
@@ -165,7 +169,7 @@
 					<BarList
 						level={3}
 						title="Devices"
-						rows={detail.devices.map((d) => ({ label: d.device, value: d.hits }))}
+						rows={detail.devices.map((d) => ({ label: cap(d.device), value: d.hits }))}
 						empty="No devices for this link."
 					/>
 					<BarList

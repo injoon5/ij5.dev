@@ -71,7 +71,17 @@
 {/snippet}
 
 {#if href}
-	<a {href} class="{base} {VARIANT[variant]} {SIZE[size]} {extra}" {...rest}>
+	<!-- An anchor has no `disabled`, so a busy or disabled link drops its href
+	     and stops taking focus or clicks rather than navigating mid-flight. -->
+	{@const inert = disabled || busy}
+	<a
+		href={inert ? undefined : href}
+		class="{base} {VARIANT[variant]} {SIZE[size]} {inert ? 'pointer-events-none opacity-45' : ''} {extra}"
+		aria-disabled={inert || undefined}
+		aria-busy={busy || undefined}
+		tabindex={inert ? -1 : undefined}
+		{...rest}
+	>
 		{@render label()}
 	</a>
 {:else}

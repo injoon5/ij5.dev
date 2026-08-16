@@ -356,10 +356,13 @@ export function findLiveRequests(
 	return [...out.values()];
 }
 
-/** Every `img/…` asset key referenced by the document (for dims + GC). */
+/** Every `img/…` asset key referenced by the document (for dims + GC). The base
+ *  name matches the `[\w.-]` the image renderer accepts, not just the hex of a
+ *  freshly minted key, so a manually-written key is never GC'd out from under a
+ *  document that still draws it. */
 export function imageKeysIn(src: string | null | undefined): string[] {
 	const keys = new Set<string>();
-	const re = /img\/[A-Za-z0-9]+\.(?:webp|png|jpe?g|avif)/g;
+	const re = /img\/[\w-]+\.(?:webp|png|jpe?g|avif)/g;
 	let m: RegExpExecArray | null;
 	while ((m = re.exec(src ?? ''))) keys.add(m[0]);
 	return [...keys];

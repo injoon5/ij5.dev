@@ -21,6 +21,16 @@
 
 	const deleting = pending({ onSuccess: () => goto('/admin/files', { noScroll: true }) });
 
+	// Deleting a file removes the bytes from R2 for good, so it asks first — the
+	// same confirm the home asset list uses.
+	const confirmDelete: import('@sveltejs/kit').SubmitFunction = (input) => {
+		if (!confirm(`Delete ${data.selected?.name}? The bytes are removed from R2.`)) {
+			input.cancel();
+			return;
+		}
+		return deleting.submit(input);
+	};
+
 	let selection = $derived(page.url.searchParams.get('s'));
 	let creating = $derived(selection === 'new');
 	let detail = $derived(creating || Boolean(data.selected));
@@ -209,7 +219,7 @@
 					method="POST"
 					action="?/delete"
 					class="mt-6 border-t border-border-subtle pt-5"
-					use:enhance={deleting.submit}
+					use:enhance={confirmDelete}
 				>
 					<input type="hidden" name="slug" value={data.selected.slug} />
 					<div class="flex items-center justify-between gap-4">

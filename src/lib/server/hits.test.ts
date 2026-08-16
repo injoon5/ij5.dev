@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEVICE_UPSERT, HITS_UPSERT, MIGRATE_VISITOR, VISITORS_INSERT } from './track';
+import { DEVICE_UPSERT, HITS_UPSERT, MIGRATE_VISITOR, PURGE_VISITOR, VISITORS_INSERT } from './track';
 
 /**
  * §13, test 3 — the `hits` upsert increments rather than duplicating.
@@ -97,6 +97,23 @@ withSqlite('hits', () => {
 
 		expect(rows<{ vh: string; slug: string }>(`SELECT vh, slug FROM visitors ORDER BY slug`)).toEqual([
 			{ vh: 'new', slug: 'cv' },
+			{ vh: 'new', slug: 'gh' }
+		]);
+	});
+
+	it('folds without aborting when the fingerprint row already exists', () => {
+		// The page's own deferred write can land after the beacon, leaving a row
+		// under the fingerprint identity on a slug the cookie-less identity also
+		// hit. A plain UPDATE onto that primary key would throw and abort the
+		// batch; `OR IGNORE` skips it and the purge clears the leftover, so the
+		// slug ends up counted exactly once.
+		db.prepare(VISITORS_INSERT).run('2026-01-01', 'gh', 'old');
+		db.prepare(VISITORS_INSERT).run('2026-01-01', 'gh', 'new'); // already present
+
+		expect(() => db.prepare(MIGRATE_VISITOR).run('2026-01-01', 'new', 'old')).not.toThrow();
+		db.prepare(PURGE_VISITOR).run('2026-01-01', 'old');
+
+		expect(rows<{ vh: string; slug: string }>(`SELECT vh, slug FROM visitors`)).toEqual([
 			{ vh: 'new', slug: 'gh' }
 		]);
 	});
