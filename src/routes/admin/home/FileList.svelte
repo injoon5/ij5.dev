@@ -59,12 +59,17 @@
 	{/if}
 
 	{#if files.length}
-		<ul class="files">
+		<!-- A thumbnail, the key and metadata across, actions on the right. The
+		     grid reflows via named areas: two rows on a phone (key over date,
+		     dims and size dropped), one wide row at `md`. -->
+		<ul class="flex flex-col gap-2">
 			{#each files as file (file.key)}
-				<li class="file">
+				<li
+					class="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 rounded-[var(--radius-ui-lg)] bg-surface px-3 py-2.5 transition-colors duration-150 ease-out [grid-template-areas:'thumb_key_actions'_'thumb_meta_actions'] hover:bg-surface-hover md:min-h-12 md:grid-cols-[2.5rem_minmax(0,1fr)_5rem_5rem_6.5rem_auto] md:gap-4 md:px-3.5 md:[grid-template-areas:'thumb_key_dims_size_date_actions']"
+				>
 					{#if file.mime.startsWith('image/')}
 						<img
-							class="file-thumb"
+							class="size-10 rounded-[var(--radius-inner)] bg-surface-sunken object-cover [grid-area:thumb]"
 							src="{assetsOrigin}/{file.key}"
 							alt=""
 							width="40"
@@ -72,22 +77,36 @@
 							loading="lazy"
 						/>
 					{:else}
-						<span class="file-thumb file-thumb--blank" aria-hidden="true"></span>
+						<span
+							class="block size-10 rounded-[var(--radius-inner)] bg-surface-sunken [grid-area:thumb]"
+							aria-hidden="true"
+						></span>
 					{/if}
 
-					<code class="file-key">{file.key}</code>
-					<span class="file-dims tnum">{file.w && file.h ? `${file.w}×${file.h}` : '—'}</span>
-					<span class="file-size tnum">{fmtBytes(file.bytes)}</span>
-					<span class="file-date tnum">{fmtDate(file.at)}</span>
+					<code class="min-w-0 truncate text-xs [grid-area:key]">{file.key}</code>
+					<span class="tnum hidden text-xs text-text-muted [grid-area:dims] md:block">
+						{file.w && file.h ? `${file.w}×${file.h}` : '—'}
+					</span>
+					<span class="tnum hidden text-xs text-text-muted [grid-area:size] md:block">
+						{fmtBytes(file.bytes)}
+					</span>
+					<span class="tnum text-xs text-text-muted [grid-area:meta] md:[grid-area:date] md:text-right">
+						{fmtDate(file.at)}
+					</span>
 
-					<span class="file-actions">
+					<span class="flex flex-wrap justify-end gap-1 [grid-area:actions] md:flex-nowrap md:gap-2">
 						<Button size="sm" variant="ghost" onclick={() => onInsert(file.key)}>
 							Insert
 						</Button>
 						<Button size="sm" variant="ghost" onclick={() => onGallery(file.key)}>
 							To gallery
 						</Button>
-						<form method="POST" action="?/deleteFile" use:enhance={deleteSubmit(file.key)}>
+						<form
+							method="POST"
+							action="?/deleteFile"
+							class="contents"
+							use:enhance={deleteSubmit(file.key)}
+						>
 							<Button
 								type="submit"
 								size="sm"
@@ -114,120 +133,3 @@
 	{/if}
 </section>
 
-<style>
-	/* The uploaded-files list. A row list like the Links table: one surface
-	   per file, a thumbnail on the left, metadata across, actions on the
-	   right. The grid shrinks its columns below `md` so the key and actions
-	   stay on one row on a phone. */
-	.files {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.file {
-		display: grid;
-		grid-template-columns: 2.5rem minmax(0, 1fr) auto;
-		grid-template-areas:
-			'thumb key actions'
-			'thumb meta actions';
-		align-items: center;
-		gap: 0.125rem 0.75rem;
-		padding: 0.625rem 0.75rem;
-		border-radius: var(--radius-ui-lg);
-		background-color: var(--surface);
-		transition: background-color 150ms var(--ease-out);
-	}
-
-	.file-thumb {
-		grid-area: thumb;
-		width: 2.5rem;
-		height: 2.5rem;
-		border-radius: var(--radius-inner);
-		background-color: var(--surface-sunken);
-		object-fit: cover;
-	}
-
-	.file-thumb--blank {
-		display: block;
-	}
-
-	.file-key {
-		grid-area: key;
-		min-width: 0;
-		font-size: var(--text-xs);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	/* On a phone the key gets the top row and the date the line under it.
-	   Dims and size are the columns a phone does not need. */
-	.file-dims,
-	.file-size,
-	.file-date {
-		font-size: var(--text-xs);
-		color: var(--text-muted);
-	}
-
-	.file-dims,
-	.file-size {
-		display: none;
-	}
-
-	.file-date {
-		grid-area: meta;
-	}
-
-	.file-actions {
-		grid-area: actions;
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: flex-end;
-		gap: 0.25rem;
-	}
-
-	.file-actions form {
-		display: contents;
-	}
-
-	@media (hover: hover) and (pointer: fine) {
-		.file:hover {
-			background-color: var(--surface-hover);
-		}
-	}
-
-	@media (min-width: 768px) {
-		.file {
-			grid-template-columns: 2.5rem minmax(0, 1fr) 5rem 5rem 6.5rem auto;
-			grid-template-areas: 'thumb key dims size date actions';
-			gap: 1rem;
-			min-height: 3rem;
-			padding-inline: 0.875rem;
-		}
-
-		.file-dims,
-		.file-size {
-			display: block;
-		}
-
-		.file-dims {
-			grid-area: dims;
-		}
-
-		.file-size {
-			grid-area: size;
-		}
-
-		.file-date {
-			grid-area: date;
-			text-align: right;
-		}
-
-		.file-actions {
-			grid-area: actions;
-			flex-wrap: nowrap;
-			gap: 0.5rem;
-		}
-	}
-</style>

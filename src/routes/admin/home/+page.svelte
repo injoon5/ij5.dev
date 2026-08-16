@@ -153,7 +153,7 @@
 	</p>
 {/if}
 
-<div class="editor">
+<div class="flex flex-col gap-8">
 	<IdentityForm draft={data.draft.profile} assetsOrigin={data.assetsOrigin} {form} />
 
 	<PageEditor
@@ -167,10 +167,3 @@
 	<FileList bind:files assetsOrigin={data.assetsOrigin} onInsert={insertImageKey} onGallery={insertGalleryRow} />
 </div>
 
-<style>
-	.editor {
-		display: flex;
-		flex-direction: column;
-		gap: 2rem;
-	}
-</style>

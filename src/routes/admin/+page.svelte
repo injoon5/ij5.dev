@@ -7,7 +7,16 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
 	import { fmtDay } from '$lib/format';
-	import { inputClass } from '$lib/ui/styles';
+	import {
+		inputClass,
+		masterLayout,
+		listPane,
+		detailAside,
+		backLink,
+		dataRow,
+		badge,
+		kbd
+	} from '$lib/ui/styles';
 	import LinkForm from './LinkForm.svelte';
 	import type { ActionData, PageData } from './$types';
 
@@ -70,14 +79,8 @@
 
 <!-- Master–detail. Below `lg` it is a drill-down: `data-detail` on the layout
      hides whichever pane is not showing. At `lg` both panes are always up. -->
-<div
-	class="group/layout grid gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start"
-	data-detail={detail || undefined}
->
-	<section
-		class="group-data-[detail]/layout:hidden lg:block"
-		aria-label="Links"
-	>
+<div class={masterLayout} data-detail={detail || undefined}>
+	<section class={listPane} aria-label="Links">
 		<header class="mb-6 flex items-center justify-between gap-4">
 			<h1 class="text-xl font-semibold">Links</h1>
 			<Button href="/admin?s=new" variant="primary" size="sm" data-sveltekit-noscroll>
@@ -145,20 +148,14 @@
 							href="/admin?s={row.slug}"
 							data-sveltekit-noscroll
 							aria-current={data.selected?.slug === row.slug ? 'true' : undefined}
-							class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 rounded-[var(--radius-ui-lg)] bg-surface px-4 py-3.5 transition-[background-color,scale] duration-150 ease-out hover:bg-surface-hover active:scale-[0.99] aria-[current=true]:shadow-[inset_0_0_0_1px_var(--accent)] md:min-h-10 md:grid-cols-[minmax(7rem,12rem)_minmax(0,1fr)_minmax(0,1fr)_3.5rem_4rem] md:items-center md:gap-4 md:py-2.5"
+							class="{dataRow} md:grid-cols-[minmax(7rem,12rem)_minmax(0,1fr)_minmax(0,1fr)_3.5rem_4rem]"
 						>
 							<span class="flex items-center gap-2 text-sm font-semibold md:[grid-area:1/1]">
 								/{row.slug}
 								{#if row.expired}
-									<span
-										class="rounded-[var(--radius-pill)] bg-surface-sunken px-[0.4375rem] py-px text-2xs font-medium text-text-muted"
-										>Expired</span
-									>
+									<span class={badge}>Expired</span>
 								{:else if row.status === 301}
-									<span
-										class="rounded-[var(--radius-pill)] bg-surface-sunken px-[0.4375rem] py-px text-2xs font-medium text-text-muted"
-										>301</span
-									>
+									<span class={badge}>301</span>
 								{/if}
 							</span>
 
@@ -196,17 +193,10 @@
 		the form renders beside it. On a phone the same URL shows the form on
 		its own, which is the behaviour a phone actually wants.
 	-->
-	<aside
-		class="hidden group-data-[detail]/layout:block lg:sticky lg:top-10 lg:block lg:rounded-[var(--radius-ui-lg)] lg:bg-surface lg:p-5"
-		aria-label="Link details"
-	>
+	<aside class={detailAside} aria-label="Link details">
 		<!-- Below `lg` the list is hidden while this pane is up, so this back link
 		     is the only way to it. Creating a link had no way back at all. -->
-		<a
-			href="/admin"
-			data-sveltekit-noscroll
-			class="-mt-2 -ms-1 mb-1 inline-flex min-h-11 items-center gap-1 px-1 text-sm font-medium text-text-muted transition-colors duration-150 ease-out hover:text-text lg:hidden"
-		>
+		<a href="/admin" data-sveltekit-noscroll class={backLink}>
 			<ChevronLeft size={16} aria-hidden="true" />
 			All links
 		</a>
@@ -233,9 +223,7 @@
 					/>
 				{:else}
 					<p class="text-sm text-text-muted">
-						Select a link to edit it, or press
-						<kbd class="rounded-[4px] bg-surface-sunken px-[0.3125rem] py-px font-mono text-2xs">n</kbd>
-						for a new one.
+						Select a link to edit it, or press <kbd class={kbd}>n</kbd> for a new one.
 					</p>
 				{/if}
 			</div>
