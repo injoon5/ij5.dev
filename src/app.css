@@ -256,6 +256,12 @@
 	   settled position. Reduced motion collapses it to instant (see base). */
 	--animate-rise: rise 420ms var(--ease-out) both;
 
+	/* The drill-down entrance: on a phone the detail pane is a new screen the
+	   router renders on selection, and a CSS animation restarts the moment an
+	   element becomes displayed — so this plays every time a row opens, no JS.
+	   Gated to below `lg` at the call site, where the pane is always present. */
+	--animate-pane-rise: pane-rise 180ms var(--ease-out);
+
 	--shadow-widget: var(--sh-widget);
 	--shadow-widget-lift: var(--sh-widget-lift);
 	--shadow-pop: var(--sh-pop);
@@ -265,6 +271,17 @@
 	from {
 		opacity: 0;
 		transform: translateY(8px) scale(0.99);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes pane-rise {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
 	}
 	to {
 		opacity: 1;

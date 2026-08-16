@@ -68,8 +68,16 @@
 <svelte:head><title>Links</title></svelte:head>
 <svelte:window onkeydown={onKeydown} />
 
-<div class="layout" data-detail={detail || undefined}>
-	<section class="list" aria-label="Links">
+<!-- Master–detail. Below `lg` it is a drill-down: `data-detail` on the layout
+     hides whichever pane is not showing. At `lg` both panes are always up. -->
+<div
+	class="group/layout grid gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start"
+	data-detail={detail || undefined}
+>
+	<section
+		class="group-data-[detail]/layout:hidden lg:block"
+		aria-label="Links"
+	>
 		<header class="mb-6 flex items-center justify-between gap-4">
 			<h1 class="text-xl font-semibold">Links</h1>
 			<Button href="/admin?s=new" variant="primary" size="sm" data-sveltekit-noscroll>
@@ -125,38 +133,57 @@
 		{:else if !visible.length}
 			<Empty title="Nothing matches" body="No link contains “{query}”. Try a shorter search." />
 		{:else}
-			<!-- A table at `md` and up, cards below it. The mobile card list is
-			     not a narrower table: the columns that do not fit are the ones a
-			     phone does not need. -->
-			<ul class="rows">
+			<!-- A five-column row at `md` and up, a two-column card below it. The
+			     mobile card is not a narrower table: the columns that do not fit
+			     are the ones a phone does not need. Every cell is placed
+			     explicitly at `md` so the DOM order (what a screen reader follows)
+			     and the visual order stay identical — slug first, never last. -->
+			<ul class="flex flex-col gap-2">
 				{#each visible as row (row.slug)}
 					<li>
 						<a
 							href="/admin?s={row.slug}"
 							data-sveltekit-noscroll
 							aria-current={data.selected?.slug === row.slug ? 'true' : undefined}
-							class="row"
+							class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 rounded-[var(--radius-ui-lg)] bg-surface px-4 py-3.5 transition-[background-color,scale] duration-150 ease-out hover:bg-surface-hover active:scale-[0.99] aria-[current=true]:shadow-[inset_0_0_0_1px_var(--accent)] md:min-h-10 md:grid-cols-[minmax(7rem,12rem)_minmax(0,1fr)_minmax(0,1fr)_3.5rem_4rem] md:items-center md:gap-4 md:py-2.5"
 						>
-							<span class="row-slug">
+							<span class="flex items-center gap-2 text-sm font-semibold md:[grid-area:1/1]">
 								/{row.slug}
 								{#if row.expired}
-									<span class="badge">Expired</span>
+									<span
+										class="rounded-[var(--radius-pill)] bg-surface-sunken px-[0.4375rem] py-px text-2xs font-medium text-text-muted"
+										>Expired</span
+									>
 								{:else if row.status === 301}
-									<span class="badge">301</span>
+									<span
+										class="rounded-[var(--radius-pill)] bg-surface-sunken px-[0.4375rem] py-px text-2xs font-medium text-text-muted"
+										>301</span
+									>
 								{/if}
 							</span>
 
-							<span class="row-target">{host(row.target_url)}</span>
+							<span class="col-start-1 truncate text-xs text-text-muted md:[grid-area:1/2]">
+								{host(row.target_url)}
+							</span>
 
 							{#if row.note}
-								<span class="row-note">{row.note}</span>
+								<span class="col-start-1 truncate text-xs text-text-muted md:[grid-area:1/3]">
+									{row.note}
+								</span>
 							{/if}
 
-							<span class="row-hits tnum" title="Clicks in the last 7 days">
+							<span
+								class="tnum col-start-2 row-start-1 text-sm text-text-muted md:[grid-area:1/4] md:text-right"
+								title="Clicks in the last 7 days"
+							>
 								{data.recent[row.slug] ?? 0}
 							</span>
 
-							<span class="row-date tnum">{fmtDay(row.created_at)}</span>
+							<span
+								class="tnum col-start-2 row-start-2 text-right text-xs text-text-muted md:[grid-area:1/5]"
+							>
+								{fmtDay(row.created_at)}
+							</span>
 						</a>
 					</li>
 				{/each}
@@ -169,17 +196,22 @@
 		the form renders beside it. On a phone the same URL shows the form on
 		its own, which is the behaviour a phone actually wants.
 	-->
-	<aside class="detail" aria-label="Link details">
-		<!--
-			Below `lg` the list is hidden while this pane is up, so this is the only
-			way back to it. Creating a link had no way back at all.
-		-->
-		<a href="/admin" data-sveltekit-noscroll class="back">
+	<aside
+		class="hidden group-data-[detail]/layout:block lg:sticky lg:top-10 lg:block lg:rounded-[var(--radius-ui-lg)] lg:bg-surface lg:p-5"
+		aria-label="Link details"
+	>
+		<!-- Below `lg` the list is hidden while this pane is up, so this back link
+		     is the only way to it. Creating a link had no way back at all. -->
+		<a
+			href="/admin"
+			data-sveltekit-noscroll
+			class="-mt-2 -ms-1 mb-1 inline-flex min-h-11 items-center gap-1 px-1 text-sm font-medium text-text-muted transition-colors duration-150 ease-out hover:text-text lg:hidden"
+		>
 			<ChevronLeft size={16} aria-hidden="true" />
 			All links
 		</a>
 
-		<div class="detail-pane">
+		<div class="max-lg:animate-pane-rise">
 			{#if creating}
 					<h2 class="mb-5 text-lg font-semibold">New link</h2>
 					<LinkForm
@@ -201,221 +233,12 @@
 					/>
 				{:else}
 					<p class="text-sm text-text-muted">
-						Select a link to edit it, or press <kbd class="kbd">n</kbd> for a new one.
+						Select a link to edit it, or press
+						<kbd class="rounded-[4px] bg-surface-sunken px-[0.3125rem] py-px font-mono text-2xs">n</kbd>
+						for a new one.
 					</p>
 				{/if}
 			</div>
 		</aside>
 </div>
 
-<style>
-	.layout {
-		display: grid;
-		gap: 2rem;
-	}
-
-	/* Below `lg` this is a drill-down: one of the two panes is showing. */
-	.layout[data-detail] .list {
-		display: none;
-	}
-
-	.layout:not([data-detail]) .detail {
-		display: none;
-	}
-
-	.back {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		min-height: 2.75rem;
-		margin-block: -0.5rem 0.25rem;
-		margin-inline-start: -0.25rem;
-		padding-inline: 0.25rem;
-		font-size: var(--text-sm);
-		font-weight: 500;
-		color: var(--text-muted);
-		transition: color 150ms var(--ease-out);
-	}
-
-	.back:hover {
-		color: var(--text);
-	}
-
-	.rows {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.row {
-		display: grid;
-		grid-template-columns: 1fr auto;
-		gap: 0.125rem 0.75rem;
-		padding: 0.875rem 1rem;
-		border-radius: var(--radius-ui-lg);
-		background-color: var(--surface);
-		transition:
-			background-color 150ms var(--ease-out),
-			scale 150ms var(--ease-out);
-	}
-
-	.row:active {
-		scale: 0.99;
-	}
-
-	.row-slug {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: var(--text-sm);
-		font-weight: 600;
-	}
-
-	.row-target,
-	.row-note {
-		grid-column: 1;
-		font-size: var(--text-xs);
-		color: var(--text-muted);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.row-hits {
-		grid-row: 1;
-		grid-column: 2;
-		font-size: var(--text-sm);
-		font-variant-numeric: tabular-nums;
-		color: var(--text-muted);
-	}
-
-	.row-date {
-		grid-row: 2;
-		grid-column: 2;
-		font-size: var(--text-xs);
-		color: var(--text-muted);
-		text-align: right;
-	}
-
-	.badge {
-		border-radius: var(--radius-pill);
-		background-color: var(--surface-sunken);
-		padding: 0.0625rem 0.4375rem;
-		font-size: var(--text-2xs);
-		font-weight: 500;
-		color: var(--text-muted);
-	}
-
-	/* Sunken: this sits inside a `--surface` panel. */
-	.kbd {
-		border-radius: 4px;
-		background-color: var(--surface-sunken);
-		padding: 0.0625rem 0.3125rem;
-		font-family: var(--font-mono);
-		font-size: var(--text-2xs);
-	}
-
-	@media (min-width: 768px) {
-		/* The columns that did not fit on a phone: destination, note, clicks
-		   and created, all on one 40px row. */
-		.row {
-			grid-template-columns: minmax(7rem, 12rem) minmax(0, 1fr) minmax(0, 1fr) 3.5rem 4rem;
-			align-items: center;
-			gap: 1rem;
-			min-height: 2.5rem;
-			padding-block: 0.625rem;
-		}
-
-		/*
-		   Every cell is placed explicitly. Naming only some of them left the
-		   slug as the one item with no definite row, so auto-placement filled
-		   the row with the positioned cells first and dropped the slug into
-		   whatever was left — the last column. The row then read
-		   host · note · clicks · date · slug, putting the identifier you
-		   actually scan for at the far right, and putting visual order at odds
-		   with the DOM order screen readers follow.
-		*/
-		.row-slug {
-			grid-area: 1 / 1;
-		}
-		.row-target {
-			grid-area: 1 / 2;
-		}
-		.row-note {
-			grid-area: 1 / 3;
-		}
-
-		.row-hits {
-			grid-area: 1 / 4;
-			text-align: right;
-		}
-
-		.row-date {
-			grid-area: 1 / 5;
-			text-align: right;
-		}
-	}
-
-	@media (min-width: 1024px) {
-		.layout {
-			grid-template-columns: minmax(0, 1fr) 24rem;
-			align-items: start;
-		}
-
-		/* Both panes are always present on a wide screen. */
-		.layout[data-detail] .list,
-		.layout:not([data-detail]) .detail {
-			display: block;
-		}
-
-		/* The list never leaves, so there is nothing to go back to. */
-		.back {
-			display: none;
-		}
-
-		.detail {
-			position: sticky;
-			top: 2.5rem;
-			border-radius: var(--radius-ui-lg);
-			background-color: var(--surface);
-			padding: 1.25rem;
-		}
-	}
-
-	/*
-	 * The drill-down entrance. Below `lg` the pane is a new screen that the
-	 * router hides with `display: none` when no link is selected — and a CSS
-	 * animation restarts the moment an element becomes rendered, so this plays
-	 * every time a row opens, with no JavaScript. On a wide screen the pane is
-	 * always present and the animation is gated off entirely.
-	 *
-	 * Transform and opacity only, 180ms, the same ease the surfaces press with.
-	 * `prefers-reduced-motion` zeroes the duration globally (app.css), so the
-	 * pane simply appears there.
-	 */
-	@media (max-width: 1023px) {
-		.detail-pane {
-			animation: pane-rise 180ms var(--ease-out);
-		}
-	}
-	@keyframes pane-rise {
-		from {
-			opacity: 0;
-			transform: translateY(10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	@media (hover: hover) and (pointer: fine) {
-		.row:hover {
-			background-color: var(--surface-hover);
-		}
-	}
-
-	.row[aria-current='true'] {
-		box-shadow: inset 0 0 0 1px var(--accent);
-	}
-</style>
