@@ -185,142 +185,6 @@ function renderGallery(content: string, cols: number, e: RenderEnv): string {
 	return `<div class="gallery" data-cols="${cols}">${cells}</div>\n`;
 }
 
-/* --------------------------------------------------- narrative blocks
-   Two recognisable shortcodes — `:::messages` (an iMessage-style thread, used
-   as a narrative device) and `:::poll` (result bars). Both are pure
-   server-rendered HTML + CSS: nothing here needs the browser to run a line of
-   script, so `/` keeps its no-JS promise. Every value is escaped author text. */
-
-/**
- * The bubble end-caps, lifted from gandan.dev: a rounded cap for each side and,
- * for the last bubble of a run, a taller cap whose extra height is the tail.
- * A cap overlaps the flat pill and is filled the pill's colour, so the two read
- * as one capsule; the tail cap adds the flick. viewBox is 93×121 (rounded) or
- * 93×142 (tail); the fill comes from CSS so it tracks sent/received and theme.
- */
-const CAP = {
-	roundL:
-		'M38.2285 4.53223C52.5705 0.000102997 65.8942 0 92.541 0V121C65.8942 121 52.5705 121 38.2285 116.468C22.5696 110.772 10.2347 98.4442 4.53516 82.7949C0.000221252 71.3903 0 62.92 0 60.5C0 58.08 0.000221252 49.6097 4.53516 38.2051C10.2347 22.5559 22.5696 10.2282 38.2285 4.53223Z',
-	roundR:
-		'M54.3125 4.53223C39.9705 0.000102997 26.6468 0 0 0V121C26.6468 121 39.9705 121 54.3125 116.468C69.9714 110.772 82.3064 98.4442 88.0059 82.7949C92.5408 71.3903 92.541 62.92 92.541 60.5C92.541 58.08 92.5408 49.6097 88.0059 38.2051C82.3064 22.5559 69.9714 10.2282 54.3125 4.53223Z',
-	tailL:
-		'M66 121H92.541V0C65.8942 0 52.5705 0.000102997 38.2285 4.53223C22.5696 10.2282 10.2347 22.5559 4.53516 38.2051C0.000221252 49.6097 0 58.08 0 60.5C0 62.92 0.000219822 71.3903 4.53516 82.7949C9.02507 95.1229 18.2797 104.404 28.7402 111.976C31.7741 114.171 32.5953 118.94 32 124C31 132.5 23 137 27 141C30.7375 144.737 52.8316 121 66 121Z',
-	tailR:
-		'M27 121H0.459V0C27.1058 0 40.4295 0.000102997 54.7715 4.53223C70.4304 10.2282 82.7653 22.5559 88.4648 38.2051C92.9998 49.6097 93 58.08 93 60.5C93 62.92 92.9998 71.3903 88.4648 82.7949C83.9749 95.1229 74.7203 104.404 64.2598 111.976C61.2259 114.171 60.4047 118.94 61 124C62 132.5 70 137 66 141C62.2625 144.737 40.1684 121 27 121Z'
-} as const;
-
-/** `SIZE` is the pill (and rounded-cap) height; a cap's width holds the source
- *  93:121 ratio, and the tail cap is the same width but 142 tall. */
-const CHAT_SIZE = 38;
-const CAP_W = ((CHAT_SIZE / 121) * 93).toFixed(2);
-const TAIL_H = ((CHAT_SIZE / 121) * 142).toFixed(2);
-
-function chatCap(kind: keyof typeof CAP, side: 'l' | 'r'): string {
-	const tail = kind[0] === 't';
-	const h = tail ? TAIL_H : String(CHAT_SIZE);
-	const vb = tail ? '0 0 93 142' : '0 0 93 121';
-	return (
-		`<svg class="cap cap-${side}" width="${CAP_W}" height="${h}" viewBox="${vb}"` +
-		` aria-hidden="true"><path d="${CAP[kind]}"/></svg>`
-	);
-}
-
-/** `:::messages` (alias `:::chat`) — a short thread told in bubbles, after
- *  gandan.dev. Each line is a message; prefix a line with `me |` (or `i |` /
- *  `나 |`) to send it from the right (blue), otherwise it arrives on the left
- *  (grey). Consecutive messages from one side are a run; only the last of a run
- *  grows a tail. */
-function renderChat(content: string): string {
-	const msgs = content
-		.split('\n')
-		.map((l) => l.trim())
-		.filter(Boolean)
-		.map((l) => {
-			const bar = l.indexOf('|');
-			const who = bar < 0 ? '' : l.slice(0, bar).trim();
-			const text = (bar < 0 ? l : l.slice(bar + 1)).trim();
-			return { out: /^(me|i|나)$/i.test(who), text };
-		})
-		.filter((m) => m.text);
-	if (!msgs.length) return '';
-
-	const rows = msgs
-		.map((m, i) => {
-			const startRun = !msgs[i - 1] || msgs[i - 1].out !== m.out;
-			const endRun = !msgs[i + 1] || msgs[i + 1].out !== m.out;
-			const cls = `chat-row ${m.out ? 'chat-out' : 'chat-in'}${startRun ? ' chat-start' : ''}`;
-			// Sent: rounded left, tail (or rounded) right. Received: the mirror.
-			const left = m.out ? chatCap('roundL', 'l') : chatCap(endRun ? 'tailL' : 'roundL', 'l');
-			const right = m.out ? chatCap(endRun ? 'tailR' : 'roundR', 'r') : chatCap('roundR', 'r');
-			return `<div class="${cls}">${left}<p class="bubble">${escapeHtml(m.text)}</p>${right}</div>`;
-		})
-		.join('');
-	return `<div class="chat">${rows}</div>\n`;
-}
-
-/** `:::poll` — result bars. A `# ` line is the question; every other line is
- *  `option | percent`. The leading option(s) at the max are highlighted. */
-function renderPoll(content: string): string {
-	const lines = content
-		.split('\n')
-		.map((l) => l.trim())
-		.filter(Boolean);
-	let question = '';
-	const rows: { label: string; pct: number }[] = [];
-	for (const l of lines) {
-		if (l.startsWith('#')) {
-			question = l.replace(/^#\s*/, '');
-			continue;
-		}
-		const bar = l.lastIndexOf('|');
-		if (bar < 0) continue;
-		const label = l.slice(0, bar).trim();
-		const pct = Math.max(0, Math.min(100, parseFloat(l.slice(bar + 1)) || 0));
-		if (label) rows.push({ label, pct });
-	}
-	if (!rows.length) return '';
-	const max = Math.max(...rows.map((r) => r.pct));
-	const q = question ? `<div class="poll-q">${escapeHtml(question)}</div>` : '';
-	const body = rows
-		.map((r) => {
-			const win = r.pct === max ? ' poll-win' : '';
-			return (
-				`<div class="poll-row${win}"><span class="poll-fill" style="width:${r.pct}%"></span>` +
-				`<span class="poll-label">${escapeHtml(r.label)}</span>` +
-				`<span class="poll-pct">${Math.round(r.pct)}%</span></div>`
-			);
-		})
-		.join('');
-	return `<div class="poll">${q}<div class="poll-rows">${body}</div></div>\n`;
-}
-
-const COMPONENTS = new Set(['messages', 'chat', 'poll']);
-
-function componentRule(state: any, startLine: number, endLine: number, silent: boolean): boolean {
-	const pos = state.bMarks[startLine] + state.tShift[startLine];
-	const line = state.src.slice(pos, state.eMarks[startLine]).trim();
-	const m = /^:::([a-z]+)(?:\s+(.*))?$/.exec(line);
-	if (!m || !COMPONENTS.has(m[1])) return false;
-	if (silent) return true;
-
-	let next = startLine + 1;
-	let closed = false;
-	for (; next < endLine; next++) {
-		const p = state.bMarks[next] + state.tShift[next];
-		if (state.src.slice(p, state.eMarks[next]).trim() === ':::') {
-			closed = true;
-			break;
-		}
-	}
-
-	const token = state.push('component_block', '', 0);
-	token.content = state.getLines(startLine + 1, next, 0, false);
-	token.meta = { name: m[1], arg: m[2] ?? '' };
-	token.map = [startLine, closed ? next + 1 : next];
-	state.line = closed ? next + 1 : next;
-	return true;
-}
-
 function galleryRule(state: any, startLine: number, endLine: number, silent: boolean): boolean {
 	const pos = state.bMarks[startLine] + state.tShift[startLine];
 	const line = state.src.slice(pos, state.eMarks[startLine]).trim();
@@ -406,24 +270,9 @@ const md = new MarkdownIt({ html: false, linkify: true, typographer: true, break
 md.block.ruler.before('fence', 'contrib', contribRule);
 md.block.ruler.before('fence', 'links', linksRule);
 md.block.ruler.before('fence', 'gallery', galleryRule);
-md.block.ruler.before('fence', 'component', componentRule);
 md.inline.ruler.after('escape', 'icon', iconRule);
 
 md.renderer.rules.links_block = (tokens: any, idx: number) => renderLinks(tokens[idx].content);
-
-md.renderer.rules.component_block = (tokens: any, idx: number) => {
-	const { name } = tokens[idx].meta as { name: string };
-	const content = tokens[idx].content as string;
-	switch (name) {
-		case 'messages':
-		case 'chat':
-			return renderChat(content);
-		case 'poll':
-			return renderPoll(content);
-		default:
-			return '';
-	}
-};
 
 md.renderer.rules.gallery_block = (tokens: any, idx: number, _o: any, env: any) => {
 	const e = env as RenderEnv;
