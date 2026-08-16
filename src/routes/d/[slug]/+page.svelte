@@ -11,13 +11,16 @@
 		return dot > 0 ? data.file.name.slice(dot + 1).toLowerCase() : '';
 	});
 
+	// The size already sits in `.file-sub` above this line, so it is deliberately
+	// left out here rather than repeated.
 	let sub = $derived(
 		[
-			`${fmtBytes(data.file.bytes)}`,
 			`uploaded ${fmtDate(data.file.created_at)}`,
 			data.file.expires_at ? `expires ${fmtDate(data.file.expires_at)}` : null,
 			`${data.file.downloads} ${data.file.downloads === 1 ? 'download' : 'downloads'}`
-		].join(' · ')
+		]
+			.filter(Boolean)
+			.join(' · ')
 	);
 </script>
 

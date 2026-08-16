@@ -64,8 +64,8 @@
 		grass.addEventListener('scroll', paintGrass, { passive: true });
 		window.addEventListener('resize', paintGrass, { passive: true });
 		// With no visible scrollbar the wheel is the graph's only affordance,
-		// so a vertical wheel pans it horizontally and is blocked from
-		// scrolling the page — but only while there is anything to pan.
+		// so a vertical wheel pans it horizontally while there is anything
+		// to pan in that direction.
 		grass.addEventListener(
 			'wheel',
 			function (event) {
@@ -75,8 +75,14 @@
 				else if (event.deltaMode === 2) d *= window.innerHeight;
 				if (event.deltaX) d += event.deltaX;
 				if (d === 0) return;
-				event.preventDefault();
+				// Only swallow the wheel while the pan actually moves. At the edge
+				// scrollLeft does not change, so the event is left to scroll the
+				// page instead of trapping it. Comparing before and after
+				// sidesteps the RTL scroll-offset disagreement between engines: it
+				// asks whether the pan moved, not which way the numbers run.
+				var before = grass.scrollLeft;
 				grass.scrollLeft += d;
+				if (grass.scrollLeft !== before) event.preventDefault();
 			},
 			{ passive: false }
 		);

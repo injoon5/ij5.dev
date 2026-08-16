@@ -60,6 +60,7 @@
 		{#snippet children({ id, describedBy, invalid })}
 			<div class="flex flex-col gap-2">
 				<input
+					bind:this={fileEl}
 					{id}
 					name="file"
 					type="file"

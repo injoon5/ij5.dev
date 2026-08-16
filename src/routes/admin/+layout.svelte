@@ -35,8 +35,9 @@
 
 	<!--
 		A persistent sidebar at `md` and up, a bottom bar below it. Not a
-		hamburger in either case: three destinations do not need to be hidden
-		behind a menu, and on a phone the thumb is at the bottom of the screen.
+		hamburger in either case: this handful of destinations does not need to be
+		hidden behind a menu, and on a phone the thumb is at the bottom of the
+		screen.
 	-->
 	<nav class="sidebar" aria-label="Admin">
 		<a
@@ -141,7 +142,7 @@
 		gap: 0.5rem;
 		/* 44px minimum, made of padding rather than a bigger icon. */
 		min-height: 3.25rem;
-		/* Seven destinations with labels cannot clear 320px, so below `md`
+		/* This many destinations with labels cannot clear 320px, so below `md`
 		   the bar is icons only (labels stay for screen readers and return in
 		   the sidebar) and every stop is visible at once. */
 		padding-inline: 0.25rem;

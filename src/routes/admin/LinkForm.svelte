@@ -26,6 +26,16 @@
 
 	const deleting = pending({ onSuccess: () => onDone?.() });
 
+	// Delete is destructive and one click away, so it asks first — the same
+	// confirm the asset list uses, so the whole admin behaves one way.
+	const confirmDelete: import('@sveltejs/kit').SubmitFunction = (input) => {
+		if (!confirm(`Delete ij5.dev/${row?.slug}? Analytics history is kept.`)) {
+			input.cancel();
+			return;
+		}
+		return deleting.submit(input);
+	};
+
 	const iso = (ms: number | null | undefined) =>
 		ms ? new Date(ms).toISOString().slice(0, 10) : '';
 
@@ -157,7 +167,7 @@
 		method="POST"
 		action="?/delete"
 		class="mt-6 border-t border-border-subtle pt-5"
-		use:enhance={deleting.submit}
+		use:enhance={confirmDelete}
 	>
 		<input type="hidden" name="slug" value={row.slug} />
 		<div class="flex items-center justify-between gap-4">

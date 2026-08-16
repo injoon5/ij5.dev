@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
@@ -26,6 +27,16 @@
 
 	const deleting = pending({ onSuccess: () => onDone?.() });
 
+	// Destructive and one click away, so it asks first — the same confirm the
+	// asset list uses, so the whole admin behaves one way.
+	const confirmDelete: import('@sveltejs/kit').SubmitFunction = (input) => {
+		if (!confirm(`Delete ij5.dev/p/${row?.slug}? Analytics history is kept.`)) {
+			input.cancel();
+			return;
+		}
+		return deleting.submit(input);
+	};
+
 	const iso = (ms: number | null | undefined) =>
 		ms ? new Date(ms).toISOString().slice(0, 10) : '';
 
@@ -35,12 +46,23 @@
 
 	let initial = $derived({
 		slug: values.slug ?? row?.slug ?? '',
-		body: values.body ?? row?.body ?? '',
 		note: values.note ?? row?.note ?? '',
 		expires: values.expires ?? iso(row?.expires_at)
 	});
 
-	let bodyLen = $derived(initial.body.length);
+	// The body is bound so the counter tracks typing. It re-seeds when the
+	// selected paste (or echoed-back values) change, but `untrack` keeps that
+	// reseed from firing on every keystroke and wiping what someone is typing.
+	// svelte-ignore state_referenced_locally
+	let body = $state(values.body ?? row?.body ?? '');
+	$effect(() => {
+		const seed = values.body ?? row?.body ?? '';
+		untrack(() => {
+			body = seed;
+		});
+	});
+
+	let bodyLen = $derived(body.length);
 </script>
 
 <form
@@ -92,7 +114,7 @@
 					{id}
 					name="body"
 					rows={14}
-					value={initial.body}
+					bind:value={body}
 					aria-describedby={describedBy}
 					aria-invalid={invalid || undefined}
 					required
@@ -175,7 +197,7 @@
 		method="POST"
 		action="?/delete"
 		class="mt-6 border-t border-border-subtle pt-5"
-		use:enhance={deleting.submit}
+		use:enhance={confirmDelete}
 	>
 		<input type="hidden" name="slug" value={row.slug} />
 		<div class="flex items-center justify-between gap-4">

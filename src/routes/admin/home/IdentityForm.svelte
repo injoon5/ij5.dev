@@ -48,7 +48,7 @@
 			id="p-links"
 			label="Quick links"
 			optional
-			hint="For the :::links buttons. One per line: icon | label | url. Icons: github, x, linkedin, instagram, youtube, mail, rss, globe."
+			hint="Shown on the share card and in structured data — not the :::links buttons (those live in the page body). One per line: label | url | icon. Icons: github, x, linkedin, instagram, youtube, mail, rss, globe."
 		>
 			{#snippet children({ id, describedBy, invalid })}
 				<textarea

@@ -5,6 +5,7 @@ import {
 	fpCookie,
 	MIGRATE_VISITOR,
 	parseBeacon,
+	PURGE_VISITOR,
 	today,
 	visitorHash,
 	VISITORS_INSERT
@@ -54,21 +55,27 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
 	const old = await visitorHash(salt, day, ip, ua);
 	const vh = await visitorHash(salt, day, fp);
 
-	// The UPDATE folds in every cookie-less row from earlier today (all slugs —
-	// a redirect clicked before the beacon is still the same person). The INSERT
-	// OR IGNORE guarantees the home row exists even if it landed late.
+	// The migration folds in every cookie-less row from earlier today (all slugs
+	// — a redirect clicked before the beacon is still the same person); the purge
+	// clears any it could not move; the INSERT OR IGNORE guarantees the home row
+	// exists even if it landed late. Analytics never fail a request (§13), so a
+	// storage hiccup here must not cost the visitor their fingerprint cookie.
 	const stmts = [
 		env.DB.prepare(MIGRATE_VISITOR).bind(day, vh, old),
+		env.DB.prepare(PURGE_VISITOR).bind(day, old),
 		env.DB.prepare(VISITORS_INSERT).bind(day, '', vh)
 	];
-	await env.DB.batch(stmts);
+	await env.DB.batch(stmts).catch(() => {});
 
 	// The page's own track() write is scheduled behind the response it rode in
 	// on; the beacon can land before that batch finishes. One delayed re-run of
 	// the migration folds any straggler in. Cheap insurance, not the happy path.
 	const retry = (async () => {
 		await new Promise((r) => setTimeout(r, 1500));
-		await env.DB.prepare(MIGRATE_VISITOR).bind(day, vh, old).run();
+		await env.DB.batch([
+			env.DB.prepare(MIGRATE_VISITOR).bind(day, vh, old),
+			env.DB.prepare(PURGE_VISITOR).bind(day, old)
+		]);
 	})().catch(() => {});
 	platform?.context?.waitUntil?.(retry);
 
