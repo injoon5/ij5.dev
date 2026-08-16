@@ -50,9 +50,11 @@ withSqlite('hits', () => {
 
 	// D1 binds `?1`/`?2` positionally. node:sqlite on Node 22 treats them as
 	// named (`{"?1": v}`) and throws "column index out of range" on a spread.
-	const runN = (sql: string, ...args: unknown[]) => {
-		const named: Record<string, unknown> = {};
-		for (let i = 0; i < args.length; i++) named[`?${i + 1}`] = args[i];
+	const runN = (sql: string, ...args: import('node:sqlite').SQLInputValue[]) => {
+		const named: Record<string, import('node:sqlite').SQLInputValue> = {};
+		args.forEach((v, i) => {
+			named[`?${i + 1}`] = v;
+		});
 		return db.prepare(sql).run(named);
 	};
 
