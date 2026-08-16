@@ -740,9 +740,13 @@
 		gap: 0.1rem;
 		min-width: 0;
 	}
+	/* Tight leading on both lines keeps the text block shorter than the chip, so
+	   the chip is what sets the row height and its inset is equal on the top,
+	   bottom and left — the padding, not the leftover of a taller neighbour. */
 	.lb-label {
 		font-size: var(--text-md);
 		font-weight: 600;
+		line-height: 1.2;
 		letter-spacing: -0.011em;
 	}
 	.lb-sub {
@@ -750,6 +754,7 @@
 		color: var(--text-muted);
 		font-family: var(--font-mono);
 		font-size: var(--text-xs);
+		line-height: 1.35;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}

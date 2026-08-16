@@ -90,7 +90,7 @@ const LINK_TINT: Record<string, string> = {
 	github: 'zinc',
 	x: 'zinc',
 	linkedin: 'sky',
-	instagram: 'pink',
+	instagram: 'green',
 	youtube: 'red',
 	mail: 'sky',
 	rss: 'amber',
