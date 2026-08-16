@@ -172,3 +172,16 @@ describe('imageKeysIn', () => {
 		expect(imageKeysIn('![x](https://example.com/y.png)')).toHaveLength(0);
 	});
 });
+
+describe('renderMarkdown — dropped shortcodes', () => {
+	it('does not render :::messages or :::poll as widgets', () => {
+		const src = [':::messages', 'hi', 'me | yo', ':::', '', ':::poll', '# q', 'A | 70', ':::'].join(
+			'\n'
+		);
+		const { html } = renderMarkdown(src, { assetsOrigin: ORIGIN });
+		expect(html).not.toContain('class="chat"');
+		expect(html).not.toContain('class="poll"');
+		expect(html).not.toContain('chat-in');
+		expect(html).not.toContain('poll-win');
+	});
+});

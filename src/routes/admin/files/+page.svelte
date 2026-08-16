@@ -8,7 +8,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
 	import { fmtBytes, fmtDate, fmtDay } from '$lib/format';
-	import { inputClass } from '$lib/ui/styles';
+	import { inputClass, masterLayout, listPane, detailAside, backLink, dataRow, badge, kbd } from '$lib/ui/styles';
 	import { pending } from '$lib/ui/pending.svelte';
 	import FileForm from './FileForm.svelte';
 	import type { ActionData, PageData } from './$types';
@@ -77,8 +77,8 @@
 <svelte:head><title>Files</title></svelte:head>
 <svelte:window onkeydown={onKeydown} />
 
-<div class="layout" data-detail={detail || undefined}>
-	<section class="list" aria-label="Files">
+<div class={masterLayout} data-detail={detail || undefined}>
+	<section class={listPane} aria-label="Files">
 		<header class="mb-6 flex items-center justify-between gap-4">
 			<h1 class="text-xl font-semibold">Files</h1>
 			<Button href="/admin/files?s=new" variant="primary" size="sm" data-sveltekit-noscroll>
@@ -133,31 +133,39 @@
 		{:else if !visible.length}
 			<Empty title="Nothing matches" body="No file is named “{query}”. Try a shorter search." />
 		{:else}
-			<ul class="rows">
+			<!-- A five-column row at `md`, a card below it. Cells are placed
+			     explicitly at `md`; the phone drops the columns it has no room for. -->
+			<ul class="flex flex-col gap-2">
 				{#each visible as row (row.slug)}
 					<li>
 						<a
 							href="/admin/files?s={row.slug}"
 							data-sveltekit-noscroll
 							aria-current={data.selected?.slug === row.slug ? 'true' : undefined}
-							class="row"
+							class="{dataRow} md:grid-cols-[minmax(0,1.4fr)_minmax(6rem,1fr)_4.5rem_3rem_4rem]"
 						>
-							<span class="row-name" title={row.name}>
+							<span class="col-start-1 truncate text-sm font-semibold md:[grid-area:1/1]" title={row.name}>
 								{row.name}
 								{#if row.expired}
-									<span class="badge">Expired</span>
+									<span class="{badge} ms-2">Expired</span>
 								{/if}
 							</span>
 
-							<span class="row-slug">/d/{row.slug}</span>
+							<span class="col-start-1 font-mono text-xs text-text-muted md:[grid-area:1/2]">
+								/d/{row.slug}
+							</span>
 
-							<span class="row-size tnum">{fmtBytes(row.bytes)}</span>
+							<span class="tnum text-right text-sm text-text-muted md:[grid-area:1/3]">
+								{fmtBytes(row.bytes)}
+							</span>
 
-							<span class="row-dl tnum" title="Downloads">
+							<span class="tnum text-right text-sm text-text-muted md:[grid-area:1/4]" title="Downloads">
 								{row.downloads}
 							</span>
 
-							<span class="row-date tnum">{fmtDay(row.created_at)}</span>
+							<span class="tnum text-right text-xs text-text-muted md:[grid-area:1/5]">
+								{fmtDay(row.created_at)}
+							</span>
 						</a>
 					</li>
 				{/each}
@@ -165,13 +173,13 @@
 		{/if}
 	</section>
 
-	<aside class="detail" aria-label="File details">
-		<a href="/admin/files" data-sveltekit-noscroll class="back">
+	<aside class={detailAside} aria-label="File details">
+		<a href="/admin/files" data-sveltekit-noscroll class={backLink}>
 			<ChevronLeft size={16} aria-hidden="true" />
 			All files
 		</a>
 
-		<div class="detail-pane">
+		<div class="max-lg:animate-pane-rise">
 			{#if creating}
 				<h2 class="mb-5 text-lg font-semibold">Share a file</h2>
 				<FileForm
@@ -233,191 +241,10 @@
 				</form>
 			{:else}
 				<p class="text-sm text-text-muted">
-					Select a file to copy its link or delete it, or press <kbd class="kbd">n</kbd> to upload.
+					Select a file to copy its link or delete it, or press <kbd class={kbd}>n</kbd> to upload.
 				</p>
 			{/if}
 		</div>
 	</aside>
 </div>
 
-<style>
-	.layout {
-		display: grid;
-		gap: 2rem;
-	}
-
-	.layout[data-detail] .list {
-		display: none;
-	}
-
-	.layout:not([data-detail]) .detail {
-		display: none;
-	}
-
-	.back {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		min-height: 2.75rem;
-		margin-block: -0.5rem 0.25rem;
-		margin-inline-start: -0.25rem;
-		padding-inline: 0.25rem;
-		font-size: var(--text-sm);
-		font-weight: 500;
-		color: var(--text-muted);
-		transition: color 150ms var(--ease-out);
-	}
-
-	.back:hover {
-		color: var(--text);
-	}
-
-	.rows {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.row {
-		display: grid;
-		grid-template-columns: 1fr auto;
-		gap: 0.125rem 0.75rem;
-		padding: 0.875rem 1rem;
-		border-radius: var(--radius-ui-lg);
-		background-color: var(--surface);
-		transition:
-			background-color 150ms var(--ease-out),
-			scale 150ms var(--ease-out);
-	}
-
-	.row:active {
-		scale: 0.99;
-	}
-
-	.row-name {
-		grid-column: 1;
-		font-size: var(--text-sm);
-		font-weight: 600;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.row-name .badge {
-		margin-inline-start: 0.5rem;
-	}
-
-	.row-slug {
-		grid-column: 1;
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		color: var(--text-muted);
-	}
-
-	.row-size,
-	.row-dl {
-		font-size: var(--text-sm);
-		font-variant-numeric: tabular-nums;
-		color: var(--text-muted);
-		text-align: right;
-	}
-
-	.row-date {
-		font-size: var(--text-xs);
-		color: var(--text-muted);
-		text-align: right;
-	}
-
-	.badge {
-		border-radius: var(--radius-pill);
-		background-color: var(--surface-sunken);
-		padding: 0.0625rem 0.4375rem;
-		font-size: var(--text-2xs);
-		font-weight: 500;
-		color: var(--text-muted);
-	}
-
-	.kbd {
-		border-radius: 4px;
-		background-color: var(--surface-sunken);
-		padding: 0.0625rem 0.3125rem;
-		font-family: var(--font-mono);
-		font-size: var(--text-2xs);
-	}
-
-	@media (min-width: 768px) {
-		.row {
-			grid-template-columns: minmax(0, 1.4fr) minmax(6rem, 1fr) 4.5rem 3rem 4rem;
-			align-items: center;
-			gap: 1rem;
-			min-height: 2.5rem;
-			padding-block: 0.625rem;
-		}
-
-		.row-name {
-			grid-area: 1 / 1;
-		}
-		.row-slug {
-			grid-area: 1 / 2;
-		}
-		.row-size {
-			grid-area: 1 / 3;
-		}
-		.row-dl {
-			grid-area: 1 / 4;
-		}
-		.row-date {
-			grid-area: 1 / 5;
-		}
-	}
-
-	@media (min-width: 1024px) {
-		.layout {
-			grid-template-columns: minmax(0, 1fr) 24rem;
-			align-items: start;
-		}
-
-		.layout[data-detail] .list,
-		.layout:not([data-detail]) .detail {
-			display: block;
-		}
-
-		.back {
-			display: none;
-		}
-
-		.detail {
-			position: sticky;
-			top: 2.5rem;
-			border-radius: var(--radius-ui-lg);
-			background-color: var(--surface);
-			padding: 1.25rem;
-		}
-	}
-
-	@media (max-width: 1023px) {
-		.detail-pane {
-			animation: pane-rise 180ms var(--ease-out);
-		}
-	}
-	@keyframes pane-rise {
-		from {
-			opacity: 0;
-			transform: translateY(10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	@media (hover: hover) and (pointer: fine) {
-		.row:hover {
-			background-color: var(--surface-hover);
-		}
-	}
-
-	.row[aria-current='true'] {
-		box-shadow: inset 0 0 0 1px var(--accent);
-	}
-</style>

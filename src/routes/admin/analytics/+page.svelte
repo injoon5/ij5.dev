@@ -34,12 +34,19 @@
 <header class="mb-6 flex flex-wrap items-center justify-between gap-4">
 	<h1 class="text-xl font-semibold">Analytics</h1>
 
-	<div class="ranges" role="group" aria-label="Date range">
+	<!-- A scrollable segmented control. The tabs are ~29px for a mouse; a touch
+	     screen gets the 44px row instead. -->
+	<div
+		class="flex gap-0.5 overflow-x-auto rounded-[var(--radius-ui)] bg-surface p-[0.1875rem] [scrollbar-width:none]"
+		role="group"
+		aria-label="Date range"
+	>
 		{#each RANGE_LABELS as option (option.key)}
 			<a
 				href={rangeHref(option.key)}
 				aria-current={data.range === option.key ? 'true' : undefined}
 				data-sveltekit-noscroll
+				class="rounded-[var(--radius-ui-sm)] px-2.5 py-1.5 text-xs font-medium whitespace-nowrap text-text-muted transition-colors duration-150 ease-out hover:text-text aria-[current=true]:bg-surface-sunken aria-[current=true]:text-text pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center"
 			>
 				{option.label}
 			</a>
@@ -60,15 +67,15 @@
 	<!-- Three short figures, three across at every width. Stacked, they cost a
 	     phone 330px of scroll before the chart. -->
 	<div class="grid grid-cols-3 gap-2 sm:gap-4">
-		<div class="stat {card}">
+		<div class="rounded-[var(--radius-ui-lg)] bg-surface p-3.5 sm:p-5">
 			<p class="tnum text-xl font-semibold sm:text-2xl">{data.totals.hits}</p>
 			<p class="mt-0.5 text-xs text-pretty text-text-muted">Redirects</p>
 		</div>
-		<div class="stat {card}">
+		<div class="rounded-[var(--radius-ui-lg)] bg-surface p-3.5 sm:p-5">
 			<p class="tnum text-xl font-semibold sm:text-2xl">{data.totals.home}</p>
 			<p class="mt-0.5 text-xs text-pretty text-text-muted">Homepage views</p>
 		</div>
-		<div class="stat {card}">
+		<div class="rounded-[var(--radius-ui-lg)] bg-surface p-3.5 sm:p-5">
 			<p class="tnum text-xl font-semibold sm:text-2xl">{data.totals.visitors}</p>
 			<p class="mt-0.5 text-xs text-pretty text-text-muted">Daily uniques</p>
 		</div>
@@ -194,56 +201,3 @@
 	{/if}
 {/if}
 
-<style>
-	/* `card` pads to 1.25rem, which is most of a 110px column on a phone. */
-	.stat {
-		padding: 0.875rem;
-	}
-
-	@media (min-width: 640px) {
-		.stat {
-			padding: 1.25rem;
-		}
-	}
-
-	.ranges {
-		display: flex;
-		gap: 0.125rem;
-		border-radius: var(--radius-ui);
-		background-color: var(--surface);
-		padding: 0.1875rem;
-		overflow-x: auto;
-		scrollbar-width: none;
-	}
-
-	.ranges a {
-		border-radius: var(--radius-ui-sm);
-		padding: 0.375rem 0.625rem;
-		font-size: var(--text-xs);
-		font-weight: 500;
-		color: var(--text-muted);
-		white-space: nowrap;
-		transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out);
-	}
-
-	/* The tabs are ~29px of type and padding — fine for a mouse, under the
-	   finger-minimum on a phone. A touch screen gets the 44px row instead. */
-	@media (pointer: coarse) {
-		.ranges a {
-			display: flex;
-			align-items: center;
-			min-height: 2.75rem;
-		}
-	}
-
-	.ranges a[aria-current='true'] {
-		background-color: var(--surface-sunken);
-		color: var(--text);
-	}
-
-	@media (hover: hover) and (pointer: fine) {
-		.ranges a:hover {
-			color: var(--text);
-		}
-	}
-</style>

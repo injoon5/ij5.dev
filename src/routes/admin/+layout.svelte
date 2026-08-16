@@ -24,14 +24,25 @@
 
 	let current = $derived(page.url.pathname);
 	const isActive = (href: string) => (href === '/admin' ? current === href : current.startsWith(href));
+
+	// Shared by the nav links and the sign-out button. A column icon-stop on the
+	// bottom bar (labels hidden, 52px touch target); a labelled row in the
+	// sidebar at `md`. The current stop tints; at `md` it also gets a surface.
+	const navLink =
+		'flex min-h-13 flex-col items-center justify-center gap-1 px-1 text-2xs font-medium text-text-muted transition-colors duration-150 ease-out hover:text-text aria-[current=page]:text-text md:min-h-9 md:flex-row md:justify-start md:gap-2.5 md:rounded-[var(--radius-ui)] md:px-3 md:text-sm md:pointer-coarse:min-h-11 md:aria-[current=page]:bg-surface md:aria-[current=page]:text-text';
 </script>
 
 <svelte:head>
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
-<div class="admin">
-	<a href="#content" class="skip">Skip to content</a>
+<div class="min-h-dvh md:grid md:grid-cols-[15rem_1fr]">
+	<a
+		href="#content"
+		class="fixed top-2 left-2 z-40 -translate-y-[calc(100%+1rem)] rounded-[var(--radius-ui)] bg-surface px-3.5 py-2.5 text-sm font-medium shadow-[var(--shadow-pop)] transition-transform duration-150 ease-out focus-visible:translate-y-0"
+	>
+		Skip to content
+	</a>
 
 	<!--
 		A persistent sidebar at `md` and up, a bottom bar below it. Not a
@@ -39,7 +50,10 @@
 		hidden behind a menu, and on a phone the thumb is at the bottom of the
 		screen.
 	-->
-	<nav class="sidebar" aria-label="Admin">
+	<nav
+		aria-label="Admin"
+		class="fixed inset-x-0 bottom-0 z-20 flex border-t border-border-subtle bg-surface pb-[env(safe-area-inset-bottom)] md:sticky md:inset-x-auto md:top-0 md:left-0 md:h-dvh md:flex-col md:gap-6 md:border-t-0 md:border-r md:bg-transparent md:px-3 md:py-7"
+	>
 		<a
 			href="/"
 			class="hidden px-3 text-sm font-semibold md:block"
@@ -48,17 +62,19 @@
 			ij5.dev
 		</a>
 
-		<ul class="nav-list">
+		<ul class="flex flex-1 md:flex-[0] md:flex-col md:gap-0.5">
 			{#each NAV as item (item.href)}
 				{@const Icon = item.icon}
-				<li>
+				<li class="flex-1">
 					<a
 						href={item.href}
 						aria-current={isActive(item.href) ? 'page' : undefined}
-						class="nav-link"
+						class={navLink}
 					>
 						<Icon size={17} aria-hidden="true" />
-						<span>{item.label}</span>
+						<!-- Labels can't clear 320px at seven stops, so the bottom bar is
+						     icons only; they return in the sidebar and stay for SRs. -->
+						<span class="hidden md:inline">{item.label}</span>
 					</a>
 				</li>
 			{/each}
@@ -70,164 +86,19 @@
 			lives behind a breakpoint" is the same rule as "nothing important lives
 			behind hover".
 		-->
-		<form method="POST" action="/logout" class="signout">
-			<button class="nav-link w-full" type="submit">
+		<form method="POST" action="/logout" class="flex md:mt-auto">
+			<button class="{navLink} w-full" type="submit">
 				<LogOut size={17} aria-hidden="true" />
-				<span>Sign out</span>
+				<span class="hidden md:inline">Sign out</span>
 			</button>
 		</form>
 	</nav>
 
-	<main class="content" id="content" tabindex="-1">
+	<main
+		class="px-4 pt-6 pb-[calc(5rem+env(safe-area-inset-bottom))] focus:outline-none md:min-w-0 md:px-10 md:pt-10 md:pb-16"
+		id="content"
+		tabindex="-1"
+	>
 		{@render children()}
 	</main>
 </div>
-
-<style>
-	.admin {
-		min-height: 100dvh;
-	}
-
-	/* Seven nav stops sit before the content on every screen. */
-	.skip {
-		position: fixed;
-		top: 0.5rem;
-		left: 0.5rem;
-		z-index: 40;
-		border-radius: var(--radius-ui);
-		background-color: var(--surface);
-		box-shadow: var(--shadow-pop);
-		padding: 0.625rem 0.875rem;
-		font-size: var(--text-sm);
-		font-weight: 500;
-		transform: translateY(calc(-100% - 1rem));
-		transition: transform 150ms var(--ease-out);
-	}
-
-	.skip:focus-visible {
-		transform: none;
-	}
-
-	.content:focus {
-		outline: none;
-	}
-
-	.sidebar {
-		position: fixed;
-		inset: auto 0 0 0;
-		z-index: 20;
-		display: flex;
-		background-color: var(--surface);
-		border-top: 1px solid var(--border-subtle);
-		padding-bottom: env(safe-area-inset-bottom);
-	}
-
-	.nav-list {
-		display: flex;
-		flex: 1;
-	}
-
-	.signout {
-		display: flex;
-	}
-
-	.nav-list :global(li) {
-		flex: 1;
-	}
-
-	.nav-link {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		/* 44px minimum, made of padding rather than a bigger icon. */
-		min-height: 3.25rem;
-		/* This many destinations with labels cannot clear 320px, so below `md`
-		   the bar is icons only (labels stay for screen readers and return in
-		   the sidebar) and every stop is visible at once. */
-		padding-inline: 0.25rem;
-		font-size: var(--text-2xs);
-		font-weight: 500;
-		color: var(--text-muted);
-		flex-direction: column;
-		gap: 0.25rem;
-		transition: color 150ms var(--ease-out);
-	}
-
-	@media (max-width: 767.98px) {
-		.nav-link span {
-			display: none;
-		}
-	}
-
-	.nav-link[aria-current='page'] {
-		color: var(--text);
-	}
-
-	.content {
-		padding: 1.5rem 1rem calc(5rem + env(safe-area-inset-bottom));
-	}
-
-	@media (min-width: 768px) {
-		.admin {
-			display: grid;
-			grid-template-columns: 15rem 1fr;
-		}
-
-		.sidebar {
-			position: sticky;
-			inset: 0 auto auto 0;
-			top: 0;
-			height: 100dvh;
-			flex-direction: column;
-			gap: 1.5rem;
-			padding: 1.75rem 0.75rem 1.75rem;
-			border-top: 0;
-			border-right: 1px solid var(--border-subtle);
-			background-color: transparent;
-		}
-
-		.nav-list {
-			flex-direction: column;
-			flex: 0;
-			gap: 0.125rem;
-		}
-
-		.signout {
-			margin-top: auto;
-		}
-
-		.nav-link {
-			flex-direction: row;
-			justify-content: flex-start;
-			min-height: 2.25rem;
-			padding-inline: 0.75rem;
-			gap: 0.625rem;
-			border-radius: var(--radius-ui);
-			font-size: var(--text-sm);
-		}
-
-		/* An iPad or landscape phone is still touch; the sidebar links get the
-		   finger-minimum there too. */
-		@media (pointer: coarse) {
-			.nav-link {
-				min-height: 2.75rem;
-			}
-		}
-
-		.nav-link[aria-current='page'] {
-			background-color: var(--surface);
-		}
-
-		@media (hover: hover) and (pointer: fine) {
-			.nav-link:hover {
-				color: var(--text);
-			}
-		}
-
-		.content {
-			padding: 2.5rem 2.5rem 4rem;
-			min-width: 0;
-		}
-	}
-</style>

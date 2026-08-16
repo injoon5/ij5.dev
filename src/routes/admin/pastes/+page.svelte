@@ -7,7 +7,16 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
 	import { fmtBytes, fmtDay } from '$lib/format';
-	import { inputClass } from '$lib/ui/styles';
+	import {
+		inputClass,
+		masterLayout,
+		listPane,
+		detailAside,
+		backLink,
+		dataRow,
+		badge,
+		kbd
+	} from '$lib/ui/styles';
 	import PasteForm from './PasteForm.svelte';
 	import type { ActionData, PageData } from './$types';
 
@@ -57,8 +66,8 @@
 <svelte:head><title>Pastes</title></svelte:head>
 <svelte:window onkeydown={onKeydown} />
 
-<div class="layout" data-detail={detail || undefined}>
-	<section class="list" aria-label="Pastes">
+<div class={masterLayout} data-detail={detail || undefined}>
+	<section class={listPane} aria-label="Pastes">
 		<header class="mb-6 flex items-center justify-between gap-4">
 			<h1 class="text-xl font-semibold">Pastes</h1>
 			<Button href="/admin/pastes?s=new" variant="primary" size="sm" data-sveltekit-noscroll>
@@ -113,41 +122,41 @@
 		{:else if !visible.length}
 			<Empty title="Nothing matches" body="No paste contains “{query}”. Try a shorter search." />
 		{:else}
-			<ul class="rows">
+			<ul class="flex flex-col gap-2">
 				{#each visible as row (row.slug)}
 					<li>
 						<a
 							href="/admin/pastes?s={row.slug}"
 							data-sveltekit-noscroll
 							aria-current={data.selected?.slug === row.slug ? 'true' : undefined}
-							class="row"
+							class="{dataRow} md:grid-cols-[minmax(7rem,12rem)_minmax(0,1fr)_minmax(0,1fr)_3.5rem_3.5rem_4rem]"
 						>
-							<span class="row-slug">
+							<span class="flex items-center gap-2 font-mono text-sm font-semibold md:[grid-area:1/1]">
 								/p/{row.slug}
 								{#if row.expired}
-									<span class="badge">Expired</span>
+									<span class={badge}>Expired</span>
 								{:else if !row.cache}
-									<span class="badge" title="Every view reads KV fresh — edits win immediately.">
+									<span class={badge} title="Every view reads KV fresh — edits win immediately.">
 										No cache
 									</span>
 								{/if}
 							</span>
 
-							<span class="row-body">{snippet(row.body) || '\u200b'}</span>
+							<span class="col-start-1 truncate font-mono text-xs text-text-muted md:[grid-area:1/2]">{snippet(row.body) || '\u200b'}</span>
 
 							{#if row.note}
-								<span class="row-note">{row.note}</span>
+								<span class="col-start-1 truncate text-xs text-text-muted md:[grid-area:1/3]">{row.note}</span>
 							{/if}
 
-							<span class="row-size tnum" title="Size of the body">
+							<span class="tnum text-right text-sm text-text-muted md:[grid-area:1/4]" title="Size of the body">
 								{fmtBytes(new TextEncoder().encode(row.body).length)}
 							</span>
 
-							<span class="row-hits tnum" title="Views in the last 7 days">
+							<span class="tnum text-right text-sm text-text-muted md:[grid-area:1/5]" title="Views in the last 7 days">
 								{data.recent[row.slug] ?? 0}
 							</span>
 
-							<span class="row-date tnum">{fmtDay(row.created_at)}</span>
+							<span class="tnum text-right text-xs text-text-muted md:[grid-area:1/6]">{fmtDay(row.created_at)}</span>
 						</a>
 					</li>
 				{/each}
@@ -155,13 +164,13 @@
 		{/if}
 	</section>
 
-	<aside class="detail" aria-label="Paste details">
-		<a href="/admin/pastes" data-sveltekit-noscroll class="back">
+	<aside class={detailAside} aria-label="Paste details">
+		<a href="/admin/pastes" data-sveltekit-noscroll class={backLink}>
 			<ChevronLeft size={16} aria-hidden="true" />
 			All pastes
 		</a>
 
-		<div class="detail-pane">
+		<div class="max-lg:animate-pane-rise">
 			{#if creating}
 				<h2 class="mb-5 text-lg font-semibold">New paste</h2>
 				<PasteForm
@@ -183,201 +192,10 @@
 				/>
 			{:else}
 				<p class="text-sm text-text-muted">
-					Select a paste to edit it, or press <kbd class="kbd">n</kbd> for a new one.
+					Select a paste to edit it, or press <kbd class={kbd}>n</kbd> for a new one.
 				</p>
 			{/if}
 		</div>
 	</aside>
 </div>
 
-<style>
-	.layout {
-		display: grid;
-		gap: 2rem;
-	}
-
-	/* Below `lg` this is a drill-down: one of the two panes is showing. */
-	.layout[data-detail] .list {
-		display: none;
-	}
-
-	.layout:not([data-detail]) .detail {
-		display: none;
-	}
-
-	.back {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		min-height: 2.75rem;
-		margin-block: -0.5rem 0.25rem;
-		margin-inline-start: -0.25rem;
-		padding-inline: 0.25rem;
-		font-size: var(--text-sm);
-		font-weight: 500;
-		color: var(--text-muted);
-		transition: color 150ms var(--ease-out);
-	}
-
-	.back:hover {
-		color: var(--text);
-	}
-
-	.rows {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.row {
-		display: grid;
-		grid-template-columns: 1fr auto;
-		gap: 0.125rem 0.75rem;
-		padding: 0.875rem 1rem;
-		border-radius: var(--radius-ui-lg);
-		background-color: var(--surface);
-		transition:
-			background-color 150ms var(--ease-out),
-			scale 150ms var(--ease-out);
-	}
-
-	.row:active {
-		scale: 0.99;
-	}
-
-	.row-slug {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-family: var(--font-mono);
-		font-size: var(--text-sm);
-		font-weight: 600;
-	}
-
-	.row-body,
-	.row-note {
-		grid-column: 1;
-		font-size: var(--text-xs);
-		color: var(--text-muted);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.row-body {
-		font-family: var(--font-mono);
-	}
-
-	.row-size,
-	.row-hits {
-		font-size: var(--text-sm);
-		font-variant-numeric: tabular-nums;
-		color: var(--text-muted);
-		text-align: right;
-	}
-
-	.row-date {
-		font-size: var(--text-xs);
-		color: var(--text-muted);
-		text-align: right;
-	}
-
-	.badge {
-		border-radius: var(--radius-pill);
-		background-color: var(--surface-sunken);
-		padding: 0.0625rem 0.4375rem;
-		font-size: var(--text-2xs);
-		font-weight: 500;
-		color: var(--text-muted);
-	}
-
-	.kbd {
-		border-radius: 4px;
-		background-color: var(--surface-sunken);
-		padding: 0.0625rem 0.3125rem;
-		font-family: var(--font-mono);
-		font-size: var(--text-2xs);
-	}
-
-	@media (min-width: 768px) {
-		.row {
-			grid-template-columns: minmax(7rem, 12rem) minmax(0, 1fr) minmax(0, 1fr) 3.5rem 3.5rem 4rem;
-			align-items: center;
-			gap: 1rem;
-			min-height: 2.5rem;
-			padding-block: 0.625rem;
-		}
-
-		/* Every cell placed explicitly — auto-placement would scatter the
-		   slug across the row (see the links list for the full story). */
-		.row-slug {
-			grid-area: 1 / 1;
-		}
-		.row-body {
-			grid-area: 1 / 2;
-		}
-		.row-note {
-			grid-area: 1 / 3;
-		}
-		.row-size {
-			grid-area: 1 / 4;
-		}
-		.row-hits {
-			grid-area: 1 / 5;
-		}
-		.row-date {
-			grid-area: 1 / 6;
-		}
-	}
-
-	@media (min-width: 1024px) {
-		.layout {
-			grid-template-columns: minmax(0, 1fr) 24rem;
-			align-items: start;
-		}
-
-		.layout[data-detail] .list,
-		.layout:not([data-detail]) .detail {
-			display: block;
-		}
-
-		.back {
-			display: none;
-		}
-
-		.detail {
-			position: sticky;
-			top: 2.5rem;
-			border-radius: var(--radius-ui-lg);
-			background-color: var(--surface);
-			padding: 1.25rem;
-		}
-	}
-
-	/* The drill-down entrance — same treatment as the links list. */
-	@media (max-width: 1023px) {
-		.detail-pane {
-			animation: pane-rise 180ms var(--ease-out);
-		}
-	}
-	@keyframes pane-rise {
-		from {
-			opacity: 0;
-			transform: translateY(10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	@media (hover: hover) and (pointer: fine) {
-		.row:hover {
-			background-color: var(--surface-hover);
-		}
-	}
-
-	.row[aria-current='true'] {
-		box-shadow: inset 0 0 0 1px var(--accent);
-	}
-</style>

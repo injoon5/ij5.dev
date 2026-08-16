@@ -2,20 +2,36 @@
 
 /* ---------------------------------------------------------------------------
    Typeface
-   Inter variable, latin subset, self-hosted. `opsz` is why the file is the
-   optical-size cut rather than the smaller weight-only one — it is what makes
-   display sizes hold their proportions against body text.
+   Interlude, a variable UI face (OFL), latin subset, self-hosted. The subset
+   keeps two axes — `wght` and `opsz` — and drops `wdth`, which the site never
+   varies. `opsz` is why display sizes hold their proportions against body text;
+   `font-optical-sizing: auto` (see base) drives it from the rendered size.
 --------------------------------------------------------------------------- */
 
 @font-face {
-	font-family: 'Inter';
+	font-family: 'Interlude';
 	font-style: normal;
 	font-display: swap;
 	font-weight: 100 900;
-	src: url('/fonts/inter-latin.woff2') format('woff2');
+	src: url('/fonts/interlude-latin.woff2') format('woff2');
 	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
 		U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212,
 		U+2215, U+FEFF, U+FFFD;
+}
+
+/* Korean (Hangul). A separate face scoped to the Hangul ranges by
+   `unicode-range`, so the ~2MB of syllables downloads *only* on a page that
+   actually sets Korean text — an English page never fetches it. The same
+   variable axes as the latin cut, so weight and optical size match across
+   scripts in a mixed line. */
+@font-face {
+	font-family: 'Interlude';
+	font-style: normal;
+	font-display: swap;
+	font-weight: 100 900;
+	src: url('/fonts/interlude-kr.woff2') format('woff2');
+	unicode-range: U+1100-11FF, U+3000-303F, U+3130-318F, U+A960-A97F, U+AC00-D7A3,
+		U+D7B0-D7FF, U+FF01-FF60;
 }
 
 /* Geist Mono, same latin subset, self-hosted. The secondary voice: code, inline
@@ -60,6 +76,12 @@
 	/* Lines. Used sparingly and never on a widget. */
 	--border-subtle: oklch(0.905 0.005 265);
 	--border-strong: oklch(0.845 0.007 265);
+
+	/* An image outline is pure black at low alpha, never the cool near-neutral
+	   the rest of the UI draws lines in — a tinted stroke picks up the surface
+	   beneath a photo's edge and reads as a rim of dirt. Flips to white in dark
+	   for the same reason. */
+	--img-outline: oklch(0 0 0 / 0.1);
 
 	/* One accent, one meaning: the primary action and the focus ring. */
 	--accent: oklch(0.53 0.156 262);
@@ -110,6 +132,8 @@
 		--border-subtle: oklch(0.28 0.01 265);
 		--border-strong: oklch(0.36 0.012 265);
 
+		--img-outline: oklch(1 0 0 / 0.1);
+
 		--accent: oklch(0.72 0.142 262);
 		--accent-hover: oklch(0.78 0.13 262);
 		--accent-contrast: oklch(0.17 0.02 262);
@@ -144,6 +168,7 @@
 	--text-inverse: oklch(0.19 0.01 265);
 	--border-subtle: oklch(0.28 0.01 265);
 	--border-strong: oklch(0.36 0.012 265);
+	--img-outline: oklch(1 0 0 / 0.1);
 	--accent: oklch(0.72 0.142 262);
 	--accent-hover: oklch(0.78 0.13 262);
 	--accent-contrast: oklch(0.17 0.02 262);
@@ -164,7 +189,7 @@
 
 @theme inline {
 	--font-sans:
-		'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+		'Interlude', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 	--font-mono: 'Geist Mono', ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
 
 	--color-bg: var(--bg);
@@ -250,9 +275,43 @@
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 	--ease-press: cubic-bezier(0.2, 0, 0, 1);
 
+	/* The one shared entrance: opacity plus a short rise, for a hero object on a
+	   rarely-seen screen (the paste/file pages, an opened admin detail pane).
+	   `both` holds the from-state before it plays so there is no flash of the
+	   settled position. Reduced motion collapses it to instant (see base). */
+	--animate-rise: rise 420ms var(--ease-out) both;
+
+	/* The drill-down entrance: on a phone the detail pane is a new screen the
+	   router renders on selection, and a CSS animation restarts the moment an
+	   element becomes displayed — so this plays every time a row opens, no JS.
+	   Gated to below `lg` at the call site, where the pane is always present. */
+	--animate-pane-rise: pane-rise 180ms var(--ease-out);
+
 	--shadow-widget: var(--sh-widget);
 	--shadow-widget-lift: var(--sh-widget-lift);
 	--shadow-pop: var(--sh-pop);
+}
+
+@keyframes rise {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.99);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes pane-rise {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
 }
 
 /* ---------------------------------------------------------------------------
@@ -388,58 +447,6 @@
 	}
 
 	/* ---------------------------------------------------------------------
-	   The document
-	   `/` is one centred reading column: a small masthead, the Markdown body,
-	   a quiet footer. Its layout lives here, not in a scoped route `<style>`,
-	   so Svelte does not stamp a class onto every node in `<svelte:head>` —
-	   bytes on the one page whose byte count is a ship gate.
-	--------------------------------------------------------------------- */
-	.doc {
-		display: flex;
-		flex-direction: column;
-		min-height: 100dvh;
-		max-width: 42rem;
-		margin-inline: auto;
-		padding:
-			clamp(4rem, 12vh, 7rem) max(1.5rem, env(safe-area-inset-right))
-			calc(2.5rem + env(safe-area-inset-bottom))
-			max(1.5rem, env(safe-area-inset-left));
-	}
-
-	.masthead {
-		margin-bottom: 2.75rem;
-	}
-
-	.avatar {
-		display: block;
-		width: 4rem;
-		height: 4rem;
-		margin-bottom: 1.15rem;
-		border-radius: var(--radius-pill);
-		object-fit: cover;
-		background-color: var(--surface-sunken);
-	}
-
-	.masthead-name {
-		/* text-2xl, from the theme. The two companions — line-height and
-		   tracking — are set here too: these classes bypass the utilities, and
-		   a display heading at body leading is the one thing that reads off. */
-		font-size: var(--text-2xl);
-		line-height: 1.2;
-		letter-spacing: -0.021em;
-		font-weight: 600;
-	}
-
-	.masthead-tagline {
-		margin-top: 0.5rem;
-		max-width: 40ch;
-		color: var(--text-muted);
-		font-size: var(--text-md);
-		line-height: 1.5;
-		letter-spacing: -0.009em;
-	}
-
-	/* ---------------------------------------------------------------------
 	   Prose — the rendered Markdown body
 	   17px on a ~40rem measure at 1.7 leading. Spacing is set on the flow, then
 	   headings claim more air above than below, so a heading reads as belonging
@@ -467,6 +474,7 @@
 	.prose h2 {
 		margin-top: 2.5rem;
 		font-size: var(--text-xl);
+		font-weight: 700;
 		letter-spacing: -0.018em;
 	}
 	.prose h3 {
@@ -587,7 +595,7 @@
 		height: auto;
 		margin: 0;
 		border-radius: var(--radius-inner-md);
-		border: 1px solid var(--border-subtle);
+		border: 1px solid var(--img-outline);
 		background-color: var(--surface-sunken);
 	}
 
@@ -635,7 +643,7 @@
 		overflow: hidden;
 		margin: 0;
 		border-radius: var(--radius-inner-md);
-		border: 1px solid var(--border-subtle);
+		border: 1px solid var(--img-outline);
 		background-color: var(--surface-sunken);
 	}
 
@@ -666,25 +674,81 @@
 		margin-top: 1.75rem;
 	}
 
+	/* The whole card is the link, so the label is strong body text — not the
+	   blue underlined string `.prose a` would otherwise make of it. The tinted
+	   chip and the arrow carry the "this goes somewhere" affordance. The `:hover`
+	   pairing beats `.prose a:hover` on its own specificity. */
+	.link-buttons a,
+	.link-buttons a:hover {
+		color: var(--text);
+		text-decoration: none;
+	}
+
+	/* Rounder and chunkier reads friendlier: the shell keeps the widget's own
+	   squircle radius rather than clipping it back to the tighter UI radius. */
 	.link-button {
 		flex-direction: row;
 		align-items: center;
 		gap: 0.85rem;
-		/* The icon's inset — one value on the top, bottom and left so the icon
-		   squircle sits at the same distance vertically and horizontally; the
-		   right keeps a little more room for the arrow. */
-		--pad: 0.7rem;
-		padding: var(--pad) 0.9rem var(--pad) var(--pad);
-		border-radius: var(--radius-ui-lg);
+		/* The chip's inset — equal on top, bottom and left so its squircle sits
+		   the same distance from each edge; the right keeps room for the arrow. */
+		--pad: 0.6rem;
+		padding: var(--pad) 1rem var(--pad) var(--pad);
 	}
 
+	/* A filled, tinted sticker rather than a bare glyph. Each chip mixes a muted
+	   brand hue into the current surface and text, so a single rule per tint
+	   adapts to dark mode for free — the mark stays a readable, saturated version
+	   of its own colour sitting on a soft wash of it. */
 	.lb-icon {
 		display: grid;
 		place-items: center;
 		flex-shrink: 0;
-		width: 2.5rem;
-		height: 2.5rem;
+		width: 2.75rem;
+		height: 2.75rem;
+		border-radius: 13px;
+		corner-shape: squircle;
+		background-color: var(--surface-sunken);
 		color: var(--text);
+		transition:
+			scale 220ms var(--ease-out),
+			rotate 220ms var(--ease-out);
+	}
+	.lb-icon[data-tint] {
+		background-color: color-mix(in oklab, var(--chip) 16%, var(--surface));
+		color: color-mix(in oklab, var(--chip) 90%, var(--text));
+	}
+	.lb-icon[data-tint='blue'] {
+		--chip: oklch(0.62 0.19 250);
+	}
+	.lb-icon[data-tint='sky'] {
+		--chip: oklch(0.66 0.15 230);
+	}
+	.lb-icon[data-tint='violet'] {
+		--chip: oklch(0.6 0.22 300);
+	}
+	.lb-icon[data-tint='pink'] {
+		--chip: oklch(0.64 0.23 350);
+	}
+	.lb-icon[data-tint='amber'] {
+		--chip: oklch(0.74 0.15 70);
+	}
+	.lb-icon[data-tint='green'] {
+		--chip: oklch(0.64 0.16 155);
+	}
+	.lb-icon[data-tint='red'] {
+		--chip: oklch(0.62 0.24 25);
+	}
+	.lb-icon[data-tint='zinc'] {
+		--chip: oklch(0.55 0.02 265);
+	}
+	/* The sticker tips and grows a touch on hover — the one playful beat, and
+	   only where a real pointer can trigger it. */
+	@media (hover: hover) and (pointer: fine) {
+		.link-button:hover .lb-icon {
+			scale: 1.06;
+			rotate: -4deg;
+		}
 	}
 
 	.lb-body {
@@ -693,16 +757,21 @@
 		gap: 0.1rem;
 		min-width: 0;
 	}
+	/* Tight leading on both lines keeps the text block shorter than the chip, so
+	   the chip is what sets the row height and its inset is equal on the top,
+	   bottom and left — the padding, not the leftover of a taller neighbour. */
 	.lb-label {
-		font-size: var(--text-base);
-		font-weight: 560;
-		letter-spacing: -0.006em;
+		font-size: var(--text-md);
+		font-weight: 600;
+		line-height: 1.2;
+		letter-spacing: -0.011em;
 	}
 	.lb-sub {
 		overflow: hidden;
 		color: var(--text-muted);
 		font-family: var(--font-mono);
 		font-size: var(--text-xs);
+		line-height: 1.35;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
@@ -833,15 +902,5 @@
 		.contrib:hover .contrib-cap {
 			color: var(--text);
 		}
-	}
-
-	/* ------------------------------------------------------------- Footer */
-	.foot {
-		margin-top: auto;
-		padding-top: 4rem;
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		letter-spacing: 0.004em;
-		color: var(--text-muted);
 	}
 }

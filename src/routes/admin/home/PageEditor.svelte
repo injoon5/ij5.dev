@@ -100,8 +100,8 @@
 		}}
 	/>
 
-	<div class="panes">
-		<form method="POST" action="?/save" class="pane" use:enhance={saving.submit}>
+	<div class="grid gap-4 lg:grid-cols-2 lg:items-start">
+		<form method="POST" action="?/save" use:enhance={saving.submit}>
 			<!-- Drop or paste an image straight onto the text to upload and
 			     insert it at the cursor. -->
 			<textarea
@@ -112,7 +112,7 @@
 				onpaste={onPaste}
 				ondrop={onDrop}
 				ondragover={(e) => e.preventDefault()}
-				class="editor-area"
+				class="min-h-[60vh] w-full resize-y rounded-[var(--radius-ui)] bg-surface px-[1.1rem] py-4 font-mono text-[16px] leading-[1.7] shadow-[inset_0_0_0_1px_var(--border-subtle)] transition-shadow duration-150 ease-out focus:shadow-[inset_0_0_0_1px_var(--accent)] focus:outline-none"
 				aria-label="Page Markdown"
 			></textarea>
 
@@ -126,52 +126,12 @@
 			</div>
 		</form>
 
-		<div class="pane preview" aria-label="Preview">
+		<div
+			class="max-h-[80vh] min-h-[60vh] overflow-auto rounded-[var(--radius-ui)] bg-surface p-7 shadow-[inset_0_0_0_1px_var(--border-subtle)]"
+			aria-label="Preview"
+		>
 			<article class="prose">{@html preview}</article>
 		</div>
 	</div>
 </section>
 
-<style>
-	.panes {
-		display: grid;
-		gap: 1rem;
-	}
-
-	.editor-area {
-		width: 100%;
-		min-height: 60vh;
-		padding: 1rem 1.1rem;
-		border-radius: var(--radius-ui);
-		background-color: var(--surface);
-		box-shadow: inset 0 0 0 1px var(--border-subtle);
-		font-family: var(--font-mono);
-		/* 16px everywhere: iOS zooms a focused field under 16px, and a
-		   landscape phone or iPad is still iOS. */
-		font-size: 16px;
-		line-height: 1.7;
-		resize: vertical;
-		transition: box-shadow 150ms var(--ease-out);
-	}
-	.editor-area:focus {
-		outline: none;
-		box-shadow: inset 0 0 0 1px var(--accent);
-	}
-
-	.preview {
-		min-height: 60vh;
-		max-height: 80vh;
-		padding: 1.75rem;
-		border-radius: var(--radius-ui);
-		background-color: var(--surface);
-		box-shadow: inset 0 0 0 1px var(--border-subtle);
-		overflow: auto;
-	}
-
-	@media (min-width: 1024px) {
-		.panes {
-			grid-template-columns: 1fr 1fr;
-			align-items: start;
-		}
-	}
-</style>

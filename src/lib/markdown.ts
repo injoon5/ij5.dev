@@ -80,6 +80,25 @@ const ARROW =
 	' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' +
 	' aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>';
 
+/**
+ * A soft colour for each icon's chip. The marks are single-hue brands, so the
+ * chip borrows a muted version of that hue — a row of these reads as a set of
+ * stickers rather than a column of grey squares. An unlisted icon lands on the
+ * house accent. The palette itself lives in `app.css` (`[data-tint]`).
+ */
+const LINK_TINT: Record<string, string> = {
+	github: 'zinc',
+	x: 'zinc',
+	linkedin: 'sky',
+	instagram: 'green',
+	youtube: 'red',
+	mail: 'sky',
+	rss: 'amber',
+	website: 'violet',
+	globe: 'violet',
+	camera: 'amber'
+};
+
 function renderLinks(content: string): string {
 	const items = content
 		.split('\n')
@@ -93,11 +112,12 @@ function renderLinks(content: string): string {
 	const buttons = items
 		.map((it) => {
 			const icon = iconSvg(it.icon, 22) ?? iconSvg('globe', 22) ?? '';
+			const tint = LINK_TINT[it.icon] ?? 'blue';
 			const rel = /^https?:\/\//i.test(it.href) ? ' target="_blank" rel="noopener"' : '';
 			const sub = it.sub ? `<span class="lb-sub">${escapeHtml(it.sub)}</span>` : '';
 			return (
 				`<a class="widget link-button" href="${escapeAttr(it.href)}"${rel}>` +
-				`<span class="lb-icon" aria-hidden="true">${icon}</span>` +
+				`<span class="lb-icon" data-tint="${tint}" aria-hidden="true">${icon}</span>` +
 				`<span class="lb-body"><span class="lb-label">${escapeHtml(it.label)}</span>${sub}</span>` +
 				ARROW +
 				`</a>`

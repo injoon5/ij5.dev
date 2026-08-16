@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { card } from '$lib/ui/styles';
 
+	// A copy-pasteable code block. Long URLs scroll inside it rather than
+	// widening the page.
+	const snippet =
+		'overflow-x-auto rounded-[var(--radius-ui)] bg-surface-sunken px-4 py-3.5 font-mono text-xs leading-[1.65] whitespace-pre [-webkit-overflow-scrolling:touch]';
+
 	/**
 	 * Reference for the shortener API, written against the routes rather than
 	 * generated from them — a generated page would be one more thing to keep
@@ -99,31 +104,31 @@
 	<p class="mt-1 max-w-[68ch] text-sm text-pretty text-text-muted">
 		Send the same token you sign in with as a bearer header. The session cookie is deliberately
 		not accepted: a cookie rides along on any request a browser is talked into making, and a
-		token has to be supplied on purpose. Rotate it by changing <code>AUTH_HASH</code>.
+		token has to be supplied on purpose. Rotate it by changing <code class="font-mono">AUTH_HASH</code>.
 	</p>
 
-	<pre class="snippet mt-3">curl {origin}/api/links \
+	<pre class="{snippet} mt-3">curl {origin}/api/links \
   -H "Authorization: Bearer $IJ5_TOKEN"</pre>
 </section>
 
 <section class="{card} mb-4">
 	<h2 class="text-sm font-semibold">Endpoints</h2>
 
-	<ul class="mt-3 flex flex-col gap-4">
+	<ul class="mt-3 flex flex-col gap-4 [&>li+li]:pt-3">
 		{#each ENDPOINTS as endpoint (endpoint.method + endpoint.path)}
-			<li class="endpoint">
+			<li>
 				<p class="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-					<span class="method" data-method={endpoint.method}>{endpoint.method}</span>
-					<code class="text-sm font-medium">{endpoint.path}</code>
+					<span class="font-mono text-2xs font-semibold text-text-subtle data-[method=DELETE]:text-danger" data-method={endpoint.method}>{endpoint.method}</span>
+					<code class="font-mono text-sm font-medium">{endpoint.path}</code>
 				</p>
 				<p class="mt-1.5 max-w-[68ch] text-sm text-pretty text-text-muted">{endpoint.summary}</p>
 
 				{#if endpoint.body}
-					<pre class="snippet mt-2">{endpoint.body}</pre>
+					<pre class="{snippet} mt-2">{endpoint.body}</pre>
 				{/if}
 
 				<p class="mt-1.5 text-xs text-text-subtle">
-					Returns <code>{endpoint.returns}</code>
+					Returns <code class="font-mono">{endpoint.returns}</code>
 				</p>
 			</li>
 		{/each}
@@ -137,7 +142,7 @@
 			{#each FIELDS as [name, type, description] (name)}
 				<div>
 					<dt class="flex flex-wrap items-baseline gap-2">
-						<code class="text-sm font-medium">{name}</code>
+						<code class="font-mono text-sm font-medium">{name}</code>
 						<span class="text-xs text-text-subtle">{type}</span>
 					</dt>
 					<dd class="mt-0.5 max-w-[60ch] text-sm text-pretty text-text-muted">{description}</dd>
@@ -149,7 +154,7 @@
 	<section class={card}>
 		<h2 class="text-sm font-semibold">Errors</h2>
 		<p class="mt-1 text-sm text-text-muted">
-			Every failure is JSON with an <code>error</code> sentence.
+			Every failure is JSON with an <code class="font-mono">error</code> sentence.
 		</p>
 		<dl class="mt-3 flex flex-col gap-3">
 			{#each STATUSES as [code, meaning] (code)}
@@ -164,48 +169,9 @@
 
 <section class="{card} mt-4">
 	<h2 class="text-sm font-semibold">Create a link</h2>
-	<pre class="snippet mt-3">curl -X POST {origin}/api/links \
+	<pre class="{snippet} mt-3">curl -X POST {origin}/api/links \
   -H "Authorization: Bearer $IJ5_TOKEN" \
   -H "Content-Type: application/json" \
   -d '&lbrace;"slug":"talk","url":"https://example.com/watch"&rbrace;'</pre>
 </section>
 
-<style>
-	.snippet {
-		overflow-x: auto;
-		border-radius: var(--radius-ui);
-		background-color: var(--surface-sunken);
-		padding: 0.875rem 1rem;
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		line-height: 1.65;
-		/* Long URLs scroll inside the block rather than widening the page. */
-		white-space: pre;
-		-webkit-overflow-scrolling: touch;
-	}
-
-	code {
-		font-family: var(--font-mono);
-	}
-
-	/* Space, not rules: the verb and path already open each item. */
-	.endpoint + .endpoint {
-		padding-top: 0.75rem;
-	}
-
-	/*
-	 * The verb is the fastest thing to scan for, so it gets weight and a
-	 * monospace box rather than a coloured pill per method: five accent colours
-	 * in one list is decoration, and DELETE is the only one worth flagging.
-	 */
-	.method {
-		font-family: var(--font-mono);
-		font-size: var(--text-2xs);
-		font-weight: 600;
-		color: var(--text-subtle);
-	}
-
-	.method[data-method='DELETE'] {
-		color: var(--danger);
-	}
-</style>

@@ -88,11 +88,13 @@
 	<script src="/a.js" defer></script>
 </svelte:head>
 
-<main class="doc">
-	<header class="masthead">
+<main
+	class="mx-auto flex min-h-dvh max-w-[42rem] flex-col pt-[clamp(4rem,12vh,7rem)] pr-[max(1.5rem,env(safe-area-inset-right))] pb-[calc(2.5rem+env(safe-area-inset-bottom))] pl-[max(1.5rem,env(safe-area-inset-left))]"
+>
+	<header class="mb-11">
 		{#if avatarUrl}
 			<img
-				class="avatar"
+				class="mb-[1.15rem] block size-16 rounded-full bg-surface-sunken object-cover"
 				src={avatarUrl}
 				alt=""
 				width="64"
@@ -100,9 +102,11 @@
 				fetchpriority="high"
 			/>
 		{/if}
-		<h1 class="masthead-name">{data.profile.name}</h1>
+		<!-- text-2xl and text-md carry their own tracking + leading from the type
+		     scale, so a display heading never falls back to body leading. -->
+		<h1 class="text-2xl font-bold">{data.profile.name}</h1>
 		{#if data.profile.tagline}
-			<p class="masthead-tagline">{data.profile.tagline}</p>
+			<p class="mt-2 max-w-[40ch] text-md text-text-muted">{data.profile.tagline}</p>
 		{/if}
 	</header>
 
@@ -114,7 +118,7 @@
 	-->
 	<article class="prose">{@html data.html}</article>
 
-	<footer class="foot">
+	<footer class="mt-auto pt-16 font-mono text-xs text-text-muted">
 		<span>© {year} {data.profile.name}</span>
 	</footer>
 </main>

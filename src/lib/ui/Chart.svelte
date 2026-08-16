@@ -178,15 +178,16 @@
 	     toward the day under the pointer reads as lag. -->
 	<!-- No live region: `aria-valuetext` on the plot below is the spoken
 	     channel, and announcing both means every scrub is said twice. -->
-	<div class="readout" aria-hidden="true">
+	<div class="flex items-baseline gap-2" aria-hidden="true">
 		<span class="tnum text-2xl font-semibold">{(current ?? { hits: max }).hits}</span>
 		<span class="text-sm text-text-muted">
 			{#if current}{label} on {fmtDay(current.day)}{:else}peak {label} in range{/if}
 		</span>
 	</div>
 
+	<!-- A vertical swipe still scrolls the page; a horizontal drag scrubs. -->
 	<div
-		class="chart"
+		class="mt-3 h-44 [touch-action:pan-y] select-none sm:h-52"
 		bind:this={plot}
 		bind:clientWidth={width}
 		bind:clientHeight={height}
@@ -204,7 +205,7 @@
 		onpointerup={release}
 		onpointercancel={release}
 	>
-		<svg viewBox="0 0 {W} {H}">
+		<svg viewBox="0 0 {W} {H}" class="block size-full">
 			<defs>
 				<linearGradient id={WASH_ID} x1="0" x2="0" y1="0" y2="1">
 					<!-- An ease-out ramp, not a linear one, which held a flat film and
@@ -219,7 +220,7 @@
 			     not even a tick mark. The numbers are there to size the line, and
 			     anything drawn to connect them to it competes with the line. -->
 			{#each ticks as tick (tick)}
-				<text class="axis-label" x="0" y={y(tick)} dominant-baseline="middle">{compact(tick)}</text>
+				<text class="fill-text-subtle text-[11px] tnum" x="0" y={y(tick)} dominant-baseline="middle">{compact(tick)}</text>
 			{/each}
 
 			{#if single}
@@ -280,51 +281,8 @@
 		reads as alignment. The gap between this date and the first point is a
 		distance nobody measures; two staggered left edges is one anybody sees.
 	-->
-	<div class="dates">
+	<div class="mt-2 flex justify-between text-xs text-text-subtle">
 		<span class="tnum">{fmtDay(data[0].day)}</span>
 		{#if !single}<span class="tnum">{fmtDay(data[data.length - 1].day)}</span>{/if}
 	</div>
 {/if}
-
-<style>
-	.readout {
-		display: flex;
-		align-items: baseline;
-		gap: 0.5rem;
-	}
-
-	.chart {
-		margin-top: 0.75rem;
-		height: 11rem;
-		/* A vertical swipe still scrolls the page; a horizontal drag scrubs. */
-		touch-action: pan-y;
-		-webkit-user-select: none;
-		user-select: none;
-	}
-
-	.chart svg {
-		display: block;
-		width: 100%;
-		height: 100%;
-	}
-
-	.axis-label {
-		fill: var(--text-subtle);
-		font-size: 11px;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.dates {
-		display: flex;
-		justify-content: space-between;
-		margin-top: 0.5rem;
-		font-size: var(--text-xs);
-		color: var(--text-subtle);
-	}
-
-	@media (min-width: 640px) {
-		.chart {
-			height: 13rem;
-		}
-	}
-</style>

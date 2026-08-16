@@ -48,6 +48,16 @@ withSqlite('hits', () => {
 	const rows = <T>(sql: string, ...args: unknown[]) =>
 		db.prepare(sql).all(...(args as never[])) as T[];
 
+	// D1 binds `?1`/`?2` positionally. node:sqlite on Node 22 treats them as
+	// named (`{"?1": v}`) and throws "column index out of range" on a spread.
+	const runN = (sql: string, ...args: import('node:sqlite').SQLInputValue[]) => {
+		const named: Record<string, import('node:sqlite').SQLInputValue> = {};
+		args.forEach((v, i) => {
+			named[`?${i + 1}`] = v;
+		});
+		return db.prepare(sql).run(named);
+	};
+
 	it('applies the migration cleanly', () => {
 		const tables = rows<{ name: string }>(
 			`SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name`
@@ -93,7 +103,7 @@ withSqlite('hits', () => {
 		db.prepare(VISITORS_INSERT).run('2026-01-01', 'gh', 'old');
 		db.prepare(VISITORS_INSERT).run('2026-01-01', 'cv', 'old');
 
-		db.prepare(MIGRATE_VISITOR).run('2026-01-01', 'new', 'old');
+		runN(MIGRATE_VISITOR, '2026-01-01', 'new', 'old');
 
 		expect(rows<{ vh: string; slug: string }>(`SELECT vh, slug FROM visitors ORDER BY slug`)).toEqual([
 			{ vh: 'new', slug: 'cv' },
@@ -110,8 +120,8 @@ withSqlite('hits', () => {
 		db.prepare(VISITORS_INSERT).run('2026-01-01', 'gh', 'old');
 		db.prepare(VISITORS_INSERT).run('2026-01-01', 'gh', 'new'); // already present
 
-		expect(() => db.prepare(MIGRATE_VISITOR).run('2026-01-01', 'new', 'old')).not.toThrow();
-		db.prepare(PURGE_VISITOR).run('2026-01-01', 'old');
+		expect(() => runN(MIGRATE_VISITOR, '2026-01-01', 'new', 'old')).not.toThrow();
+		runN(PURGE_VISITOR, '2026-01-01', 'old');
 
 		expect(rows<{ vh: string; slug: string }>(`SELECT vh, slug FROM visitors`)).toEqual([
 			{ vh: 'new', slug: 'gh' }
@@ -122,7 +132,7 @@ withSqlite('hits', () => {
 		db.prepare(VISITORS_INSERT).run('2026-01-01', 'gh', 'old');
 		db.prepare(VISITORS_INSERT).run('2026-01-02', 'gh', 'old');
 
-		db.prepare(MIGRATE_VISITOR).run('2026-01-01', 'new', 'old');
+		runN(MIGRATE_VISITOR, '2026-01-01', 'new', 'old');
 
 		const rows = db
 			.prepare(`SELECT vh FROM visitors WHERE day = '2026-01-02'`)
