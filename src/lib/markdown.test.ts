@@ -181,8 +181,8 @@ describe('renderMarkdown — narrative blocks', () => {
 		expect(html).toContain('class="chat"');
 		expect(html).toContain('chat-in');
 		expect(html).toContain('chat-out');
-		// received run of 1 + sent run of 2 → two tails
-		expect((html.match(/chat-tail/g) ?? []).length).toBe(2);
+		// received run of 1 + sent run of 2 → two tail caps (the 93×142 viewBox)
+		expect((html.match(/viewBox="0 0 93 142"/g) ?? []).length).toBe(2);
 	});
 
 	it('accepts :::chat as an alias and escapes message text', () => {

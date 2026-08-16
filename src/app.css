@@ -930,23 +930,21 @@
 	--------------------------------------------------------------------- */
 
 	/* Messages — an iMessage thread, after gandan.dev, used as a narrative
-	   device. Sent bubbles are iOS blue on the right; received are grey on the
-	   left; the last bubble of a run grows the classic tail. */
+	   device. A flat pill carries the text; SVG end-caps (see markdown.ts) round
+	   the ends and, on a run's last bubble, hang the tail. Cap and pill share a
+	   colour and overlap, so they read as one capsule. Sent is iOS blue on the
+	   right, received grey on the left; both follow the theme. */
 	.chat {
 		display: flex;
 		flex-direction: column;
 		gap: 3px;
 		margin-top: 1.5rem;
-		/* The tail flicks ~0.3rem past a bubble's edge. Widen the block into the
-		   page gutter by that much and pad it back, so a tail on a bubble sitting
-		   at the column edge has room instead of being clipped — the bubbles stay
-		   aligned with the prose. */
-		margin-inline: -0.75rem;
-		padding-inline: 0.75rem;
 	}
+	/* Top-aligned so a taller tail cap hangs its flick below the pill. */
 	.chat-row {
 		display: flex;
-		max-width: 80%;
+		align-items: flex-start;
+		max-width: 85%;
 	}
 	.chat-in {
 		align-self: flex-start;
@@ -957,13 +955,34 @@
 	.chat-start:not(:first-child) {
 		margin-top: 0.5rem;
 	}
+	.chat .cap {
+		flex: none;
+	}
+	.chat .cap-l {
+		margin-right: -23px;
+	}
+	.chat .cap-r {
+		margin-left: -23px;
+	}
+	.chat-in .cap {
+		fill: var(--msg-recv);
+	}
+	.chat-out .cap {
+		fill: var(--msg-sent);
+	}
+	/* The pill rides above the caps (as gandan's does) so a cap's overlap never
+	   covers the text; the caps, behind and the same colour, form the ends. */
 	.bubble {
 		position: relative;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		min-height: 38px;
 		margin: 0;
-		padding: 0.4rem 0.85rem;
-		border-radius: 1.25rem;
+		padding: 3px 10px;
+		border-radius: 16px;
 		font-size: var(--text-md);
-		line-height: 1.4;
+		line-height: 1.35;
 		overflow-wrap: anywhere;
 	}
 	.chat-in .bubble {
@@ -973,40 +992,6 @@
 	.chat-out .bubble {
 		background-color: var(--msg-sent);
 		color: #fff;
-	}
-	/* The tail — the classic two-piece flick on the run's last bubble: a
-	   coloured corner (::before) that merges into the bubble, then a
-	   page-coloured bite (::after) that carves the hook out of its outer edge. */
-	.chat-tail::before,
-	.chat-tail::after {
-		content: '';
-		position: absolute;
-		bottom: 0;
-		height: 20px;
-	}
-	.chat-out .chat-tail::before {
-		right: -8px;
-		width: 20px;
-		background-color: var(--msg-sent);
-		border-bottom-left-radius: 16px 14px;
-	}
-	.chat-out .chat-tail::after {
-		right: -18px;
-		width: 18px;
-		background-color: var(--bg);
-		border-bottom-left-radius: 10px;
-	}
-	.chat-in .chat-tail::before {
-		left: -8px;
-		width: 20px;
-		background-color: var(--msg-recv);
-		border-bottom-right-radius: 16px 14px;
-	}
-	.chat-in .chat-tail::after {
-		left: -18px;
-		width: 18px;
-		background-color: var(--bg);
-		border-bottom-right-radius: 10px;
 	}
 
 	/* Poll */
