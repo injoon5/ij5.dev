@@ -83,12 +83,6 @@
 	   for the same reason. */
 	--img-outline: oklch(0 0 0 / 0.1);
 
-	/* iMessage bubbles (the `:::messages` block). The sent blue is iOS's own and
-	   holds on either theme; the received grey and its text flip with the page. */
-	--msg-sent: #0094ff;
-	--msg-recv: #e9e9eb;
-	--msg-recv-fg: #1c1c1e;
-
 	/* One accent, one meaning: the primary action and the focus ring. */
 	--accent: oklch(0.53 0.156 262);
 	--accent-hover: oklch(0.48 0.156 262);
@@ -140,9 +134,6 @@
 
 		--img-outline: oklch(1 0 0 / 0.1);
 
-		--msg-recv: #3a3a3c;
-		--msg-recv-fg: #f2f2f7;
-
 		--accent: oklch(0.72 0.142 262);
 		--accent-hover: oklch(0.78 0.13 262);
 		--accent-contrast: oklch(0.17 0.02 262);
@@ -190,8 +181,6 @@
 	--sh-widget: none;
 	--sh-widget-lift: none;
 	--sh-pop: 0 0 0 1px oklch(1 0 0 / 0.07), 0 16px 40px -12px oklch(0 0 0 / 0.6);
-	--msg-recv: #3a3a3c;
-	--msg-recv-fg: #f2f2f7;
 }
 
 /* ---------------------------------------------------------------------------
@@ -322,14 +311,6 @@
 	to {
 		opacity: 1;
 		transform: none;
-	}
-}
-
-/* Poll bars grow in from their leading edge on first paint. Under reduced
-   motion the global duration override lands them at full width instantly. */
-@keyframes poll-grow {
-	from {
-		transform: scaleX(0);
 	}
 }
 
@@ -921,129 +902,5 @@
 		.contrib:hover .contrib-cap {
 			color: var(--text);
 		}
-	}
-
-	/* ---------------------------------------------------------------------
-	   Narrative blocks — the `:::messages` and `:::poll` shortcodes. Built from
-	   the page's own tokens so they read as part of it, not stickers pasted on.
-	   All CSS, no script.
-	--------------------------------------------------------------------- */
-
-	/* Messages — an iMessage thread, after gandan.dev, used as a narrative
-	   device. A flat pill carries the text; SVG end-caps (see markdown.ts) round
-	   the ends and, on a run's last bubble, hang the tail. Cap and pill share a
-	   colour and overlap, so they read as one capsule. Sent is iOS blue on the
-	   right, received grey on the left; both follow the theme. */
-	.chat {
-		display: flex;
-		flex-direction: column;
-		gap: 3px;
-		margin-top: 1.5rem;
-	}
-	/* Top-aligned so a taller tail cap hangs its flick below the pill. */
-	.chat-row {
-		display: flex;
-		align-items: flex-start;
-		max-width: 85%;
-	}
-	.chat-in {
-		align-self: flex-start;
-	}
-	.chat-out {
-		align-self: flex-end;
-	}
-	.chat-start:not(:first-child) {
-		margin-top: 0.5rem;
-	}
-	.chat .cap {
-		flex: none;
-	}
-	.chat .cap-l {
-		margin-right: -23px;
-	}
-	.chat .cap-r {
-		margin-left: -23px;
-	}
-	.chat-in .cap {
-		fill: var(--msg-recv);
-	}
-	.chat-out .cap {
-		fill: var(--msg-sent);
-	}
-	/* The pill rides above the caps (as gandan's does) so a cap's overlap never
-	   covers the text; the caps, behind and the same colour, form the ends. */
-	.bubble {
-		position: relative;
-		z-index: 1;
-		display: flex;
-		align-items: center;
-		min-height: 38px;
-		margin: 0;
-		padding: 3px 10px;
-		border-radius: 16px;
-		font-size: var(--text-md);
-		line-height: 1.35;
-		overflow-wrap: anywhere;
-	}
-	.chat-in .bubble {
-		background-color: var(--msg-recv);
-		color: var(--msg-recv-fg);
-	}
-	.chat-out .bubble {
-		background-color: var(--msg-sent);
-		color: #fff;
-	}
-
-	/* Poll */
-	.poll {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: 1.5rem;
-	}
-	.poll-q {
-		font-size: var(--text-sm);
-		font-weight: 600;
-	}
-	.poll-rows {
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-	}
-	.poll-row {
-		position: relative;
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		overflow: hidden;
-		padding: 0.5rem 0.8rem;
-		border-radius: var(--radius-ui);
-		background-color: var(--surface-sunken);
-		font-size: var(--text-sm);
-	}
-	.poll-fill {
-		position: absolute;
-		inset: 0 auto 0 0;
-		border-radius: inherit;
-		background-color: color-mix(in oklab, var(--accent) 12%, var(--surface));
-		transform-origin: left;
-		animation: poll-grow 620ms var(--ease-out) both;
-	}
-	.poll-win .poll-fill {
-		background-color: color-mix(in oklab, var(--accent) 24%, var(--surface));
-	}
-	.poll-label {
-		position: relative;
-		font-weight: 500;
-	}
-	.poll-pct {
-		position: relative;
-		margin-left: auto;
-		font-variant-numeric: tabular-nums;
-		color: var(--text-muted);
-	}
-	.poll-win .poll-pct {
-		color: var(--accent);
-		font-weight: 600;
 	}
 }

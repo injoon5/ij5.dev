@@ -173,32 +173,15 @@ describe('imageKeysIn', () => {
 	});
 });
 
-describe('renderMarkdown — narrative blocks', () => {
-	it('renders :::messages as sent/received bubbles, one tail per run', () => {
-		const { html } = renderMarkdown([':::messages', 'hi', 'me | yo', 'me | sup', ':::'].join('\n'), {
-			assetsOrigin: ''
-		});
-		expect(html).toContain('class="chat"');
-		expect(html).toContain('chat-in');
-		expect(html).toContain('chat-out');
-		// received run of 1 + sent run of 2 → two tail caps (the 93×142 viewBox)
-		expect((html.match(/viewBox="0 0 93 142"/g) ?? []).length).toBe(2);
-	});
-
-	it('accepts :::chat as an alias and escapes message text', () => {
-		const { html } = renderMarkdown([':::chat', '<script>x', ':::'].join('\n'), { assetsOrigin: '' });
-		expect(html).toContain('class="chat"');
-		expect(html).not.toContain('<script>x');
-		expect(html).toContain('&lt;script&gt;x');
-	});
-
-	it('renders :::poll with a clamped, highlighted winner', () => {
-		const { html } = renderMarkdown([':::poll', '# q', 'A | 70', 'B | 150', ':::'].join('\n'), {
-			assetsOrigin: ''
-		});
-		expect(html).toContain('class="poll"');
-		expect(html).toContain('poll-win');
-		expect(html).toContain('width:100%');
-		expect(html).toContain('70%');
+describe('renderMarkdown — dropped shortcodes', () => {
+	it('does not render :::messages or :::poll as widgets', () => {
+		const src = [':::messages', 'hi', 'me | yo', ':::', '', ':::poll', '# q', 'A | 70', ':::'].join(
+			'\n'
+		);
+		const { html } = renderMarkdown(src, { assetsOrigin: ORIGIN });
+		expect(html).not.toContain('class="chat"');
+		expect(html).not.toContain('class="poll"');
+		expect(html).not.toContain('chat-in');
+		expect(html).not.toContain('poll-win');
 	});
 });
