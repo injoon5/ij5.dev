@@ -78,7 +78,7 @@
 	let nearLimit = $derived(body.length > MAX_PASTE_CHARS * 0.9);
 </script>
 
-<form method="POST" action="?/{mode}" class="flex flex-col gap-5" use:enhance={saving.submit}>
+<form method="POST" action="?/{mode}" class="flex flex-col gap-4 md:gap-5" use:enhance={saving.submit}>
 	{#if error}
 		<p role="alert" class={notice.error}>{error}</p>
 	{/if}
@@ -128,12 +128,12 @@
 				required
 				spellcheck="false"
 				maxlength={MAX_PASTE_CHARS}
-				class="{fieldClass(invalid)} resize-y font-mono text-[13px] leading-[1.6] pointer-fine:text-[12.5px]"
+				class="{fieldClass(invalid)} resize-y font-mono text-[13px] leading-[1.6] max-md:h-56 pointer-fine:text-[12.5px]"
 			></textarea>
 		{/snippet}
 	</Field>
 
-	<div class="grid gap-5 sm:grid-cols-2">
+	<div class="grid gap-4 sm:grid-cols-2 md:gap-5">
 		<Field id="expires" label="Expires" error={fields.expires}>
 			{#snippet children({ id, describedBy, invalid })}
 				<input

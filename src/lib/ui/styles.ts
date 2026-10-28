@@ -5,7 +5,7 @@
  */
 
 const inputBase =
-	'w-full rounded-[var(--radius-ui)] bg-surface px-3 py-2.5 text-text transition-shadow duration-150 ease-out placeholder:text-text-subtle focus-visible:outline-none pointer-fine:py-[0.4375rem] pointer-fine:text-sm';
+	'w-full rounded-[var(--radius-ui)] bg-surface px-3 py-2 text-text transition-shadow duration-150 ease-out placeholder:text-text-subtle focus-visible:outline-none pointer-fine:py-[0.4375rem] pointer-fine:text-sm';
 
 /** The border and focus ring are the only things that change between a valid
  *  and an invalid field. Both strings are written out in full: Tailwind finds
@@ -19,10 +19,14 @@ export function inputClass(invalid = false): string {
 
 export const fieldClass = (invalid = false) => inputClass(invalid);
 
-/** A panel. On a phone it is a white group on the gray canvas, borderless
- *  like a grouped list; on the white desktop canvas a hairline draws it. */
-export const card =
-	'rounded-[var(--radius-ui-lg)] bg-surface p-4 md:border md:border-border-subtle md:p-5';
+/** A panel's surface: on a phone a white group on the gray canvas,
+ *  borderless like a grouped list; on the white desktop canvas a hairline
+ *  draws it. No padding — for lists and strips that run edge to edge. */
+export const cardFlush =
+	'overflow-hidden rounded-[var(--radius-ui-lg)] bg-surface md:border md:border-border-subtle';
+
+/** The same panel with its content inset. */
+export const card = `${cardFlush} p-4 md:p-5`;
 
 /** The heading inside a `card`. */
 export const cardTitle = 'text-sm font-semibold';
@@ -49,7 +53,7 @@ export const tableBody = 'divide-y divide-border-subtle md:divide-y-0';
 
 /** A row. Each table appends the same `md:grid-cols-…` as its header. */
 export const tableRow =
-	'grid min-h-[3.75rem] grid-cols-[minmax(0,1fr)_auto] content-center items-center gap-x-4 gap-y-0.5 px-4 py-2.5 transition-colors duration-100 ease-out active:bg-row-active aria-[current=true]:bg-row-active md:h-11 md:min-h-0 md:gap-y-0 md:border-b md:border-border-subtle md:px-6 md:py-0 md:hover:bg-row-hover';
+	'grid min-h-[3.25rem] grid-cols-[minmax(0,1fr)_auto] content-center items-center gap-x-4 gap-y-px px-4 py-2 transition-colors duration-100 ease-out active:bg-row-active aria-[current=true]:bg-row-active md:h-11 md:min-h-0 md:gap-y-0 md:border-b md:border-border-subtle md:px-6 md:py-0 md:hover:bg-row-hover';
 
 /** The first line of a row: its name. */
 export const rowTitle = 'text-[0.9375rem] font-medium md:text-sm';
@@ -65,9 +69,9 @@ export const badge =
 export const kbd =
 	'inline-grid min-w-[1.25rem] place-items-center rounded-[5px] border border-border-subtle bg-surface px-1 font-mono text-2xs text-text-muted';
 
-/** A square, icon-only control: 44px on touch, compact under a mouse. */
+/** A square, icon-only control: 36px on touch, 32px under a mouse. */
 export const iconButton =
-	'relative grid size-11 shrink-0 place-items-center rounded-[var(--radius-ui-sm)] text-text-muted transition-[background-color,color,scale] duration-150 ease-out hover:bg-row-active hover:text-text active:scale-[0.96] pointer-fine:size-8';
+	'relative grid size-9 shrink-0 place-items-center rounded-[var(--radius-ui-sm)] text-text-muted transition-[background-color,color,scale] duration-150 ease-out hover:bg-row-active hover:text-text active:scale-[0.96] pointer-fine:size-8';
 
 /** A status line after an action: success or failure. */
 export const notice = {
@@ -91,7 +95,7 @@ export function affixClass(invalid = false): string {
 export const affixPrefix = 'shrink-0 ps-3 text-text-subtle select-none pointer-fine:text-sm';
 
 export const affixInput =
-	'min-w-0 flex-1 bg-transparent py-2.5 ps-0.5 pe-3 text-text placeholder:text-text-subtle focus-visible:outline-none pointer-fine:py-[0.4375rem] pointer-fine:text-sm';
+	'min-w-0 flex-1 bg-transparent py-2 ps-0.5 pe-3 text-text placeholder:text-text-subtle focus-visible:outline-none pointer-fine:py-[0.4375rem] pointer-fine:text-sm';
 
 /**
  * A checkbox drawn as a switch (`role="switch"` on the input): the native

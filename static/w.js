@@ -1,6 +1,6 @@
 /*
  * The only script the public page ever loads, and only when a block on it
- * actually needs one. Two behaviours, no framework, no state.
+ * actually needs one. Three small behaviours, no framework, no state.
  *
  * It is a file rather than an inline script so `script-src 'self'` stays
  * intact: hashing inline handlers would mean `unsafe-hashes`, and reaching for
@@ -9,6 +9,10 @@
  */
 (function () {
 	'use strict';
+
+	// iOS Safari applies `:active` only once something listens for touches;
+	// this is what lets the link buttons visibly press on an iPhone.
+	document.addEventListener('touchstart', function () {}, { passive: true });
 
 	// `error` does not bubble, so this listens in the capture phase. A missing
 	// R2 object then disappears — and takes its gallery frame and caption with

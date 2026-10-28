@@ -5,7 +5,7 @@
 	import Empty from '$lib/ui/Empty.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import PageHeader from '$lib/ui/PageHeader.svelte';
-	import { card, cardTitle } from '$lib/ui/styles';
+	import { card, cardFlush, cardTitle } from '$lib/ui/styles';
 	import { RANGE_LABELS } from './ranges';
 	import type { PageData } from './$types';
 
@@ -120,25 +120,28 @@
 			{/snippet}
 		</Empty>
 	{:else}
-		<!-- Three figures in one strip, three across at every width: stacked
-		     they cost a phone a screen of scroll before the chart. -->
-		<dl
-			class="{card} grid divide-x divide-border-subtle p-0 md:p-0"
-			style="grid-template-columns: repeat({metrics.length}, minmax(0, 1fr))"
-		>
-			{#each metrics as [label, value] (label)}
-				<div class="flex flex-col gap-1 px-4 py-3.5 md:px-5 md:py-4">
-					<dt class="text-xs text-text-muted">{label}</dt>
-					<dd class="text-xl font-semibold tracking-[-0.018em] md:text-2xl">
-						{Number(value).toLocaleString('en')}
-					</dd>
-				</div>
-			{/each}
-		</dl>
-
-		<section class={card}>
-			<h2 class="sr-only">Visits over time</h2>
-			<Chart data={data.traffic} label="visits" />
+		<!-- The totals and the line they add up to, as one object: figures on
+		     top, three across at every width (stacked, they cost a phone a
+		     screen of scroll), and the chart under a hairline. -->
+		<section class="{cardFlush}">
+			<h2 class="sr-only">Totals</h2>
+			<dl
+				class="grid divide-x divide-border-subtle border-b border-border-subtle"
+				style="grid-template-columns: repeat({metrics.length}, minmax(0, 1fr))"
+			>
+				{#each metrics as [label, value] (label)}
+					<div class="flex flex-col gap-0.5 px-4 py-3 md:px-5 md:py-4">
+						<dt class="text-xs text-text-muted md:text-sm">{label}</dt>
+						<dd class="text-xl font-semibold tracking-[-0.02em] md:text-[1.625rem]">
+							{Number(value).toLocaleString('en')}
+						</dd>
+					</div>
+				{/each}
+			</dl>
+			<div class="px-4 pt-3 pb-4 md:px-5 md:pt-4 md:pb-5">
+				<h2 class="sr-only">Visits over time</h2>
+				<Chart data={data.traffic} label="visits" />
+			</div>
 		</section>
 
 		<div class="grid gap-4 lg:grid-cols-2">
@@ -157,9 +160,14 @@
 				value: r.hits
 			}))} />
 			<BarList title="Countries" rows={data.countries.map((c) => ({ label: country(c.country), value: c.hits }))} />
-			<BarList title="Devices" rows={data.devices.map((d) => ({ label: cap(d.device), value: d.hits }))} />
-			<BarList title="Operating systems" rows={data.os.map((o) => ({ label: o.os, value: o.hits }))} />
-			<BarList title="Browsers" rows={data.browsers.map((b) => ({ label: b.browser, value: b.hits }))} />
+			<BarList
+				title="Technology"
+				views={[
+					{ title: 'Devices', rows: data.devices.map((d) => ({ label: cap(d.device), value: d.hits })) },
+					{ title: 'Browsers', rows: data.browsers.map((b) => ({ label: b.browser, value: b.hits })) },
+					{ title: 'Systems', rows: data.os.map((o) => ({ label: o.os, value: o.hits })) }
+				]}
+			/>
 		</div>
 	{/if}
 
@@ -173,7 +181,7 @@
 					<li>
 						<a
 							href="/admin?s=new&slug={encodeURIComponent(n.path)}"
-							class="group flex min-h-8 items-center justify-between gap-3 rounded-[var(--radius-ui-sm)] px-2 transition-colors duration-150 ease-out hover:bg-row-active pointer-coarse:min-h-11"
+							class="group flex min-h-8 items-center justify-between gap-3 rounded-[var(--radius-ui-sm)] px-2 transition-colors duration-150 ease-out hover:bg-row-active pointer-coarse:min-h-9"
 						>
 							<span class="truncate text-sm">/{n.path}</span>
 							<span class="flex shrink-0 items-center gap-3 text-sm text-text-muted">

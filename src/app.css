@@ -334,6 +334,11 @@
 	html {
 		-webkit-tap-highlight-color: transparent;
 		-webkit-text-size-adjust: 100%;
+		/* No double-tap-to-zoom wait on taps. */
+		touch-action: manipulation;
+		/* Safari shows the root's background when a page is pulled past its
+		   end; it must be the canvas, not a white band. */
+		background-color: var(--bg);
 	}
 
 	body {
@@ -401,6 +406,33 @@
 
 	svg {
 		flex-shrink: 0;
+	}
+
+	/* Safari draws a native select as a glossy pill with its own arrows, and
+	   a different one in every engine. One flat field, one chevron. */
+	select {
+		appearance: none;
+		padding-inline-end: 2.25rem;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23888' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 6.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 0.75rem center;
+		background-size: 1rem;
+	}
+
+	/* iOS Safari collapses an empty date field to the height of nothing and
+	   centres a filled one. Same height and alignment as every other field. */
+	input[type='date'] {
+		-webkit-appearance: none;
+		appearance: none;
+		text-align: start;
+	}
+	@media (pointer: coarse) {
+		input[type='date'] {
+			min-height: calc(1lh + 1rem);
+		}
+	}
+	input[type='date']::-webkit-date-and-time-value {
+		text-align: start;
 	}
 
 	/* Less motion, not none. Narrowing the property list drops anything that

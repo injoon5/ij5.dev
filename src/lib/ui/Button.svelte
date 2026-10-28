@@ -42,17 +42,17 @@
 		danger: 'bg-surface text-danger hover:bg-danger-tint md:bg-transparent'
 	};
 
-	// 44px minimum on touch, at every width — a landscape phone or iPad is
-	// still touch. Compact only where a fine pointer is actually available.
+	// Sized for a fingertip on touch (36–44px, the same rhythm as iOS
+	// controls) and compact where a fine pointer is actually available.
 	const SIZE: Record<Size, string> = {
-		sm: 'h-11 rounded-[var(--radius-ui)] px-3 text-sm pointer-fine:h-8',
-		md: 'h-11 rounded-[var(--radius-ui)] px-4 text-sm pointer-fine:h-9',
-		// A form's own actions: a full-width, thumb-height bar on a phone —
-		// where they are the last thing on the screen — and a compact button
-		// beside its siblings from `md`.
+		sm: 'h-9 rounded-[var(--radius-ui)] px-3 text-sm pointer-fine:h-8',
+		md: 'h-10 rounded-[var(--radius-ui)] px-4 text-sm pointer-fine:h-9',
+		// A form's own actions: full width on a phone, where they are the last
+		// thing on the screen, and a compact button beside its siblings from
+		// `md`. 44px is a finger's target, not a thumb-slab.
+		form: 'h-11 w-full rounded-[var(--radius-ui)] px-4 text-[0.9375rem] md:h-10 md:w-auto md:px-3 md:text-sm md:pointer-fine:h-8',
 		// One full-width action on its own: sign-in.
-		lg: 'h-12 w-full rounded-[var(--radius-ui-lg)] px-4 text-[0.9375rem] pointer-fine:h-10 pointer-fine:rounded-[var(--radius-ui)] pointer-fine:text-sm',
-		form: 'h-12 w-full rounded-[var(--radius-ui-lg)] px-4 text-[0.9375rem] md:h-11 md:w-auto md:rounded-[var(--radius-ui)] md:px-3 md:text-sm md:pointer-fine:h-8'
+		lg: 'h-11 w-full rounded-[var(--radius-ui)] px-4 text-[0.9375rem] pointer-fine:h-10 pointer-fine:text-sm'
 	};
 
 	const base =

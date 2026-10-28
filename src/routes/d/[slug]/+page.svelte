@@ -60,7 +60,7 @@
 		<!-- On hover the arrow nudges down — the direction a download travels.
 		     Full width: on a phone this is the one thing the page is for. -->
 		<a
-			class="group mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-ui-lg)] bg-accent text-[0.9375rem] font-medium text-accent-contrast shadow-[inset_0_1px_0_oklch(1_0_0/0.12)] transition-[background-color,scale] duration-150 ease-[var(--ease-press)] hover:bg-accent-hover active:scale-[0.96] pointer-fine:h-11 pointer-fine:text-sm"
+			class="group mt-8 flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-ui)] bg-accent text-[0.9375rem] font-medium text-accent-contrast shadow-[inset_0_1px_0_oklch(1_0_0/0.12)] transition-[background-color,scale] duration-150 ease-[var(--ease-press)] hover:bg-accent-hover active:scale-[0.96] pointer-fine:h-10 pointer-fine:text-sm"
 			href="/d/{data.file.slug}/file"
 			rel="nofollow"
 		>

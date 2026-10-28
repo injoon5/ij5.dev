@@ -23,10 +23,10 @@
 </script>
 
 <header
-	class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-3 md:sticky md:top-0 md:z-10 md:min-h-14 md:border-b md:border-border-subtle md:bg-surface/90 md:px-6 md:py-2.5 md:backdrop-blur-md"
+	class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-2.5 md:sticky md:top-0 md:z-10 md:min-h-14 md:border-b md:border-border-subtle md:bg-surface/90 md:px-6 md:py-2.5 md:backdrop-blur-md"
 >
 	<h1
-		class="min-w-0 truncate text-[1.75rem] leading-tight font-bold tracking-[-0.022em] md:text-[0.9375rem] md:font-semibold md:tracking-[-0.01em]"
+		class="min-w-0 truncate text-[1.625rem] leading-tight font-bold tracking-[-0.022em] md:text-[0.9375rem] md:font-semibold md:tracking-[-0.01em]"
 	>
 		{title}
 	</h1>

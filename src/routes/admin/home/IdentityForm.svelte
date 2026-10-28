@@ -3,7 +3,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import AssetInput from '$lib/ui/AssetInput.svelte';
-	import { card, cardTitle, fieldClass } from '$lib/ui/styles';
+	import { cardTitle, fieldClass } from '$lib/ui/styles';
 	import { pending } from '$lib/ui/pending.svelte';
 	import { serializeLines } from '$lib/lines';
 	import type { Profile } from '$lib/types';
@@ -39,11 +39,25 @@
 		bind:this={formEl}
 		method="POST"
 		action="?/profile"
-		class="{card} flex flex-col gap-5"
+		class="flex flex-col gap-4 md:gap-5 md:rounded-[var(--radius-ui-lg)] md:border md:border-border-subtle md:bg-surface md:p-5"
 		oninput={() => (dirty = true)}
 		use:enhance={saving.submit}
 	>
-		<div class="grid gap-5 md:grid-cols-2">
+		<!-- The masthead as it reads on the page: picture, name, line. -->
+		<div class="grid gap-4 md:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] md:gap-5">
+			<Field id="p-avatar" label="Avatar" error={fields.avatar}>
+				{#snippet children({ id, describedBy, invalid })}
+					<AssetInput
+						{id}
+						name="avatar"
+						value={draft.avatar ?? ''}
+						{assetsOrigin}
+						{describedBy}
+						{invalid}
+						onchange={() => (dirty = true)}
+					/>
+				{/snippet}
+			</Field>
 			<Field id="p-name" label="Name" error={fields.name}>
 				{#snippet children({ id, describedBy, invalid })}
 					<input
@@ -75,20 +89,6 @@
 				{/snippet}
 			</Field>
 		</div>
-
-		<Field id="p-avatar" label="Avatar" error={fields.avatar}>
-			{#snippet children({ id, describedBy, invalid })}
-				<AssetInput
-					{id}
-					name="avatar"
-					value={draft.avatar ?? ''}
-					{assetsOrigin}
-					{describedBy}
-					{invalid}
-					onchange={() => (dirty = true)}
-				/>
-			{/snippet}
-		</Field>
 
 		<!-- The format is the one thing here nobody could guess, so the hint
 		     stays: it says what these are for and how to write one. -->

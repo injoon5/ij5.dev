@@ -62,7 +62,7 @@
 	});
 </script>
 
-<form method="POST" action="?/{mode}" class="flex flex-col gap-5" use:enhance={saving.submit}>
+<form method="POST" action="?/{mode}" class="flex flex-col gap-4 md:gap-5" use:enhance={saving.submit}>
 	{#if error}
 		<p role="alert" class={notice.error}>{error}</p>
 	{/if}
@@ -112,7 +112,7 @@
 		{/snippet}
 	</Field>
 
-	<div class="grid gap-5 sm:grid-cols-2">
+	<div class="grid gap-4 sm:grid-cols-2 md:gap-5">
 		<!-- The one hint on this form, and only when it applies: a 301 cannot be
 		     recalled from a browser that has already followed it. -->
 		<Field
@@ -127,7 +127,7 @@
 					name="status"
 					bind:value={status}
 					aria-describedby={describedBy}
-					class={fieldClass(invalid)}
+					class="{fieldClass(invalid)} pe-9"
 				>
 					<option value="302">Temporary (302)</option>
 					<option value="301">Permanent (301)</option>

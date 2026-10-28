@@ -27,12 +27,12 @@
 </script>
 
 <header
-	class="sticky top-0 z-10 grid min-h-12 grid-cols-[minmax(5.5rem,1fr)_minmax(0,auto)_minmax(5.5rem,1fr)] items-center gap-1 border-b border-border-subtle bg-bg/85 px-1 pt-[env(safe-area-inset-top)] backdrop-blur-xl backdrop-saturate-150 md:bg-surface/90 lg:flex lg:min-h-14 lg:px-3 lg:ps-5 lg:pt-0"
+	class="sticky top-0 z-10 grid min-h-11 grid-cols-[minmax(5.5rem,1fr)_minmax(0,auto)_minmax(5.5rem,1fr)] items-center gap-1 border-b border-border-subtle bg-bg/85 px-1 pt-[env(safe-area-inset-top)] backdrop-blur-xl backdrop-saturate-150 md:bg-surface/90 lg:flex lg:min-h-14 lg:px-3 lg:ps-5 lg:pt-0"
 >
 	<a
 		href={close}
 		data-sveltekit-noscroll
-		class="flex h-11 items-center justify-self-start pe-2 text-[1.0625rem] text-accent transition-opacity duration-150 ease-out active:opacity-50 lg:hidden"
+		class="flex h-10 items-center justify-self-start pe-2 text-[1.0625rem] text-accent transition-opacity duration-150 ease-out active:opacity-50 lg:hidden"
 	>
 		<ChevronLeft size={26} strokeWidth={2} aria-hidden="true" class="-me-0.5" />
 		{backLabel}

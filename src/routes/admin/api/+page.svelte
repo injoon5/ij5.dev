@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import CopyButton from '$lib/ui/CopyButton.svelte';
 	import PageHeader from '$lib/ui/PageHeader.svelte';
-	import { card, cardTitle } from '$lib/ui/styles';
+	import { card, cardFlush, cardTitle } from '$lib/ui/styles';
 
 	/**
 	 * Reference for the shortener API, written against the routes rather than
@@ -99,7 +99,7 @@
 
 <PageHeader title="API" />
 
-<div class="mx-auto flex max-w-3xl flex-col gap-8 px-4 pt-1 pb-10 md:px-6 md:pt-8">
+<div class="flex max-w-3xl flex-col gap-8 px-4 pt-1 pb-10 md:px-6 md:pt-8">
 	<section>
 		<h2 class="{cardTitle} mb-1">Authentication</h2>
 		<p class="mb-3 text-sm text-pretty text-text-muted">
@@ -110,7 +110,7 @@
 
 	<section>
 		<h2 class="{cardTitle} mb-3">Endpoints</h2>
-		<ul class="{card} flex flex-col divide-y divide-border-subtle p-0 md:p-0">
+		<ul class="{cardFlush} flex flex-col divide-y divide-border-subtle">
 			{#each ENDPOINTS as endpoint (endpoint.method + endpoint.path)}
 				<li class="flex flex-col gap-2 p-4 md:p-5">
 					<p class="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
@@ -133,7 +133,7 @@
 
 	<section>
 		<h2 class="{cardTitle} mb-3">Fields</h2>
-		<dl class="{card} flex flex-col divide-y divide-border-subtle p-0 md:p-0">
+		<dl class="{cardFlush} flex flex-col divide-y divide-border-subtle">
 			{#each FIELDS as [name, type, description] (name)}
 				<div class="grid gap-1 p-4 md:grid-cols-[9rem_minmax(0,1fr)] md:gap-4 md:px-5">
 					<dt class="flex flex-wrap items-baseline gap-x-2">
@@ -151,7 +151,7 @@
 		<p class="mb-3 text-sm text-text-muted">
 			Every failure is JSON with an <code class="font-mono text-text">error</code> sentence.
 		</p>
-		<dl class="{card} flex flex-col divide-y divide-border-subtle p-0 md:p-0">
+		<dl class="{cardFlush} flex flex-col divide-y divide-border-subtle">
 			{#each STATUSES as [status, meaning] (status)}
 				<div class="flex gap-4 px-4 py-3 md:px-5">
 					<dt class="w-9 shrink-0 font-mono text-sm font-medium">{status}</dt>

@@ -1,15 +1,13 @@
 <script lang="ts">
-	import Upload from 'lucide-svelte/icons/upload';
-	import X from 'lucide-svelte/icons/x';
 	import ImageIcon from 'lucide-svelte/icons/image';
 	import Button from './Button.svelte';
-	import { iconButton, inputClass } from './styles';
 	import { uploadImage } from './upload';
 
 	/**
-	 * An image field: the stored key in a text input (so it still works with
-	 * scripts off), a preview beside it, and an upload button. Dropping an
-	 * image anywhere on the row uploads it too.
+	 * An image field shown as the image: a round preview, then Upload (or
+	 * Replace) and Remove. The stored key rides in a hidden input — it is an
+	 * opaque hash nobody reads or types, so it does not earn a text field.
+	 * Dropping an image anywhere on the row uploads it too.
 	 */
 	type Props = {
 		id: string;
@@ -18,7 +16,7 @@
 		assetsOrigin: string;
 		describedBy?: string;
 		invalid?: boolean;
-		/** Fires whenever the value changes by upload or clear. */
+		/** Fires whenever the value changes by upload or removal. */
 		onchange?: () => void;
 	};
 
@@ -57,8 +55,8 @@
 
 <div class="flex flex-col gap-1.5">
 	<div
-		class="flex items-center gap-2 rounded-[var(--radius-ui)] transition-[background-color,box-shadow] duration-150 ease-out {dragging
-			? 'bg-accent-tint shadow-[0_0_0_4px_var(--accent-tint)]'
+		class="-m-1 flex items-center gap-3 rounded-[var(--radius-ui)] p-1 transition-colors duration-150 ease-out {dragging
+			? 'bg-accent-tint'
 			: ''}"
 		ondragover={(e) => {
 			e.preventDefault();
@@ -79,67 +77,53 @@
 				alt=""
 				width="40"
 				height="40"
-				class="size-10 shrink-0 rounded-full bg-surface-sunken object-cover outline outline-1 -outline-offset-1 outline-[var(--img-outline)]"
+				class="size-10 shrink-0 rounded-full bg-surface-sunken object-cover outline outline-1 -outline-offset-1 outline-[var(--img-outline)] {busy
+					? 'opacity-50'
+					: ''} transition-opacity duration-150 ease-out"
 			/>
 		{:else}
 			<span
-				class="grid size-10 shrink-0 place-items-center rounded-full bg-surface-sunken text-text-subtle"
+				class="grid size-10 shrink-0 place-items-center rounded-full bg-surface-sunken text-text-subtle {invalid
+					? 'ring-1 ring-danger'
+					: ''}"
 				aria-hidden="true"
 			>
 				<ImageIcon size={16} />
 			</span>
 		{/if}
 
-		<input
-			{id}
-			{name}
-			bind:value
-			aria-describedby={described}
-			aria-invalid={invalid || Boolean(error) || undefined}
-			placeholder="img/…"
-			spellcheck="false"
-			autocomplete="off"
-			class="{inputClass(invalid)} min-w-0 flex-1 font-mono text-[13px] pointer-fine:text-[12.5px]"
-		/>
-
-		{#if value}
-			<button
-				type="button"
-				onclick={() => {
-					value = '';
-					onchange?.();
-				}}
-				aria-label="Remove image"
-				title="Remove image"
-				class={iconButton}
-			>
-				<X size={15} aria-hidden="true" />
-			</button>
-		{/if}
-
+		<input type="hidden" {name} {value} />
 		<input
 			bind:this={fileEl}
+			{id}
 			type="file"
 			accept="image/png,image/jpeg,image/webp,image/avif"
 			class="sr-only"
-			tabindex="-1"
-			aria-hidden="true"
+			aria-describedby={described}
 			onchange={(e) => {
 				const file = e.currentTarget.files?.[0];
 				if (file) upload(file);
 				e.currentTarget.value = '';
 			}}
 		/>
-		<Button
-			variant="secondary"
-			size="sm"
-			onclick={() => fileEl?.click()}
-			busy={busy}
-			busyLabel="Uploading…"
-		>
-			<Upload size={14} aria-hidden="true" />
-			Upload
-		</Button>
+
+		<div class="flex items-center gap-1.5">
+			<Button variant="secondary" size="sm" onclick={() => fileEl?.click()} {busy} busyLabel="Uploading…">
+				{value ? 'Replace' : 'Upload'}
+			</Button>
+			{#if value}
+				<Button
+					variant="ghost"
+					size="sm"
+					onclick={() => {
+						value = '';
+						onchange?.();
+					}}
+				>
+					Remove
+				</Button>
+			{/if}
+		</div>
 	</div>
 
 	{#if error}

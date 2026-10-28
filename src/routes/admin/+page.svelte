@@ -66,9 +66,9 @@
 				<Button href="/admin?s=new" variant="primary"
 					size="sm"
 					data-sveltekit-noscroll
-					class="max-md:size-10 max-md:rounded-full max-md:px-0"
+					class="max-md:size-9 max-md:rounded-full max-md:bg-accent-tint max-md:px-0 max-md:text-accent max-md:shadow-none"
 				>
-					<Plus size={15} aria-hidden="true" class="max-md:size-5" />
+					<Plus size={15} aria-hidden="true" class="max-md:size-[18px]" strokeWidth={2.25} />
 					<span class="max-md:sr-only">New link</span>
 				</Button>
 			{/snippet}

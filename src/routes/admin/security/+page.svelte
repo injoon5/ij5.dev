@@ -9,7 +9,7 @@
 	import PageHeader from '$lib/ui/PageHeader.svelte';
 	import { registerPasskey } from '$lib/ui/passkey';
 	import { fmtDate } from '$lib/format';
-	import { card, cardTitle, fieldClass, iconButton, notice } from '$lib/ui/styles';
+	import { cardFlush, cardTitle, fieldClass, iconButton, notice } from '$lib/ui/styles';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -60,14 +60,14 @@
 
 <PageHeader title="Security" />
 
-<div class="mx-auto flex max-w-2xl flex-col gap-4 px-4 pt-1 pb-10 md:px-6 md:pt-8">
+<div class="flex max-w-2xl flex-col gap-4 px-4 pt-1 pb-10 md:px-6 md:pt-8">
 	<h2 class={cardTitle}>Passkeys</h2>
 
 	{#if form?.error}
 		<p role="alert" class={notice.error}>{form.error}</p>
 	{/if}
 
-	<div class="{card} p-0 md:p-0">
+	<div class="{cardFlush}">
 		{#if data.passkeys.length}
 			<ul class="divide-y divide-border-subtle">
 				{#each data.passkeys as key (key.id)}

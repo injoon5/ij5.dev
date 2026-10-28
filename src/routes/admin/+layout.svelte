@@ -60,10 +60,10 @@
 		'flex h-8 items-center gap-2.5 rounded-[var(--radius-ui-sm)] px-2.5 text-sm font-medium text-text-muted transition-colors duration-150 ease-out hover:bg-row-active hover:text-text aria-[current=page]:bg-surface aria-[current=page]:text-text aria-[current=page]:shadow-[0_0_0_1px_var(--border-subtle),0_1px_2px_oklch(0_0_0/0.04)] pointer-coarse:h-11';
 
 	const tab =
-		'flex min-h-[3.25rem] flex-1 flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-medium text-text-subtle transition-colors duration-150 ease-out active:opacity-60 aria-[current=page]:text-accent';
+		'flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 pt-0.5 text-[0.625rem] font-medium text-text-subtle transition-colors duration-150 ease-out active:opacity-60 aria-[current=page]:text-accent';
 
 	const sheetRow =
-		'flex min-h-13 w-full items-center gap-3.5 px-4 text-[0.9375rem] font-medium transition-colors duration-100 ease-out active:bg-row-active';
+		'flex min-h-12 w-full items-center gap-3.5 px-4 text-[0.9375rem] font-medium transition-colors duration-100 ease-out active:bg-row-active';
 </script>
 
 <svelte:head>

@@ -92,18 +92,22 @@
 	const compact = (v: number) =>
 		v >= 10000 ? `${Math.round(v / 1000)}k` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v);
 
-	// The readout always names a day: the one under the pointer, or the most
-	// recent one at rest. Scrubbing then reads as moving through time from
-	// "now", rather than switching between two kinds of number.
+	// At rest the readout is the whole range; under the pointer it is that
+	// day. The marker and the day only exist while something is pointing.
 	let shownIndex = $derived(active ?? data.length - 1);
-	let current = $derived(data[shownIndex] ?? null);
+	let current = $derived(active !== null ? (data[active] ?? null) : null);
+	let total = $derived(data.reduce((sum, d) => sum + d.hits, 0));
 
 	const fmtDay = (day: string) =>
 		new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short' }).format(
 			new Date(`${day}T00:00:00Z`)
 		);
 
-	let readout = $derived(current ? `${current.hits} ${label} on ${fmtDay(current.day)}` : '');
+	let readout = $derived(
+		current
+			? `${current.hits} ${label} on ${fmtDay(current.day)}`
+			: `${total.toLocaleString('en')} ${label} in range`
+	);
 
 	function indexAt(clientX: number) {
 		const rect = plot?.getBoundingClientRect();
@@ -175,21 +179,24 @@
 {#if !data.length}
 	<p class="py-10 text-center text-sm text-pretty text-text-muted">No traffic in this range yet.</p>
 {:else}
-	<!-- The number is the headline and the chart is the footnote. No transition
-	     on the value: scrubbing is direct manipulation, and a number easing
-	     toward the day under the pointer reads as lag. -->
-	<!-- No live region: `aria-valuetext` on the plot below is the spoken
-	     channel, and announcing both means every scrub is said twice. -->
-	<div class="flex items-baseline gap-2" aria-hidden="true">
-		<span class="tnum text-2xl font-semibold tracking-[-0.02em]">{current?.hits ?? 0}</span>
-		<span class="tnum text-sm text-text-muted">
-			{label} on {current ? fmtDay(current.day) : ''}
-		</span>
-	</div>
+	<!-- A quiet line, not a headline — the totals above the chart are the
+	     headline. No transition on the value: scrubbing is direct
+	     manipulation, and a number easing toward the pointer reads as lag.
+	     No live region either: `aria-valuetext` on the plot is the spoken
+	     channel, and announcing both says every scrub twice. -->
+	<p class="tnum text-sm text-text-muted" aria-hidden="true">
+		{#if current}
+			<span class="font-medium text-text">{current.hits.toLocaleString('en')}</span>
+			{label} on {fmtDay(current.day)}
+		{:else}
+			<span class="font-medium text-text">{total.toLocaleString('en')}</span>
+			{label}
+		{/if}
+	</p>
 
 	<!-- A vertical swipe still scrolls the page; a horizontal drag scrubs. -->
 	<div
-		class="mt-3 h-44 [touch-action:pan-y] select-none sm:h-52"
+		class="mt-2 h-40 [touch-action:pan-y] select-none sm:h-52"
 		bind:this={plot}
 		bind:clientWidth={width}
 		bind:clientHeight={height}

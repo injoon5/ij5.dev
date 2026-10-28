@@ -18,6 +18,7 @@
 	import {
 		badge,
 		card,
+		cardFlush,
 		iconButton,
 		kbd,
 		notice,
@@ -81,9 +82,9 @@
 					variant="primary"
 					size="sm"
 					data-sveltekit-noscroll
-					class="max-md:size-10 max-md:rounded-full max-md:px-0"
+					class="max-md:size-9 max-md:rounded-full max-md:bg-accent-tint max-md:px-0 max-md:text-accent max-md:shadow-none"
 				>
-					<Plus size={15} aria-hidden="true" class="max-md:size-5" />
+					<Plus size={15} aria-hidden="true" class="max-md:size-[18px]" strokeWidth={2.25} />
 					<span class="max-md:sr-only">Upload</span>
 				</Button>
 			{/snippet}
@@ -196,7 +197,7 @@
 					<p role="alert" class={notice.error}>{deleteError}</p>
 				{/if}
 
-				<dl class="{card} grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2.5 text-sm md:p-4">
+				<dl class="{cardFlush} grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2.5 p-4 text-sm">
 					<dt class="text-text-muted">Link</dt>
 					<dd class="truncate text-right">{page.url.host}{href}</dd>
 					<dt class="text-text-muted">Size</dt>

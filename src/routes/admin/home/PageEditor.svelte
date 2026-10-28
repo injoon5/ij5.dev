@@ -3,7 +3,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import { renderMarkdown } from '$lib/markdown';
 	import { uploadImage } from '$lib/ui/upload';
-	import { card, cardTitle } from '$lib/ui/styles';
+	import { cardFlush, cardTitle } from '$lib/ui/styles';
 	import type { AssetRow } from '$lib/types';
 
 	/**
@@ -146,7 +146,7 @@
 		</div>
 
 		<div
-			class="{card} h-[min(70vh,44rem)] min-h-80 overflow-auto md:p-7 {view === 'preview'
+			class="{cardFlush} h-[min(70vh,44rem)] min-h-80 overflow-auto p-5 md:p-7 {view === 'preview'
 				? ''
 				: 'max-xl:hidden'}"
 			aria-label="Preview"

@@ -272,7 +272,12 @@ md.block.ruler.before('fence', 'links', linksRule);
 md.block.ruler.before('fence', 'gallery', galleryRule);
 md.inline.ruler.after('escape', 'icon', iconRule);
 
-md.renderer.rules.links_block = (tokens: any, idx: number) => renderLinks(tokens[idx].content);
+md.renderer.rules.links_block = (tokens: any, idx: number, _o: any, env: any) => {
+	// The buttons press, and iOS only shows a press once `/w.js` listens for
+	// touches.
+	(env as RenderEnv).needsScript = true;
+	return renderLinks(tokens[idx].content);
+};
 
 md.renderer.rules.gallery_block = (tokens: any, idx: number, _o: any, env: any) => {
 	const e = env as RenderEnv;

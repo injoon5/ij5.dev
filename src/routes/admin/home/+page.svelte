@@ -35,11 +35,11 @@
 	let status = $derived(
 		unsaved
 			? { label: 'Unsaved changes', dot: 'bg-warning' }
-			: data.dirty
-				? { label: 'Unpublished changes', dot: 'bg-accent' }
-				: data.publishedVersion
-					? { label: 'Published', dot: 'bg-success' }
-					: { label: 'Not published', dot: 'bg-text-subtle' }
+			: !data.publishedVersion
+				? { label: 'Not published yet', dot: 'bg-text-subtle' }
+				: data.dirty
+					? { label: 'Unpublished changes', dot: 'bg-accent' }
+					: { label: 'Published', dot: 'bg-success' }
 	);
 
 	// The uploaded images. Seeded from the load, then changed locally by

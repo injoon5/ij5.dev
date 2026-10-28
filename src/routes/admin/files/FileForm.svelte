@@ -81,7 +81,7 @@
 	method="POST"
 	action="?/create"
 	enctype="multipart/form-data"
-	class="flex flex-col gap-5"
+	class="flex flex-col gap-4 md:gap-5"
 	use:enhance={submit}
 >
 	{#if error}
@@ -157,7 +157,7 @@
 		{/if}
 	</div>
 
-	<div class="grid gap-5 sm:grid-cols-2">
+	<div class="grid gap-4 sm:grid-cols-2 md:gap-5">
 		<Field id="slug" label="Link" error={fields.slug}>
 			{#snippet children({ id, describedBy, invalid })}
 				<div class={affixClass(invalid)}>
