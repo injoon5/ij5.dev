@@ -1,22 +1,18 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import ChevronLeft from 'lucide-svelte/icons/chevron-left';
 	import Plus from 'lucide-svelte/icons/plus';
-	import Search from 'lucide-svelte/icons/search';
+	import ArrowUpRight from 'lucide-svelte/icons/arrow-up-right';
 	import Button from '$lib/ui/Button.svelte';
+	import CopyButton from '$lib/ui/CopyButton.svelte';
+	import DetailHeader from '$lib/ui/DetailHeader.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
+	import MasterDetail from '$lib/ui/MasterDetail.svelte';
+	import PageHeader from '$lib/ui/PageHeader.svelte';
+	import SearchField from '$lib/ui/SearchField.svelte';
 	import { fmtBytes, fmtDay } from '$lib/format';
-	import {
-		inputClass,
-		masterLayout,
-		listPane,
-		detailAside,
-		backLink,
-		dataRow,
-		badge,
-		kbd
-	} from '$lib/ui/styles';
+	import { listShortcuts } from '$lib/ui/shortcuts';
+	import { badge, iconButton, kbd, rowTitle, table, tableBody, tableHead, tableRow } from '$lib/ui/styles';
 	import PasteForm from './PasteForm.svelte';
 	import type { ActionData, PageData } from './$types';
 
@@ -25,12 +21,13 @@
 	let query = $state('');
 	let searchEl = $state<HTMLInputElement | null>(null);
 
-	let selection = $derived(page.url.searchParams.get('s'));
-	let creating = $derived(selection === 'new');
-	let detail = $derived(creating || Boolean(data.selected));
+	let creating = $derived(page.url.searchParams.get('s') === 'new');
+	let open = $derived(creating || Boolean(data.selected));
 
-	/** The first ~80 characters, collapsed to one line — enough to identify. */
-	const snippet = (body: string) => body.replace(/\s+/g, ' ').trim().slice(0, 80);
+	/** The opening of the body, collapsed to one line — enough to recognise. */
+	const snippet = (body: string) => body.replace(/\s+/g, ' ').trim().slice(0, 120);
+
+	const encoder = new TextEncoder();
 
 	let visible = $derived.by(() => {
 		const q = query.trim().toLowerCase();
@@ -38,164 +35,166 @@
 		return data.pastes.filter(
 			(p) =>
 				p.slug.toLowerCase().includes(q) ||
-				snippet(p.body).toLowerCase().includes(q) ||
+				p.body.toLowerCase().includes(q) ||
 				(p.note ?? '').toLowerCase().includes(q)
 		);
 	});
 
-	function onKeydown(event: KeyboardEvent) {
-		// `Cmd+N`, `Ctrl+/` and friends belong to the browser.
-		if (event.metaKey || event.ctrlKey || event.altKey) return;
+	// Name, opening, note, views, size, created — shared by the header row and
+	// every row so the columns can only line up.
+	const cols =
+		'md:grid-cols-[minmax(7rem,12rem)_minmax(0,1.4fr)_minmax(0,1fr)_3.5rem_4.5rem_4.5rem]';
 
-		const el = event.target as HTMLElement | null;
-		if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable)) return;
-
-		if (event.key === 'Escape' && detail) {
-			event.preventDefault();
-			goto('/admin/pastes', { noScroll: true });
-		} else if (event.key === 'n') {
-			event.preventDefault();
-			goto('/admin/pastes?s=new', { noScroll: true });
-		} else if (event.key === '/') {
-			event.preventDefault();
-			searchEl?.focus();
-		}
-	}
+	const onkeydown = listShortcuts('/admin/pastes', () => ({ open, search: searchEl }));
 </script>
-
 <svelte:head><title>Pastes</title></svelte:head>
-<svelte:window onkeydown={onKeydown} />
+<svelte:window {onkeydown} />
 
-<div class={masterLayout} data-detail={detail || undefined}>
-	<section class={listPane} aria-label="Pastes">
-		<header class="mb-6 flex items-center justify-between gap-4">
-			<h1 class="text-xl font-semibold">Pastes</h1>
-			<Button href="/admin/pastes?s=new" variant="primary" size="sm" data-sveltekit-noscroll>
-				<Plus size={15} aria-hidden="true" />
-				New
-			</Button>
-		</header>
+<MasterDetail {open} label="Paste">
+	{#snippet list()}
+		<PageHeader title="Pastes">
+			{#snippet actions()}
+				<Button href="/admin/pastes?s=new" variant="primary"
+					size="sm"
+					data-sveltekit-noscroll
+					class="max-md:size-10 max-md:rounded-full max-md:px-0"
+				>
+					<Plus size={15} aria-hidden="true" class="max-md:size-5" />
+					<span class="max-md:sr-only">New paste</span>
+				</Button>
+			{/snippet}
+		</PageHeader>
 
-		{#if data.pastes.length}
-			<div class="relative mb-3">
-				<Search
-					size={15}
-					class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-subtle"
-					aria-hidden="true"
-				/>
-				<input
-					bind:this={searchEl}
-					bind:value={query}
-					type="search"
-					placeholder="Search pastes"
-					aria-label="Search pastes"
-					class="{inputClass()} pl-9"
-				/>
+		{#if !data.pastes.length}
+			<Empty title="No pastes yet">
+				{#snippet action()}
+					<Button href="/admin/pastes?s=new" variant="primary" size="sm">Create a paste</Button>
+				{/snippet}
+			</Empty>
+		{:else}
+			<div class="px-4 pb-3 md:px-6 md:pt-3">
+				<SearchField bind:value={query} bind:el={searchEl} label="Search pastes" />
 			</div>
 
 			<p class="sr-only" role="status">
 				{#if query.trim()}
 					{visible.length}
-					{visible.length === 1 ? 'paste' : 'pastes'} match “{query.trim()}”
+					{visible.length === 1 ? 'paste matches' : 'pastes match'} “{query.trim()}”
 				{/if}
 			</p>
-		{/if}
 
-		{#if form?.created}
-			<p
-				role="status"
-				class="mb-3 rounded-[var(--radius-ui)] bg-accent-tint px-3 py-2 text-sm text-accent"
-			>
-				ij5.dev/p/{form.created} is live — paste it anywhere.
-			</p>
-		{/if}
-
-		{#if !data.pastes.length}
-			<Empty
-				title="No pastes yet"
-				body="A paste is plaintext served at ij5.dev/p/… — configs, notes, logs, anything you want to share as text. Viewers get a clean page; curl gets the raw body."
-			>
-				{#snippet action()}
-					<Button href="/admin/pastes?s=new" variant="primary" size="sm">Create the first one</Button>
-				{/snippet}
-			</Empty>
-		{:else if !visible.length}
-			<Empty title="Nothing matches" body="No paste contains “{query}”. Try a shorter search." />
-		{:else}
-			<ul class="flex flex-col gap-2">
-				{#each visible as row (row.slug)}
-					<li>
-						<a
-							href="/admin/pastes?s={row.slug}"
-							data-sveltekit-noscroll
-							aria-current={data.selected?.slug === row.slug ? 'true' : undefined}
-							class="{dataRow} md:grid-cols-[minmax(7rem,12rem)_minmax(0,1fr)_minmax(0,1fr)_3.5rem_3.5rem_4rem]"
-						>
-							<span class="flex items-center gap-2 font-mono text-sm font-semibold md:[grid-area:1/1]">
-								/p/{row.slug}
-								{#if row.expired}
-									<span class={badge}>Expired</span>
-								{:else if !row.cache}
-									<span class={badge} title="Every view reads KV fresh — edits win immediately.">
-										No cache
+			{#if !visible.length}
+				<Empty title="No pastes match “{query.trim()}”" />
+			{:else}
+				<div class={table}>
+					<div class="{tableHead} {cols}" aria-hidden="true">
+						<span>Paste</span>
+						<span>Text</span>
+						<span>Note</span>
+						<span class="text-right" title="Views in the last 7 days">Views</span>
+						<span class="text-right">Size</span>
+						<span class="text-right">Created</span>
+					</div>
+					<ul class={tableBody}>
+						{#each visible as row (row.slug)}
+							{@const views = data.recent[row.slug] ?? 0}
+							<li>
+								<a
+									href="/admin/pastes?s={encodeURIComponent(row.slug)}"
+									data-sveltekit-noscroll
+									aria-current={data.selected?.slug === row.slug ? 'true' : undefined}
+									class="{tableRow} {cols}"
+								>
+									<span class="flex min-w-0 items-center gap-2 {rowTitle}">
+										<span class="truncate">/p/{row.slug}</span>
+										{#if row.expired}
+											<span class={badge}>Expired</span>
+										{:else if !row.cache}
+											<span class={badge} title="Served fresh on every view">Uncached</span>
+										{/if}
 									</span>
-								{/if}
-							</span>
 
-							<span class="col-start-1 truncate font-mono text-xs text-text-muted md:[grid-area:1/2]">{snippet(row.body) || '\u200b'}</span>
+									<span
+										class="col-start-1 truncate font-mono text-xs text-text-muted md:col-start-auto"
+									>
+										{snippet(row.body) || '​'}
+									</span>
 
-							{#if row.note}
-								<span class="col-start-1 truncate text-xs text-text-muted md:[grid-area:1/3]">{row.note}</span>
-							{/if}
+									<span class="hidden truncate text-sm text-text-muted md:block">{row.note ?? ''}</span>
 
-							<span class="tnum text-right text-sm text-text-muted md:[grid-area:1/4]" title="Size of the body">
-								{fmtBytes(new TextEncoder().encode(row.body).length)}
-							</span>
+									<span
+										class="col-start-2 row-start-2 text-right text-xs text-text-muted md:col-start-auto md:row-start-auto md:text-sm"
+									>
+										{views}<span class="md:sr-only">&nbsp;{views === 1 ? 'view' : 'views'}</span>
+									</span>
 
-							<span class="tnum text-right text-sm text-text-muted md:[grid-area:1/5]" title="Views in the last 7 days">
-								{data.recent[row.slug] ?? 0}
-							</span>
+									<span class="hidden text-right text-sm text-text-muted md:block">
+										{fmtBytes(encoder.encode(row.body).length)}
+									</span>
 
-							<span class="tnum text-right text-xs text-text-muted md:[grid-area:1/6]">{fmtDay(row.created_at)}</span>
-						</a>
-					</li>
-				{/each}
-			</ul>
+									<span
+										class="col-start-2 row-start-1 text-right text-xs text-text-subtle md:col-start-auto md:row-start-auto md:text-sm md:text-text-muted"
+									>
+										{fmtDay(row.created_at)}
+									</span>
+								</a>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
 		{/if}
-	</section>
+	{/snippet}
 
-	<aside class={detailAside} aria-label="Paste details">
-		<a href="/admin/pastes" data-sveltekit-noscroll class={backLink}>
-			<ChevronLeft size={16} aria-hidden="true" />
-			All pastes
-		</a>
-
-		<div class="max-lg:animate-pane-rise">
-			{#if creating}
-				<h2 class="mb-5 text-lg font-semibold">New paste</h2>
+	{#snippet detail()}
+		{#if creating}
+			<DetailHeader title="New paste" close="/admin/pastes" backLabel="Pastes" />
+			<div class="p-4 md:p-5">
 				<PasteForm
 					row={null}
 					fields={form?.intent === 'create' ? form.fields : undefined}
 					values={form?.intent === 'create' ? form.values : undefined}
-					error={form?.error}
-					onDone={() => goto('/admin/pastes', { noScroll: true })}
+					error={form?.intent === 'create' ? form.error : undefined}
+					onDone={(slug) =>
+						goto(slug ? `/admin/pastes?s=${encodeURIComponent(slug)}` : '/admin/pastes', {
+							noScroll: true
+						})}
 				/>
-			{:else if data.selected}
-				<h2 class="mb-1 text-lg font-semibold">/p/{data.selected.slug}</h2>
-				<p class="mb-5 truncate text-sm text-text-muted">{snippet(data.selected.body)}</p>
-				<PasteForm
-					row={data.selected}
-					fields={form?.intent === 'update' ? form.fields : undefined}
-					values={form?.intent === 'update' ? form.values : undefined}
-					error={form?.error}
-					onDone={() => goto('/admin/pastes', { noScroll: true })}
-				/>
-			{:else}
+			</div>
+		{:else if data.selected}
+			{@const href = `/p/${data.selected.slug}`}
+			<DetailHeader title="/p/{data.selected.slug}" close="/admin/pastes" backLabel="Pastes">
+				{#snippet actions()}
+					<CopyButton text="{page.url.origin}{href}" label="Copy link" />
+					<a
+						{href}
+						target="_blank"
+						rel="noopener"
+						class={iconButton}
+						aria-label="Open paste"
+						title="Open paste"
+					>
+						<ArrowUpRight size={16} aria-hidden="true" />
+					</a>
+				{/snippet}
+			</DetailHeader>
+			<div class="p-4 md:p-5">
+				{#key data.selected.slug}
+					<PasteForm
+						row={data.selected}
+						fields={form?.intent === 'update' ? form.fields : undefined}
+						values={form?.intent === 'update' ? form.values : undefined}
+						error={form?.intent === 'update' || form?.intent === 'delete' ? form.error : undefined}
+						onDone={() => goto('/admin/pastes', { noScroll: true })}
+					/>
+				{/key}
+			</div>
+		{:else}
+			<div class="grid h-full min-h-40 place-items-center p-8 text-center max-lg:hidden">
 				<p class="text-sm text-text-muted">
-					Select a paste to edit it, or press <kbd class={kbd}>n</kbd> for a new one.
+					Select a paste, or press <kbd class={kbd}>N</kbd> to create one.
 				</p>
-			{/if}
-		</div>
-	</aside>
-</div>
-
+			</div>
+		{/if}
+	{/snippet}
+</MasterDetail>

@@ -134,6 +134,29 @@ export async function clearCache(env: Env): Promise<HomeDoc | null> {
 	return next;
 }
 
+export async function readPrevious(env: Env): Promise<HomeDoc | null> {
+	return await env.KV.get<HomeDoc>(PREV, { type: 'json' });
+}
+
 export async function hasPrevious(env: Env): Promise<boolean> {
 	return (await env.KV.get(PREV, { type: 'text' })) !== null;
+}
+
+/**
+ * Writes a document back into the D1 row. A revert swaps the KV documents, but
+ * D1 is the source of truth every later save rebuilds the draft from — without
+ * this, the next unrelated edit would quietly resurrect the reverted content.
+ */
+export async function restoreToD1(env: Env, doc: HomeDoc): Promise<void> {
+	await env.DB.prepare(
+		`UPDATE profile SET name = ?, tagline = ?, avatar = ?, links = ?, content = ? WHERE id = 1`
+	)
+		.bind(
+			doc.profile.name,
+			doc.profile.tagline,
+			doc.profile.avatar,
+			JSON.stringify(doc.profile.links ?? []),
+			doc.markdown || null
+		)
+		.run();
 }

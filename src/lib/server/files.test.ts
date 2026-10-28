@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanName, randomFileSlug } from './files';
+import { asciiName, cleanName, contentDisposition, randomFileSlug } from './files';
 import { SLUG_PATTERN } from '$lib/reserved';
 
 /**
@@ -19,6 +19,19 @@ describe('randomFileSlug', () => {
 
 	it('never uses ambiguous characters', () => {
 		expect(randomFileSlug()).not.toMatch(/[ilo01]/);
+	});
+});
+
+describe('contentDisposition', () => {
+	it('keeps the header ASCII so a non-Latin name cannot fail the download', () => {
+		const header = contentDisposition('보고서 final.pdf');
+		expect(header).toMatch(/^[\x20-\x7e]+$/);
+		expect(() => new Headers({ 'content-disposition': header })).not.toThrow();
+	});
+
+	it('carries the real name in the RFC 5987 form', () => {
+		expect(contentDisposition('보고서.pdf')).toContain(`filename*=UTF-8''${encodeURIComponent('보고서.pdf')}`);
+		expect(asciiName('보고서.pdf')).toBe('___.pdf');
 	});
 });
 

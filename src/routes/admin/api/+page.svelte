@@ -1,26 +1,18 @@
 <script lang="ts">
-	import { card } from '$lib/ui/styles';
-
-	// A copy-pasteable code block. Long URLs scroll inside it rather than
-	// widening the page.
-	const snippet =
-		'overflow-x-auto rounded-[var(--radius-ui)] bg-surface-sunken px-4 py-3.5 font-mono text-xs leading-[1.65] whitespace-pre [-webkit-overflow-scrolling:touch]';
+	import { page } from '$app/state';
+	import CopyButton from '$lib/ui/CopyButton.svelte';
+	import PageHeader from '$lib/ui/PageHeader.svelte';
+	import { card, cardTitle } from '$lib/ui/styles';
 
 	/**
 	 * Reference for the shortener API, written against the routes rather than
-	 * generated from them — a generated page would be one more thing to keep
-	 * running, and this API is five endpoints that change about once a year.
-	 *
-	 * Every example is copy-pasteable and none of them contain a real token.
+	 * generated from them — five endpoints that change about once a year do
+	 * not earn a generator. Every example is copy-pasteable, addresses the
+	 * host you are reading it on (so a preview deployment never hands you
+	 * production curl lines), and none contains a real token.
 	 */
 
-	let origin = $state('https://ij5.dev');
-
-	// The examples should address whatever host you are reading them on, so a
-	// preview deployment does not hand you curl lines pointing at production.
-	$effect(() => {
-		origin = window.location.origin;
-	});
+	let origin = $derived(page.url.origin);
 
 	type Endpoint = {
 		method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
@@ -31,16 +23,11 @@
 	};
 
 	const ENDPOINTS: Endpoint[] = [
-		{
-			method: 'GET',
-			path: '/api/links',
-			summary: 'Every link, newest first.',
-			returns: '{ "links": [ … ] }'
-		},
+		{ method: 'GET', path: '/api/links', summary: 'Every link, newest first.', returns: '{ "links": [ … ] }' },
 		{
 			method: 'POST',
 			path: '/api/links',
-			summary: 'Create a link. Fails if the slug is taken or reserved.',
+			summary: 'Create a link.',
 			body: `{
   "slug": "talk",
   "url": "https://example.com/watch",
@@ -48,130 +35,134 @@
   "note": "Conference talk",
   "expires_at": null
 }`,
-			returns: '201 with the created link'
+			returns: '201 and the link'
 		},
-		{
-			method: 'GET',
-			path: '/api/links/{slug}',
-			summary: 'One link.',
-			returns: 'The link, or 404'
-		},
+		{ method: 'GET', path: '/api/links/{slug}', summary: 'One link.', returns: 'The link' },
 		{
 			method: 'PATCH',
 			path: '/api/links/{slug}',
-			summary:
-				'Change a link. Send only the fields you are changing; null clears note or expiry.',
+			summary: 'Change a link. Send only what changes; null clears the note or expiry.',
 			body: `{ "url": "https://example.com/new" }`,
 			returns: 'The updated link'
 		},
 		{
 			method: 'DELETE',
 			path: '/api/links/{slug}',
-			summary: 'Remove a link from D1 and KV.',
+			summary: 'Delete a link.',
 			returns: '{ "slug": "talk", "deleted": true }'
 		}
 	];
 
 	const FIELDS = [
-		['slug', 'string', 'Letters, numbers, hyphens, underscores. 1–64 characters, no leading separator.'],
-		['url', 'string', 'Absolute URL including the scheme.'],
-		['status', '301 | 302', 'Defaults to 302. A 301 is cached by the browser forever — only for links you will never repoint.'],
-		['note', 'string | null', 'Yours, never served to visitors.'],
-		['expires_at', 'number | null', 'Epoch milliseconds. Checked lazily on read; the row survives for history.']
+		['slug', 'string', 'Letters, numbers, hyphens and underscores, up to 64.'],
+		['url', 'string', 'A full URL: https://, mailto:, tel: or sms:.'],
+		['status', '301 | 302', '302 unless the link will never move — browsers cache a 301 for good.'],
+		['note', 'string | null', 'For you; never shown to visitors.'],
+		['expires_at', 'number | null', 'Epoch milliseconds.']
 	];
 
 	const STATUSES = [
-		['401', 'Missing or wrong bearer token.'],
+		['400', 'The body is not JSON.'],
+		['401', 'The bearer token is missing or wrong.'],
 		['404', 'No link with that slug.'],
-		['409', 'Slug is taken, or reserved by the site itself.'],
-		['422', 'Body failed validation. The response carries a `fields` object.'],
-		['503', 'Deployment has no bindings or no configured token.']
+		['409', 'The slug is taken or reserved.'],
+		['422', 'The body failed validation; its fields object names each problem.']
 	];
+
+	const method = {
+		GET: 'text-text-muted',
+		POST: 'text-success',
+		PATCH: 'text-warning',
+		DELETE: 'text-danger'
+	};
+
+	let auth = $derived(`curl ${origin}/api/links \\\n  -H "Authorization: Bearer $IJ5_TOKEN"`);
+	let create = $derived(
+		`curl -X POST ${origin}/api/links \\\n  -H "Authorization: Bearer $IJ5_TOKEN" \\\n  -H "Content-Type: application/json" \\\n  -d '{"slug":"talk","url":"https://example.com/watch"}'`
+	);
 </script>
 
-<svelte:head><title>API · ij5</title></svelte:head>
+<svelte:head><title>API</title></svelte:head>
 
-<header class="mb-6">
-	<h1 class="text-xl font-semibold">API</h1>
-	<p class="mt-1 max-w-[68ch] text-sm text-pretty text-text-muted">
-		A REST interface to the shortener, for scripts and shortcuts. Links created here mirror into
-		KV exactly like links created in the UI, so a new slug resolves on the next request.
-	</p>
-</header>
+{#snippet code(text: string)}
+	<!-- Long lines scroll inside the block rather than widening the page. -->
+	<div class="relative">
+		<pre
+			class="overflow-x-auto rounded-[var(--radius-ui)] bg-surface-sunken py-3 ps-4 pe-12 font-mono text-[12.5px] leading-[1.65] whitespace-pre">{text}</pre>
+		<div
+			class="absolute top-1 right-1 rounded-[var(--radius-ui-sm)] bg-surface-sunken shadow-[-12px_0_12px_var(--surface-sunken)]"
+		>
+			<CopyButton {text} label="Copy" />
+		</div>
+	</div>
+{/snippet}
 
-<section class="{card} mb-4">
-	<h2 class="text-sm font-semibold">Authentication</h2>
-	<p class="mt-1 max-w-[68ch] text-sm text-pretty text-text-muted">
-		Send the same token you sign in with as a bearer header. The session cookie is deliberately
-		not accepted: a cookie rides along on any request a browser is talked into making, and a
-		token has to be supplied on purpose. Rotate it by changing <code class="font-mono">AUTH_HASH</code>.
-	</p>
+<PageHeader title="API" />
 
-	<pre class="{snippet} mt-3">curl {origin}/api/links \
-  -H "Authorization: Bearer $IJ5_TOKEN"</pre>
-</section>
+<div class="mx-auto flex max-w-3xl flex-col gap-8 px-4 pt-1 pb-10 md:px-6 md:pt-8">
+	<section>
+		<h2 class="{cardTitle} mb-1">Authentication</h2>
+		<p class="mb-3 text-sm text-pretty text-text-muted">
+			Send your sign-in token as a bearer token. The session cookie is not accepted here.
+		</p>
+		{@render code(auth)}
+	</section>
 
-<section class="{card} mb-4">
-	<h2 class="text-sm font-semibold">Endpoints</h2>
+	<section>
+		<h2 class="{cardTitle} mb-3">Endpoints</h2>
+		<ul class="{card} flex flex-col divide-y divide-border-subtle p-0 md:p-0">
+			{#each ENDPOINTS as endpoint (endpoint.method + endpoint.path)}
+				<li class="flex flex-col gap-2 p-4 md:p-5">
+					<p class="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+						<span class="w-14 shrink-0 font-mono text-xs font-semibold {method[endpoint.method]}">
+							{endpoint.method}
+						</span>
+						<code class="font-mono text-sm font-medium">{endpoint.path}</code>
+					</p>
+					<p class="text-sm text-pretty text-text-muted">{endpoint.summary}</p>
+					{#if endpoint.body}
+						{@render code(endpoint.body)}
+					{/if}
+					<p class="text-xs text-text-muted">
+						Returns <code class="font-mono text-text">{endpoint.returns}</code>
+					</p>
+				</li>
+			{/each}
+		</ul>
+	</section>
 
-	<ul class="mt-3 flex flex-col gap-4 [&>li+li]:pt-3">
-		{#each ENDPOINTS as endpoint (endpoint.method + endpoint.path)}
-			<li>
-				<p class="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-					<span class="font-mono text-2xs font-semibold text-text-subtle data-[method=DELETE]:text-danger" data-method={endpoint.method}>{endpoint.method}</span>
-					<code class="font-mono text-sm font-medium">{endpoint.path}</code>
-				</p>
-				<p class="mt-1.5 max-w-[68ch] text-sm text-pretty text-text-muted">{endpoint.summary}</p>
-
-				{#if endpoint.body}
-					<pre class="{snippet} mt-2">{endpoint.body}</pre>
-				{/if}
-
-				<p class="mt-1.5 text-xs text-text-subtle">
-					Returns <code class="font-mono">{endpoint.returns}</code>
-				</p>
-			</li>
-		{/each}
-	</ul>
-</section>
-
-<div class="grid gap-4 lg:grid-cols-2">
-	<section class={card}>
-		<h2 class="text-sm font-semibold">Fields</h2>
-		<dl class="mt-3 flex flex-col gap-3">
+	<section>
+		<h2 class="{cardTitle} mb-3">Fields</h2>
+		<dl class="{card} flex flex-col divide-y divide-border-subtle p-0 md:p-0">
 			{#each FIELDS as [name, type, description] (name)}
-				<div>
-					<dt class="flex flex-wrap items-baseline gap-2">
+				<div class="grid gap-1 p-4 md:grid-cols-[9rem_minmax(0,1fr)] md:gap-4 md:px-5">
+					<dt class="flex flex-wrap items-baseline gap-x-2">
 						<code class="font-mono text-sm font-medium">{name}</code>
-						<span class="text-xs text-text-subtle">{type}</span>
+						<span class="font-mono text-xs text-text-subtle">{type}</span>
 					</dt>
-					<dd class="mt-0.5 max-w-[60ch] text-sm text-pretty text-text-muted">{description}</dd>
+					<dd class="text-sm text-pretty text-text-muted">{description}</dd>
 				</div>
 			{/each}
 		</dl>
 	</section>
 
-	<section class={card}>
-		<h2 class="text-sm font-semibold">Errors</h2>
-		<p class="mt-1 text-sm text-text-muted">
-			Every failure is JSON with an <code class="font-mono">error</code> sentence.
+	<section>
+		<h2 class="{cardTitle} mb-1">Errors</h2>
+		<p class="mb-3 text-sm text-text-muted">
+			Every failure is JSON with an <code class="font-mono text-text">error</code> sentence.
 		</p>
-		<dl class="mt-3 flex flex-col gap-3">
-			{#each STATUSES as [code, meaning] (code)}
-				<div class="flex gap-3">
-					<dt class="tnum w-8 shrink-0 text-sm font-medium">{code}</dt>
-					<dd class="max-w-[52ch] text-sm text-pretty text-text-muted">{meaning}</dd>
+		<dl class="{card} flex flex-col divide-y divide-border-subtle p-0 md:p-0">
+			{#each STATUSES as [status, meaning] (status)}
+				<div class="flex gap-4 px-4 py-3 md:px-5">
+					<dt class="w-9 shrink-0 font-mono text-sm font-medium">{status}</dt>
+					<dd class="text-sm text-pretty text-text-muted">{meaning}</dd>
 				</div>
 			{/each}
 		</dl>
+	</section>
+
+	<section>
+		<h2 class="{cardTitle} mb-3">Example</h2>
+		{@render code(create)}
 	</section>
 </div>
-
-<section class="{card} mt-4">
-	<h2 class="text-sm font-semibold">Create a link</h2>
-	<pre class="{snippet} mt-3">curl -X POST {origin}/api/links \
-  -H "Authorization: Bearer $IJ5_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '&lbrace;"slug":"talk","url":"https://example.com/watch"&rbrace;'</pre>
-</section>
-

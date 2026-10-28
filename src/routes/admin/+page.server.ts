@@ -19,14 +19,14 @@ const form = z.object({
 	slug: z
 		.string()
 		.trim()
-		.regex(SLUG_PATTERN, 'Letters, numbers, hyphens and underscores. No dots or slashes.'),
+		.regex(SLUG_PATTERN, 'Use letters, numbers, hyphens and underscores.'),
 	target_url: z
 		.string()
 		.trim()
-		.refine(isTargetUrl, 'Needs a full URL — https://, mailto:, tel: or sms:'),
+		.refine(isTargetUrl, 'Use a full URL, starting with https://, mailto:, tel: or sms:'),
 	// 301 is browser-cached forever, so it is opt-in per link rather than the
 	// default: you will eventually want to repoint something.
-	status: z.coerce.number().int().refine((v) => v === 301 || v === 302, 'Pick 301 or 302'),
+	status: z.coerce.number().int().refine((v) => v === 301 || v === 302, 'Pick temporary or permanent.'),
 	note: z
 		.string()
 		.trim()
@@ -81,7 +81,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 		),
 		env.DB.prepare(
 			`SELECT slug, SUM(n) AS hits FROM hits
-			 WHERE kind = 'redirect' AND device != 'bot' AND day >= date('now','-7 day')
+			 WHERE kind = 'redirect' AND device != 'bot' AND day >= date('now','-6 day')
 			 GROUP BY slug`
 		)
 	]);
@@ -135,8 +135,8 @@ export const actions: Actions = {
 			});
 		}
 
-		// The hook checks links before pastes, so a link that shares a name
-		// with a paste would shadow it silently. Reject here instead.
+		// Links, pastes and files share one namespace of names, so a name means
+		// one thing wherever it is typed.
 		if (await getPaste(env, parsed.row.slug)) {
 			return fail(409, {
 				intent: 'create',
@@ -178,7 +178,7 @@ export const actions: Actions = {
 		if (!env) return fail(500, { error: 'No platform bindings.' });
 
 		const slug = String((await request.formData()).get('slug') ?? '');
-		if (!slug) return fail(400, { error: 'No slug given.' });
+		if (!slug) return fail(400, { intent: 'delete', error: 'No link given.' });
 
 		await deleteSlug(env, slug);
 		await purgeLocalCache(platform, slug);

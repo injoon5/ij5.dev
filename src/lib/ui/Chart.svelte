@@ -19,7 +19,7 @@
 
 	type Point = { day: string; hits: number };
 
-	let { data, label = 'hits' }: { data: Point[]; label?: string } = $props();
+	let { data, label = 'visits' }: { data: Point[]; label?: string } = $props();
 
 	// The wash gradient needs a stable, unique id per instance — a hardcoded id
 	// would collide the day a page renders two charts.
@@ -92,16 +92,18 @@
 	const compact = (v: number) =>
 		v >= 10000 ? `${Math.round(v / 1000)}k` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v);
 
-	let current = $derived(active !== null ? data[active] : null);
+	// The readout always names a day: the one under the pointer, or the most
+	// recent one at rest. Scrubbing then reads as moving through time from
+	// "now", rather than switching between two kinds of number.
+	let shownIndex = $derived(active ?? data.length - 1);
+	let current = $derived(data[shownIndex] ?? null);
 
 	const fmtDay = (day: string) =>
 		new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short' }).format(
 			new Date(`${day}T00:00:00Z`)
 		);
 
-	let readout = $derived(
-		current ? `${current.hits} ${label} on ${fmtDay(current.day)}` : `peak ${max} ${label} in range`
-	);
+	let readout = $derived(current ? `${current.hits} ${label} on ${fmtDay(current.day)}` : '');
 
 	function indexAt(clientX: number) {
 		const rect = plot?.getBoundingClientRect();
@@ -151,7 +153,7 @@
 	function onkeydown(event: KeyboardEvent) {
 		if (!data.length) return;
 		const last = data.length - 1;
-		const at = active ?? last;
+		const at = shownIndex;
 		let to: number | null = null;
 
 		if (event.key === 'ArrowLeft') to = Math.max(0, at - 1);
@@ -179,9 +181,9 @@
 	<!-- No live region: `aria-valuetext` on the plot below is the spoken
 	     channel, and announcing both means every scrub is said twice. -->
 	<div class="flex items-baseline gap-2" aria-hidden="true">
-		<span class="tnum text-2xl font-semibold">{(current ?? { hits: max }).hits}</span>
-		<span class="text-sm text-text-muted">
-			{#if current}{label} on {fmtDay(current.day)}{:else}peak {label} in range{/if}
+		<span class="tnum text-2xl font-semibold tracking-[-0.02em]">{current?.hits ?? 0}</span>
+		<span class="tnum text-sm text-text-muted">
+			{label} on {current ? fmtDay(current.day) : ''}
 		</span>
 	</div>
 
@@ -196,7 +198,7 @@
 		aria-label="Traffic over time"
 		aria-valuemin="0"
 		aria-valuemax={data.length - 1}
-		aria-valuenow={active ?? data.length - 1}
+		aria-valuenow={shownIndex}
 		aria-valuetext={readout}
 		{onkeydown}
 		{onpointerdown}
@@ -220,7 +222,7 @@
 			     not even a tick mark. The numbers are there to size the line, and
 			     anything drawn to connect them to it competes with the line. -->
 			{#each ticks as tick (tick)}
-				<text class="fill-text-subtle text-[11px] tnum" x="0" y={y(tick)} dominant-baseline="middle">{compact(tick)}</text>
+				<text class="fill-text-subtle text-[11px]" x="0" y={y(tick)} dominant-baseline="middle">{compact(tick)}</text>
 			{/each}
 
 			{#if single}
@@ -247,7 +249,7 @@
 				/>
 			{/if}
 
-			{#if current && !single}
+			{#if active !== null && current && !single}
 				<line
 					x1={x(active!)}
 					x2={x(active!)}
@@ -282,7 +284,7 @@
 		distance nobody measures; two staggered left edges is one anybody sees.
 	-->
 	<div class="mt-2 flex justify-between text-xs text-text-subtle">
-		<span class="tnum">{fmtDay(data[0].day)}</span>
-		{#if !single}<span class="tnum">{fmtDay(data[data.length - 1].day)}</span>{/if}
+		<span>{fmtDay(data[0].day)}</span>
+		{#if !single}<span>{fmtDay(data[data.length - 1].day)}</span>{/if}
 	</div>
 {/if}

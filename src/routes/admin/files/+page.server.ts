@@ -46,12 +46,16 @@ export const actions: Actions = {
 			expires: String(data.get('expires') ?? '')
 		};
 
-		if (!(file instanceof File)) return fail(400, { intent: 'create', error: 'Choose a file to upload.' });
-		if (file.size === 0) return fail(400, { intent: 'create', error: 'That file is empty.' });
+		// A form posted with nothing picked still carries a nameless, empty File.
+		if (!(file instanceof File) || (!file.name && file.size === 0)) {
+			return fail(400, { intent: 'create', fields: { file: 'Choose a file.' }, values });
+		}
+		if (file.size === 0) return fail(400, { intent: 'create', fields: { file: 'That file is empty.' }, values });
 		if (file.size > MAX_FILE_BYTES) {
 			return fail(400, {
 				intent: 'create',
-				error: `Files are capped at ${(MAX_FILE_BYTES / 1024 / 1024).toFixed(0)} MB.`
+				fields: { file: `Files can be up to ${(MAX_FILE_BYTES / 1024 / 1024).toFixed(0)} MB.` },
+				values
 			});
 		}
 
@@ -62,7 +66,7 @@ export const actions: Actions = {
 
 		if (slug) {
 			if (!SLUG_PATTERN.test(slug)) {
-				fields.slug = 'Letters, numbers, hyphens and underscores. No dots or slashes.';
+				fields.slug = 'Use letters, numbers, hyphens and underscores.';
 			} else if (RESERVED.has(slug)) {
 				fields.slug = `"${slug}" is reserved by the site itself.`;
 			} else if (!(await slugAvailable(env, slug))) {
@@ -73,7 +77,7 @@ export const actions: Actions = {
 				const candidate = randomFileSlug();
 				if (await slugAvailable(env, candidate)) slug = candidate;
 			}
-			if (!slug) fields.slug = 'Could not find a free slug; try again.';
+			if (!slug) fields.slug = 'Could not find a free name. Try again.';
 		}
 
 		if (fields.slug) return fail(400, { intent: 'create', fields, values });
@@ -96,9 +100,11 @@ export const actions: Actions = {
 		if (!env) return fail(500, { error: 'No platform bindings.' });
 
 		const slug = String((await request.formData()).get('slug') ?? '');
-		if (!slug) return fail(400, { error: 'No slug given.' });
+		if (!slug) return fail(400, { intent: 'delete', error: 'No file given.' });
 
-		if (!(await getFile(env, slug))) return fail(404, { error: 'That file no longer exists.' });
+		if (!(await getFile(env, slug))) {
+			return fail(404, { intent: 'delete', error: 'That file no longer exists.' });
+		}
 
 		await deleteFile(env, slug);
 		return { deleted: slug };

@@ -6,18 +6,13 @@
 
 	let { data }: { data: PageData } = $props();
 
-	let ext = $derived.by(() => {
-		const dot = data.file.name.lastIndexOf('.');
-		return dot > 0 ? data.file.name.slice(dot + 1).toLowerCase() : '';
-	});
-
-	// The size already sits in the sub line above, so it is deliberately left
-	// out here rather than repeated.
+	// The name already carries the extension, so the line under it is the
+	// size — what decides whether to tap Download on a phone — and the dates.
 	let sub = $derived(
 		[
-			`uploaded ${fmtDate(data.file.created_at)}`,
-			data.file.expires_at ? `expires ${fmtDate(data.file.expires_at)}` : null,
-			`${data.file.downloads} ${data.file.downloads === 1 ? 'download' : 'downloads'}`
+			fmtBytes(data.file.bytes),
+			fmtDate(data.file.created_at),
+			data.file.expires_at ? `Expires ${fmtDate(data.file.expires_at)}` : null
 		]
 			.filter(Boolean)
 			.join(' · ')
@@ -34,53 +29,47 @@
 </svelte:head>
 
 <main
-	class="mx-auto flex min-h-dvh max-w-[30rem] flex-col pt-[clamp(2.5rem,10vh,5rem)] pr-[max(1.25rem,env(safe-area-inset-right))] pb-[calc(2.5rem+env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]"
+	class="mx-auto flex min-h-dvh max-w-[26rem] flex-col pt-[max(1.25rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(2rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] sm:pt-12"
 >
-	<header class="mb-8 flex justify-center">
+	<nav class="flex justify-center">
 		<a
 			href="/"
-			class="text-[15px] font-semibold tracking-[-0.01em] transition-colors duration-150 ease-out hover:text-accent"
+			class="rounded-[var(--radius-ui-sm)] px-2 py-1.5 text-[0.9375rem] font-semibold tracking-[-0.01em] transition-colors duration-150 ease-out hover:text-accent"
 		>
 			ij5.dev
 		</a>
-	</header>
+	</nav>
 
 	<!-- The hero object rises in on load: a rare screen, so the small delight is
 	     warranted. `animate-rise` collapses to instant under reduced motion. -->
 	<section
-		class="animate-rise flex flex-col items-center rounded-[var(--radius-widget)] bg-surface px-6 py-9 text-center shadow-[var(--shadow-widget)] [corner-shape:squircle]"
+		class="animate-rise my-auto flex flex-col items-center rounded-[var(--radius-widget)] bg-surface px-6 pt-9 pb-6 text-center shadow-[var(--shadow-widget)] [corner-shape:squircle] sm:my-16"
 	>
 		<div
-			class="mb-[1.1rem] grid size-[3.25rem] place-items-center rounded-[var(--radius-inner-lg)] bg-surface-sunken text-text-muted"
+			class="mb-5 grid size-14 place-items-center rounded-[var(--radius-inner-lg)] bg-surface-sunken text-text-muted [corner-shape:squircle]"
 			aria-hidden="true"
 		>
-			<FileIcon size={22} />
+			<FileIcon size={24} strokeWidth={1.75} />
 		</div>
 
-		<h1 class="text-lg font-semibold tracking-[-0.014em] [overflow-wrap:anywhere]" title={data.file.name}>
+		<h1 class="text-lg leading-snug font-semibold tracking-[-0.014em] [overflow-wrap:anywhere]">
 			{data.file.name}
 		</h1>
-		<p class="mt-1.5 font-mono text-xs text-text-subtle">
-			{ext ? `${ext.toUpperCase()} · ` : ''}{fmtBytes(data.file.bytes)}
-		</p>
-		<p class="mt-3 text-xs text-text-muted">{sub}</p>
+		<p class="mt-1.5 text-sm text-text-muted">{sub}</p>
 
-		<!-- On hover the arrow nudges down — the direction a download travels. -->
+		<!-- On hover the arrow nudges down — the direction a download travels.
+		     Full width: on a phone this is the one thing the page is for. -->
 		<a
-			class="group mt-7 inline-flex items-center gap-2 rounded-[var(--radius-ui)] bg-accent px-6 py-2.5 text-sm font-medium text-accent-contrast transition-[background-color,scale] duration-150 ease-[var(--ease-press)] hover:bg-accent-hover active:scale-[0.97]"
+			class="group mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-ui-lg)] bg-accent text-[0.9375rem] font-medium text-accent-contrast shadow-[inset_0_1px_0_oklch(1_0_0/0.12)] transition-[background-color,scale] duration-150 ease-[var(--ease-press)] hover:bg-accent-hover active:scale-[0.96] pointer-fine:h-11 pointer-fine:text-sm"
 			href="/d/{data.file.slug}/file"
 			rel="nofollow"
 		>
 			<Download
-				size={16}
+				size={17}
 				aria-hidden="true"
 				class="transition-transform duration-200 ease-out group-hover:translate-y-0.5"
 			/>
 			Download
 		</a>
 	</section>
-
-	<footer class="pt-10 text-center font-mono text-xs text-text-muted">
-		<a href="/" class="transition-colors duration-150 ease-out hover:text-text">file on ij5.dev</a>
-	</footer>
 </main>

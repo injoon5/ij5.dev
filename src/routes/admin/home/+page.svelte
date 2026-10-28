@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { enhance } from '$app/forms';
-	import Rocket from 'lucide-svelte/icons/rocket';
-	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
-	import Undo from 'lucide-svelte/icons/undo-2';
+	import { applyAction, deserialize, enhance } from '$app/forms';
+	import { beforeNavigate } from '$app/navigation';
+	import type { SubmitFunction } from '@sveltejs/kit';
+	import Ellipsis from 'lucide-svelte/icons/ellipsis';
 	import Button from '$lib/ui/Button.svelte';
+	import PageHeader from '$lib/ui/PageHeader.svelte';
 	import { pending } from '$lib/ui/pending.svelte';
+	import { iconButton, notice } from '$lib/ui/styles';
 	import type { AssetRow } from '$lib/types';
 	import type { ActionData, PageData } from './$types';
 	import IdentityForm from './IdentityForm.svelte';
@@ -14,18 +16,36 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	// The editing buffer. Seeded once from the draft; a save round-trip does not
-	// overwrite what someone is still typing.
+	// The editing buffer, seeded once from the draft. A save round trip does
+	// not overwrite what someone is still typing; a revert does (below).
 	// svelte-ignore state_referenced_locally
 	let content = $state(data.draft.markdown ?? '');
 	let textarea = $state<HTMLTextAreaElement | null>(null);
 
-	// The uploaded files. Seeded from the load, then mutated locally by uploads
-	// and deletes. When the page load re-runs (after a save/publish/revert),
-	// the server list is authoritative and re-seeds this — otherwise a delete
-	// elsewhere would linger in the client's copy. The effect tracks only the
-	// server list, never the local one, so an optimistic upload or delete is
-	// not undone by its own write.
+	let profileDirty = $state(false);
+	let profileForm = $state<HTMLFormElement | null>(null);
+	let saveForm = $state<HTMLFormElement | null>(null);
+	let menu = $state<HTMLDetailsElement | null>(null);
+
+	let contentDirty = $derived(content !== (data.draft.markdown ?? ''));
+	let unsaved = $derived(contentDirty || profileDirty);
+
+	// One status, most urgent first. "Unsaved" is about this browser tab;
+	// "unpublished" is the saved draft against what visitors see.
+	let status = $derived(
+		unsaved
+			? { label: 'Unsaved changes', dot: 'bg-warning' }
+			: data.dirty
+				? { label: 'Unpublished changes', dot: 'bg-accent' }
+				: data.publishedVersion
+					? { label: 'Published', dot: 'bg-success' }
+					: { label: 'Not published', dot: 'bg-text-subtle' }
+	);
+
+	// The uploaded images. Seeded from the load, then changed locally by
+	// uploads and deletes. When the load re-runs the server list wins — a
+	// delete elsewhere must not linger here — and the effect tracks only the
+	// server list, so a local change is not undone by its own write.
 	// svelte-ignore state_referenced_locally
 	let files = $state<AssetRow[]>(data.files);
 	$effect(() => {
@@ -35,12 +55,76 @@
 		});
 	});
 
-	const publishing = pending();
-	const reverting = pending();
-	const clearing = pending();
+	const saving = pending();
+	const clearing = pending({ onSuccess: () => menu?.removeAttribute('open') });
+	const reverting = pending({
+		onSuccess: () => {
+			// The revert rewrote the draft; the buffer follows it.
+			content = data.draft.markdown ?? '';
+			profileDirty = false;
+			menu?.removeAttribute('open');
+		}
+	});
+	const publishing = pending({ onSuccess: () => (profileDirty = false) });
+
+	const confirmRevert: SubmitFunction = (input) => {
+		if (!confirm('Put the previously published version back live? The current one is kept, so this can be undone.')) {
+			input.cancel();
+			return;
+		}
+		return reverting.submit(input);
+	};
+
+	/**
+	 * Publish ships what is on screen. The page text rides along in this
+	 * form; unsaved profile edits live in their own form, so they are saved
+	 * first — and if that save is rejected, nothing is published and the
+	 * profile's errors show where they belong.
+	 */
+	const publish: SubmitFunction = async (input) => {
+		if (profileDirty && profileForm) {
+			const res = await fetch('?/profile', {
+				method: 'POST',
+				headers: { 'x-sveltekit-action': 'true' },
+				body: new FormData(profileForm)
+			});
+			const result = deserialize(await res.text());
+			if (result.type !== 'success') {
+				input.cancel();
+				await applyAction(result);
+				return;
+			}
+			profileDirty = false;
+		}
+		return publishing.submit(input);
+	};
+
+	// ⌘S / Ctrl+S saves the draft, the way every editor does.
+	function onkeydown(event: KeyboardEvent) {
+		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+			event.preventDefault();
+			if (contentDirty) saveForm?.requestSubmit();
+			if (profileDirty) profileForm?.requestSubmit();
+		}
+	}
+
+	// Never lose typing to a stray click: leaving with unsaved edits asks.
+	beforeNavigate(({ cancel, type }) => {
+		if (!unsaved || type === 'leave') return;
+		if (!confirm('Leave without saving? Your changes will be lost.')) cancel();
+	});
+
+	function onbeforeunload(event: BeforeUnloadEvent) {
+		if (unsaved) event.preventDefault();
+	}
+
+	// A click anywhere outside the overflow menu closes it.
+	function onclick(event: MouseEvent) {
+		if (menu?.open && !menu.contains(event.target as Node)) menu.removeAttribute('open');
+	}
 
 	function onUploaded(meta: Omit<AssetRow, 'at'> & { at: number }) {
-		files = [meta, ...files];
+		if (!files.some((f) => f.key === meta.key)) files = [meta, ...files];
 	}
 
 	function insertAtCursor(snippet: string) {
@@ -60,15 +144,14 @@
 	}
 
 	function insertImageKey(key: string) {
-		insertAtCursor(`\n\n![photo](${key})\n\n`);
+		insertAtCursor(`\n\n![](${key})\n\n`);
 	}
 
 	function insertGalleryRow(key: string) {
-		// If the cursor sits inside a :::gallery block the key is just another
-		// row, so append it there; otherwise seed a fresh block at the cursor.
-		// `lastIndexOf` finds the gallery nearest the cursor rather than blindly
-		// using the first one in the document, and `close > start` confirms the
-		// cursor is actually inside it before appending.
+		// Inside a :::gallery block the key is just another row, so it goes
+		// there; otherwise a fresh block starts at the cursor. `lastIndexOf`
+		// finds the gallery nearest the cursor, and `close > start` confirms
+		// the cursor is actually inside it.
 		const start = textarea?.selectionStart ?? content.length;
 		const open = content.lastIndexOf(':::gallery', start);
 		const close = open >= 0 ? content.indexOf('\n:::', open + 9) : -1;
@@ -78,83 +161,89 @@
 			insertAtCursor(`\n\n:::gallery\n${key}\n:::\n\n`);
 		}
 	}
+
+	const menuItem =
+		'flex w-full items-center rounded-[var(--radius-ui-sm)] px-2.5 py-2 text-left text-sm transition-colors duration-100 ease-out hover:bg-row-active disabled:pointer-events-none disabled:opacity-45 pointer-coarse:py-3';
 </script>
 
 <svelte:head><title>Home</title></svelte:head>
+<svelte:window {onkeydown} {onbeforeunload} {onclick} />
 
-<header class="mb-6 flex flex-wrap items-center justify-between gap-3">
-	<div>
-		<h1 class="text-xl font-semibold">Home</h1>
-		<p class="mt-0.5 text-xs text-text-muted">
-			{#if data.dirty}
-				Draft has unpublished changes · live version {data.publishedVersion}
-			{:else}
-				Published · version {data.publishedVersion}
-			{/if}
-		</p>
-	</div>
-
-	<div class="flex items-center gap-2">
-		{#if data.canRevert}
-			<form method="POST" action="?/revert" use:enhance={reverting.submit}>
-				<Button type="submit" variant="ghost" size="sm" busy={reverting.busy} busyLabel="Reverting…">
-					<Undo size={14} aria-hidden="true" />
-					Revert
-				</Button>
-			</form>
-		{/if}
-
-		<form method="POST" action="?/clear" use:enhance={clearing.submit}>
-			<Button
-				type="submit"
-				variant="ghost"
-				size="sm"
-				disabled={data.publishedVersion === 0}
-				busy={clearing.busy}
-				busyLabel="Clearing…"
-				title="Re-render the homepage everywhere without publishing an edit"
+<PageHeader title="Home">
+	{#snippet meta()}
+		<span class="flex items-center gap-1.5 text-xs whitespace-nowrap text-text-muted" role="status">
+			<span class="size-1.5 rounded-full {status.dot}" aria-hidden="true"></span>
+			{status.label}
+		</span>
+	{/snippet}
+	{#snippet actions()}
+		<!-- The rarely-used, consequential actions live behind one button. -->
+		<details bind:this={menu} class="relative">
+			<summary class="{iconButton} list-none [&::-webkit-details-marker]:hidden" aria-label="More actions" title="More actions">
+				<Ellipsis size={16} aria-hidden="true" />
+			</summary>
+			<div
+				class="absolute top-full right-0 z-20 mt-1.5 w-60 origin-top-right rounded-[var(--radius-ui)] bg-surface p-1 shadow-[var(--shadow-pop)] starting:scale-95 starting:opacity-0 transition-[opacity,scale] duration-150 ease-out"
 			>
-				<RefreshCw size={14} aria-hidden="true" />
-				Clear cache
+				<form method="POST" action="?/revert" use:enhance={confirmRevert}>
+					<button type="submit" class={menuItem} disabled={!data.canRevert || reverting.busy}>
+						{reverting.busy ? 'Reverting…' : 'Revert to previous version'}
+					</button>
+				</form>
+				<form method="POST" action="?/clear" use:enhance={clearing.submit}>
+					<button
+						type="submit"
+						class={menuItem}
+						disabled={!data.publishedVersion || clearing.busy}
+						title="Re-render the live page everywhere without publishing an edit"
+					>
+						{clearing.busy ? 'Clearing…' : 'Clear cache'}
+					</button>
+				</form>
+			</div>
+		</details>
+
+		<form bind:this={saveForm} method="POST" action="?/save" use:enhance={saving.submit}>
+			<input type="hidden" name="content" value={content} />
+			<Button type="submit" variant="secondary" size="sm" disabled={!contentDirty} busy={saving.busy} busyLabel="Saving…">
+				Save
 			</Button>
 		</form>
 
-		<form method="POST" action="?/publish" use:enhance={publishing.submit}>
+		<form method="POST" action="?/publish" use:enhance={publish}>
+			<input type="hidden" name="content" value={content} />
 			<Button
 				type="submit"
 				variant="primary"
 				size="sm"
-				disabled={!data.dirty}
+				disabled={!unsaved && !data.dirty}
 				busy={publishing.busy}
 				busyLabel="Publishing…"
 			>
-				<Rocket size={14} aria-hidden="true" />
 				Publish
 			</Button>
 		</form>
-	</div>
-</header>
+	{/snippet}
+</PageHeader>
 
-{#if form?.published}
-	<p role="status" class="mb-4 rounded-[var(--radius-ui)] bg-accent-tint px-3 py-2 text-sm text-accent">
-		Version {form.published} is live everywhere.
-	</p>
-{:else if form?.reverted}
-	<p role="status" class="mb-4 rounded-[var(--radius-ui)] bg-accent-tint px-3 py-2 text-sm text-accent">
-		Rolled back. Version {form.reverted} is live.
-	</p>
-{:else if form?.cleared}
-	<p role="status" class="mb-4 rounded-[var(--radius-ui)] bg-accent-tint px-3 py-2 text-sm text-accent">
-		Cache cleared — version {form.cleared} is being re-rendered everywhere.
-	</p>
-{:else if form?.error}
-	<p role="alert" class="mb-4 rounded-[var(--radius-ui)] bg-danger-tint px-3 py-2 text-sm text-danger">
-		{form.error}
-	</p>
-{/if}
+<div class="flex flex-col gap-8 px-4 pt-2 pb-8 md:px-6 md:pt-6">
+	{#if form?.published}
+		<p role="status" class={notice.ok}>Published. The live page is up to date.</p>
+	{:else if form?.reverted}
+		<p role="status" class={notice.ok}>The previous version is live again.</p>
+	{:else if form?.cleared}
+		<p role="status" class={notice.ok}>Cache cleared. The live page re-renders on the next visit.</p>
+	{:else if form && 'error' in form && form.error}
+		<p role="alert" class={notice.error}>{form.error}</p>
+	{/if}
 
-<div class="flex flex-col gap-8">
-	<IdentityForm draft={data.draft.profile} assetsOrigin={data.assetsOrigin} {form} />
+	<IdentityForm
+		draft={data.draft.profile}
+		assetsOrigin={data.assetsOrigin}
+		fields={form?.intent === 'profile' ? form.fields : undefined}
+		bind:dirty={profileDirty}
+		bind:formEl={profileForm}
+	/>
 
 	<PageEditor
 		bind:content
@@ -166,4 +255,3 @@
 
 	<FileList bind:files assetsOrigin={data.assetsOrigin} onInsert={insertImageKey} onGallery={insertGalleryRow} />
 </div>
-

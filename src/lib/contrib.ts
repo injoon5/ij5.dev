@@ -22,10 +22,13 @@ const numberFmt = new Intl.NumberFormat('en');
  * refresh, in which case an empty lattice renders as a quiet year rather than a
  * hole). `user` labels the fallback and keys the live lookup.
  */
-export function renderContribGraph(data: ContribData | undefined, user: string): string {
+export function renderContribGraph(
+	data: ContribData | undefined,
+	user: string,
+	href = `https://github.com/${encodeURIComponent(user)}`
+): string {
 	const days = data?.days ?? [];
-	// A full year is 53 columns; at the width of a reading column each cell is
-	// comfortably tappable, so the whole calendar fits with room to breathe.
+	// A full year is 53 columns of seven days.
 	const trimmed = days.slice(-53 * 7);
 	const hasData = trimmed.length > 0;
 
@@ -37,7 +40,7 @@ export function renderContribGraph(data: ContribData | undefined, user: string):
 	// don't push the grid out of its 7-row shape.
 	const weeks = Math.ceil(cells.length / 7);
 
-	// 369 rows of `<i data-l="N">` add up: a short attribute name and an
+	// 371 cells of `<i data-l="N">` add up: a short attribute name and an
 	// unquoted single-digit value keep the year's markup a third smaller than
 	// a class plus `data-level`. The grid is aria-hidden, so there is no
 	// accessible name to preserve. `<i>` is not a void element, so it needs
@@ -49,12 +52,12 @@ export function renderContribGraph(data: ContribData | undefined, user: string):
 			? `${numberFmt.format(data.total)} contributions in the last year`
 			: `@${escapeHtml(user)} on GitHub`;
 
-	// The site's own `/gh` short link, not the profile URL, so the click stays
-	// on whichever origin is serving the page (dev and prod alike).
-	const href = '/gh';
+	// The caption is the link text. With data it reads as a number with no
+	// owner, so the accessible name adds whose year it is.
+	const name = hasData && data?.total !== undefined ? ` aria-label="${label} — @${escapeHtml(user)} on GitHub"` : '';
 
 	return (
-		`<a class="contrib" href="${href}" aria-label="${escapeHtml(user)} on GitHub">` +
+		`<a class="contrib" href="${escapeHtml(href)}" target="_blank" rel="noopener"${name}>` +
 		`<span class="contrib-mask">` +
 		`<span class="contrib-scroll"><span class="contrib-grid" style="--weeks:${weeks}" aria-hidden="true">${grid}</span></span>` +
 		`</span>` +

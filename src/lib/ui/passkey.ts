@@ -1,4 +1,5 @@
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
+import { errorMessage } from './upload';
 import type {
 	AuthenticationResponseJSON,
 	PublicKeyCredentialCreationOptionsJSON,
@@ -30,34 +31,31 @@ function message(e: unknown, fallback: string): string {
 	return e instanceof Error ? e.message : fallback;
 }
 
-async function responseError(res: Response, fallback: string): Promise<string> {
-	try {
-		const body = (await res.json()) as { error?: string };
-		return body.error ?? fallback;
-	} catch {
-		return fallback;
-	}
-}
+/** JSON in both directions, so a failure arrives as a sentence, not a page. */
+const post = (url: string, body?: unknown) =>
+	fetch(url, {
+		method: 'POST',
+		headers: { accept: 'application/json', 'content-type': 'application/json' },
+		body: body === undefined ? undefined : JSON.stringify(body)
+	});
 
 export async function signInWithPasskey(): Promise<PasskeyResult> {
 	if (!supported()) return { ok: false, error: 'This browser does not support passkeys.' };
 
 	try {
-		const begin = await fetch('/api/passkey/login/begin', { method: 'POST' });
-		const body = (await begin.json()) as { options?: PublicKeyCredentialRequestOptionsJSON };
-		if (!begin.ok || !body.options) {
-			return { ok: false, error: 'Passkey sign-in is unavailable right now.' };
+		const begin = await post('/api/passkey/login/begin');
+		if (!begin.ok) {
+			return { ok: false, error: await errorMessage(begin, 'Passkey sign-in is unavailable right now.') };
 		}
+		const body = (await begin.json()) as { options: PublicKeyCredentialRequestOptionsJSON };
 
 		const response = await startAuthentication({ optionsJSON: body.options });
 
-		const done = await fetch('/api/passkey/login/complete', {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ response: response as AuthenticationResponseJSON })
+		const done = await post('/api/passkey/login/complete', {
+			response: response as AuthenticationResponseJSON
 		});
 
-		if (!done.ok) return { ok: false, error: await responseError(done, 'That passkey did not work.') };
+		if (!done.ok) return { ok: false, error: await errorMessage(done, 'That passkey did not work.') };
 		return { ok: true };
 	} catch (e) {
 		const text = message(e, 'Passkey sign-in was cancelled.');
@@ -70,21 +68,20 @@ export async function registerPasskey(name: string): Promise<PasskeyResult> {
 	if (!supported()) return { ok: false, error: 'This browser does not support passkeys.' };
 
 	try {
-		const begin = await fetch('/api/passkey/register/begin', { method: 'POST' });
-		const body = (await begin.json()) as { options?: PublicKeyCredentialCreationOptionsJSON };
-		if (!begin.ok || !body.options) {
-			return { ok: false, error: 'Passkey registration is unavailable right now.' };
+		const begin = await post('/api/passkey/register/begin');
+		if (!begin.ok) {
+			return { ok: false, error: await errorMessage(begin, 'Adding a passkey is unavailable right now.') };
 		}
+		const body = (await begin.json()) as { options: PublicKeyCredentialCreationOptionsJSON };
 
 		const response = await startRegistration({ optionsJSON: body.options });
 
-		const done = await fetch('/api/passkey/register/complete', {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ response: response as RegistrationResponseJSON, name })
+		const done = await post('/api/passkey/register/complete', {
+			response: response as RegistrationResponseJSON,
+			name
 		});
 
-		if (!done.ok) return { ok: false, error: await responseError(done, 'That passkey could not be saved.') };
+		if (!done.ok) return { ok: false, error: await errorMessage(done, 'That passkey could not be saved.') };
 		return { ok: true };
 	} catch (e) {
 		const text = message(e, 'Passkey registration was cancelled.');

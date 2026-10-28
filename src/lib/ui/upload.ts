@@ -34,18 +34,34 @@ export async function shrink(file: File): Promise<{ blob: Blob; w: number; h: nu
 export async function uploadImage(
 	file: File
 ): Promise<{ key: string; w: number; h: number; mime: string; bytes: number }> {
-	if (!file.type.startsWith('image/')) throw new Error('Images only.');
+	if (!file.type.startsWith('image/')) throw new Error('That file is not an image.');
 	const { blob, w, h } = await shrink(file);
 	const res = await fetch('/api/assets', {
 		method: 'POST',
 		headers: {
+			// Without this SvelteKit answers a thrown `error()` with its HTML
+			// error page, and the whole document became the message on screen.
+			accept: 'application/json',
 			'content-type': blob.type,
 			'x-image-width': String(w),
 			'x-image-height': String(h)
 		},
 		body: blob
 	});
-	if (!res.ok) throw new Error(await res.text());
+	if (!res.ok) throw new Error(await errorMessage(res, 'That image could not be uploaded.'));
 	const json = (await res.json()) as { key: string };
 	return { key: json.key, w, h, mime: blob.type, bytes: blob.size };
+}
+
+/** The sentence a failed JSON endpoint sent back: SvelteKit's `error()` writes
+ *  `message`, the API helpers write `error`. The hook's bare-text 401 means the
+ *  session lapsed while the page sat open. Anything else gets the fallback. */
+export async function errorMessage(res: Response, fallback: string): Promise<string> {
+	try {
+		const body = (await res.json()) as { message?: string; error?: string };
+		if (body.message || body.error) return (body.message || body.error) as string;
+	} catch {
+		// Not JSON.
+	}
+	return res.status === 401 ? 'Your session has expired. Sign in again.' : fallback;
 }

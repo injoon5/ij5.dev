@@ -6,10 +6,13 @@ import {
 	hasPrevious,
 	publish,
 	readDraft,
+	readPrevious,
 	readPublished,
+	restoreToD1,
 	revert,
 	syncDraft
 } from '$lib/server/home';
+import { docKeys, isAssetKey, isReferenced, releaseAssets, removeAsset } from '$lib/server/assets';
 import { parseLines } from '$lib/lines';
 import { imageKeysIn } from '$lib/markdown';
 import type { AssetRow } from '$lib/types';
@@ -85,14 +88,12 @@ export const actions: Actions = {
 			});
 		}
 
-		// `Label | https://… | github` per line — a repeater with add and remove
-		// buttons would need JavaScript, and this form has to work without it.
+		// `Label | https://…` per line — a repeater with add and remove buttons
+		// would need JavaScript, and this form has to work without it.
 		const links = parseLines(String(form.get('links') ?? ''), ['label', 'href', 'icon']).filter(
 			(l) => l.label && l.href
 		);
 
-		// The avatar is an asset like any other, so a replaced one is released on
-		// the same terms as a replaced image in the body.
 		const before = await env.DB.prepare(`SELECT avatar FROM profile WHERE id = 1`).first<{
 			avatar: string | null;
 		}>();
@@ -112,6 +113,8 @@ export const actions: Actions = {
 			)
 			.run();
 
+		// The avatar is an asset like any other, so a replaced one is released on
+		// the same terms as a replaced image in the body.
 		if (before?.avatar !== avatar) {
 			await releaseAssets(env, [before?.avatar].filter(isAssetKey));
 		}
@@ -124,38 +127,34 @@ export const actions: Actions = {
 		const env = platform?.env;
 		if (!env) return noEnv();
 
-		const content = String((await request.formData()).get('content') ?? '');
-		if (content.length > MAX_CONTENT) {
-			return fail(400, {
-				intent: 'content',
-				error: `That is longer than the editor supports (${MAX_CONTENT.toLocaleString()} characters).`
-			});
-		}
-
-		// Read what the body referenced before overwriting it: content-addressed
-		// keys mean an image dropped from the document would otherwise linger in
-		// R2 forever with nothing left pointing at it (§5).
-		const before = await env.DB.prepare(`SELECT content FROM profile WHERE id = 1`).first<{
-			content: string | null;
-		}>();
-
-		await env.DB.prepare(`UPDATE profile SET content = ? WHERE id = 1`)
-			.bind(content || null)
-			.run();
-
-		if (before) {
-			const kept = new Set(imageKeysIn(content));
-			await releaseAssets(env, imageKeysIn(before.content).filter((key) => !kept.has(key)));
-		}
+		const result = await saveContent(env, String((await request.formData()).get('content') ?? ''));
+		if (result) return result;
 
 		await syncDraft(env);
 		return { saved: 'content' };
 	},
 
-	publish: async ({ platform }) => {
+	/**
+	 * Publishing what is on screen, not what was last saved. The editor sends
+	 * its buffer along, so "Publish" after an edit can never ship the previous
+	 * draft while the new text sits unsaved in the textarea.
+	 */
+	publish: async ({ request, platform }) => {
 		const env = platform?.env;
 		if (!env) return noEnv();
+
+		const content = (await request.formData()).get('content');
+		if (typeof content === 'string') {
+			const result = await saveContent(env, content);
+			if (result) return result;
+			await syncDraft(env);
+		}
+
+		// The document about to fall out of `home:prev` may hold the last
+		// reference to an image; once it is gone, so is the image.
+		const dropped = await readPrevious(env);
 		const doc = await publish(env);
+		await releaseAssets(env, docKeys(dropped));
 		return { published: doc.v };
 	},
 
@@ -164,6 +163,7 @@ export const actions: Actions = {
 		if (!env) return noEnv();
 		const doc = await revert(env);
 		if (!doc) return fail(400, { error: 'Nothing to revert to yet.' });
+		await restoreToD1(env, doc);
 		return { reverted: doc.v };
 	},
 
@@ -182,55 +182,47 @@ export const actions: Actions = {
 		if (!env) return noEnv();
 
 		const key = String((await request.formData()).get('key') ?? '');
-		if (!isAssetKey(key)) return fail(400, { error: 'That file is not deletable here.' });
+		if (!isAssetKey(key)) return fail(400, { error: 'That image cannot be deleted here.' });
 
 		// Content-addressed keys are shared, so a delete is a live-reference
-		// check first: the avatar, or any image still in the document.
+		// check first: the draft, the live page, and the version a revert
+		// would restore.
 		if (await isReferenced(env, key)) {
-			return fail(409, { error: 'That file is still in use on the page.' });
+			return fail(409, {
+				error: 'That image is still in use — on the page, the live site, or the previous version.'
+			});
 		}
 
 		await removeAsset(env, key);
-
-		// Keep the editor's draft in sync with the live reference set.
-		await syncDraft(env);
 		return { deleted: key };
 	}
 };
 
-const isAssetKey = (v: unknown): v is string => typeof v === 'string' && v.startsWith('img/');
-
 /**
- * Whether an asset key is still referenced by the page — the avatar or any
- * image inside the Markdown body. Content-addressed keys are shared, so a
- * delete must never remove something the page still draws.
+ * Writes the Markdown body to D1 and releases any image it stopped drawing.
+ * Returns a failure to hand straight back to the form, or nothing on success.
  */
-async function isReferenced(env: App.Platform['env'], key: string): Promise<boolean> {
-	const row = await env.DB.prepare(
-		`SELECT 1 FROM profile WHERE id = 1 AND (content LIKE ?1 OR avatar = ?2) LIMIT 1`
-	)
-		.bind(`%${key}%`, key)
-		.first();
-	return Boolean(row);
-}
+async function saveContent(env: App.Platform['env'], content: string) {
+	if (content.length > MAX_CONTENT) {
+		return fail(400, {
+			intent: 'content',
+			error: `The page is longer than the editor supports (${MAX_CONTENT.toLocaleString('en')} characters).`
+		});
+	}
 
-async function removeAsset(env: App.Platform['env'], key: string): Promise<void> {
-	await env.BUCKET.delete(key).catch(() => {});
-	await env.DB.prepare(`DELETE FROM assets WHERE key = ?`).bind(key).run();
-}
+	// Read what the body referenced before overwriting it: content-addressed
+	// keys mean an image dropped from the document would otherwise linger in
+	// R2 forever with nothing left pointing at it (§5).
+	const before = await env.DB.prepare(`SELECT content FROM profile WHERE id = 1`).first<{
+		content: string | null;
+	}>();
 
-/**
- * Deletes any R2 object in `keys` that nothing references any more (§5). No
- * scheduled cleanup: the object goes when its last reference does, checked in
- * the same handler that removed the reference.
- *
- * Call this *after* the write that dropped the reference, never before — the
- * check is a live query, so running it first would find the row being replaced
- * and conclude the image is still in use.
- */
-async function releaseAssets(env: App.Platform['env'], keys: string[]) {
-	for (const key of keys) {
-		if (await isReferenced(env, key)) continue;
-		await removeAsset(env, key);
+	await env.DB.prepare(`UPDATE profile SET content = ? WHERE id = 1`)
+		.bind(content || null)
+		.run();
+
+	if (before) {
+		const kept = new Set(imageKeysIn(content));
+		await releaseAssets(env, imageKeysIn(before.content).filter((key) => !kept.has(key)));
 	}
 }

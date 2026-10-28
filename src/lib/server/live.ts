@@ -57,7 +57,7 @@ const fetchers: Record<string, Fetcher> = {
 		 * refuses anonymous requests outright — there is no unauthenticated
 		 * version of this data to fall back to. So with no token the widget is
 		 * simply off: nothing is scheduled, nothing is fetched, and the card
-		 * renders its own empty lattice, which reads as a quiet quarter rather
+		 * renders its own empty lattice, which reads as a quiet year rather
 		 * than a broken widget.
 		 */
 		available: (env) => Boolean(env.GITHUB_TOKEN),

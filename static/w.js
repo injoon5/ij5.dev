@@ -11,8 +11,8 @@
 	'use strict';
 
 	// `error` does not bubble, so this listens in the capture phase. A missing
-	// R2 object then collapses to the widget surface rather than showing a
-	// broken-image glyph.
+	// R2 object then disappears — and takes its gallery frame and caption with
+	// it — rather than showing a broken-image glyph.
 	document.addEventListener(
 		'error',
 		function (event) {
@@ -31,13 +31,17 @@
 	// scroll offsets disagree between engines. The mask is written here, not
 	// in CSS, because a per-side alpha wants a single gradient that no
 	// `mask-composite` expression reproduced consistently across engines.
-	var grass = document.querySelector('.contrib-scroll');
-	if (grass) {
+	// One pass per graph: a page may carry more than one `::contributions`.
+	var graphs = document.querySelectorAll('.contrib-scroll');
+	for (var i = 0; i < graphs.length; i++) wire(graphs[i]);
+
+	function wire(grass) {
 		var grassGrid = grass.firstElementChild;
 		var grassMask = grass.parentElement;
+		if (!grassGrid || !grassMask) return;
 		var paintGrass = function () {
 			var max = grass.scrollWidth - grass.clientWidth;
-			if (max <= 0 || !grassGrid || !grassMask) {
+			if (max <= 0) {
 				grassMask.style.maskImage = 'none';
 				grassMask.style.webkitMaskImage = 'none';
 				return;

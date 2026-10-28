@@ -46,6 +46,22 @@ export function cleanName(name: string): string {
 	return cleaned.slice(0, 255) || 'file';
 }
 
+/**
+ * The quoted `filename=` of a Content-Disposition header. Header values must be
+ * bytes, so a name with Hangul or an emoji in it would throw while the response
+ * was being built and turn the download into a 500. The real name rides in the
+ * RFC 5987 `filename*` beside it; this is only the fallback for clients that
+ * ignore that, so anything outside printable ASCII becomes `_`.
+ */
+export function asciiName(name: string): string {
+	return name.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
+}
+
+/** Both forms of the filename, for `Content-Disposition: attachment`. */
+export function contentDisposition(name: string): string {
+	return `attachment; filename="${asciiName(name)}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+}
+
 export async function listFiles(env: Env): Promise<FileRow[]> {
 	const { results } = await env.DB.prepare(
 		`SELECT slug, key, name, mime, bytes, created_at, expires_at, downloads

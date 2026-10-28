@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { bumpDownloads, getFile } from '$lib/server/files';
+import { bumpDownloads, contentDisposition, getFile } from '$lib/server/files';
 
 /**
  * The bytes. Streamed from R2 with `Content-Disposition: attachment`, so the
@@ -34,8 +34,7 @@ export const GET: RequestHandler = async (event) => {
 	return new Response(obj.body, {
 		headers: {
 			'content-type': file.mime || 'application/octet-stream',
-			// ASCII fallback for strict clients, RFC 5987 for the real name.
-			'content-disposition': `attachment; filename="${file.name}"; filename*=UTF-8''${encodeURIComponent(file.name)}`,
+			'content-disposition': contentDisposition(file.name),
 			'cache-control': 'no-store',
 			'content-length': String(file.bytes)
 		}
