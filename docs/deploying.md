@@ -60,6 +60,21 @@ to Cloudflare.
 Both origins are set as plain `vars` in `wrangler.jsonc`; change them there if
 you deploy under different hostnames.
 
+### 5. Match the upload limit to the plan
+
+Shared files go to R2 in parts, one request per part, so a part has to fit the
+zone's request-body limit. `UPLOAD_PART_MIB` in `wrangler.jsonc` sets the part
+size, and the largest file is 10,000 of those parts:
+
+| Zone plan  | Request limit | `UPLOAD_PART_MIB` | Largest file |
+| ---------- | ------------- | ----------------- | ------------ |
+| Free / Pro | 100 MB        | `90` (default)    | ≈ 879 GB     |
+| Business   | 200 MB        | `190`             | ≈ 1.8 TB     |
+| Enterprise | up to 5 GB    | `500`             | ≈ 4.8 TB     |
+
+R2 caps an object at 5 TiB less 5 GiB whatever the setting. Uploads that are
+started and never finished are discarded by R2 after seven days.
+
 ## Deploying
 
 Run the same three checks CI runs, then ship:

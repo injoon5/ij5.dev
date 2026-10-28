@@ -1,18 +1,32 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { RESERVED, SLUG_PATTERN } from '$lib/reserved';
-import { cleanName, createFile, deleteFile, getFile, listFiles, randomFileSlug, slugAvailable } from '$lib/server/files';
-import { MAX_FILE_BYTES, type FileRow } from '$lib/types';
+import {
+	cleanName,
+	createFile,
+	deleteFile,
+	freeRandomSlug,
+	getFile,
+	listFiles,
+	parseExpiry,
+	slugProblem
+} from '$lib/server/files';
+import { fmtBytes } from '$lib/format';
+import { MAX_FORM_FILE_BYTES, type FileRow } from '$lib/types';
+import { uploadLimits } from '$lib/uploads';
 
 /**
  * The admin's file screen. Uploading is the only write that matters: a file's
  * bytes go to R2, its row to D1, and the recipient gets `/d/{slug}`. Editing
  * is out of scope — replace a file by uploading a new one.
+ *
+ * With JavaScript the form streams the file to R2 in parts through
+ * `/api/files/uploads`, up to `uploadLimits().maxFileBytes`. The `create`
+ * action below is the no-JS fallback for small files.
  */
 
 export const load: PageServerLoad = async ({ platform, url }) => {
 	const env = platform?.env;
-	if (!env) return { files: [], selected: null, origin: '' };
+	if (!env) return { files: [], selected: null, origin: '', maxFileBytes: 0 };
 
 	const rows = await listFiles(env);
 	const files = rows.map((row) => ({
@@ -25,14 +39,10 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 	return {
 		files,
 		selected: wanted ? (files.find((f) => f.slug === wanted) ?? null) : null,
-		origin: url.origin
+		origin: url.origin,
+		maxFileBytes: uploadLimits(env.UPLOAD_PART_MIB).maxFileBytes
 	};
 };
-
-function expiresAt(raw: string): number | null {
-	const v = raw.trim();
-	return v ? Date.parse(`${v}T23:59:59Z`) || null : null;
-}
 
 export const actions: Actions = {
 	create: async ({ request, platform }) => {
@@ -51,10 +61,12 @@ export const actions: Actions = {
 			return fail(400, { intent: 'create', fields: { file: 'Choose a file.' }, values });
 		}
 		if (file.size === 0) return fail(400, { intent: 'create', fields: { file: 'That file is empty.' }, values });
-		if (file.size > MAX_FILE_BYTES) {
+		if (file.size > MAX_FORM_FILE_BYTES) {
 			return fail(400, {
 				intent: 'create',
-				fields: { file: `Files can be up to ${(MAX_FILE_BYTES / 1024 / 1024).toFixed(0)} MB.` },
+				fields: {
+					file: `Without JavaScript, files can be up to ${fmtBytes(MAX_FORM_FILE_BYTES)}.`
+				},
 				values
 			});
 		}
@@ -65,18 +77,10 @@ export const actions: Actions = {
 		const fields: Record<string, string> = {};
 
 		if (slug) {
-			if (!SLUG_PATTERN.test(slug)) {
-				fields.slug = 'Use letters, numbers, hyphens and underscores.';
-			} else if (RESERVED.has(slug)) {
-				fields.slug = `"${slug}" is reserved by the site itself.`;
-			} else if (!(await slugAvailable(env, slug))) {
-				fields.slug = 'That name is taken.';
-			}
+			const problem = await slugProblem(env, slug);
+			if (problem) fields.slug = problem;
 		} else {
-			for (let i = 0; i < 8 && !slug; i++) {
-				const candidate = randomFileSlug();
-				if (await slugAvailable(env, candidate)) slug = candidate;
-			}
+			slug = (await freeRandomSlug(env)) ?? '';
 			if (!slug) fields.slug = 'Could not find a free name. Try again.';
 		}
 
@@ -88,7 +92,7 @@ export const actions: Actions = {
 			name: cleanName(file.name),
 			mime: file.type || 'application/octet-stream',
 			bytes: file.size,
-			expires_at: expiresAt(values.expires)
+			expires_at: parseExpiry(values.expires)
 		};
 
 		await createFile(env, row, await file.arrayBuffer());

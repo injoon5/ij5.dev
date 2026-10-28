@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { beforeNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Upload from 'lucide-svelte/icons/upload';
@@ -8,11 +9,12 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import { affixClass, affixInput, affixPrefix, fieldClass, iconButton, notice } from '$lib/ui/styles';
-	import { pending } from '$lib/ui/pending.svelte';
+	import { FieldError, uploadFile } from '$lib/ui/multipart';
 	import { fmtBytes } from '$lib/format';
-	import { MAX_FILE_BYTES } from '$lib/types';
 
 	type Props = {
+		/** The largest file this deployment accepts (`$lib/uploads`). */
+		maxFileBytes: number;
 		fields?: Record<string, string>;
 		values?: Record<string, string>;
 		error?: string;
@@ -20,31 +22,33 @@
 		onDone?: (slug?: string) => void;
 	};
 
-	let { fields = {}, values = {}, error, onDone }: Props = $props();
+	let { maxFileBytes, fields = {}, values = {}, error, onDone }: Props = $props();
 
 	let host = $derived(page.url.host);
 
-	const saving = pending({
-		reset: true,
-		onSuccess: (data) => {
-			chosen = null;
-			onDone?.(String(data?.created ?? ''));
-		}
-	});
-
 	let fileEl = $state<HTMLInputElement | null>(null);
 	let dragging = $state(false);
-	let chosen = $state<{ name: string; size: number } | null>(null);
+	let chosen = $state<File | null>(null);
 	let fileError = $state('');
 
-	const LIMIT = `Files can be up to ${(MAX_FILE_BYTES / 1024 / 1024).toFixed(0)} MB.`;
+	// The upload in flight: its progress, the way to stop it, and what it
+	// came back with when it failed.
+	let uploading = $state(false);
+	let loaded = $state(0);
+	let controller: AbortController | null = null;
+	let uploadError = $state('');
+	let uploadFields = $state<Record<string, string>>({});
 
-	/** Validates a pick and, for a drop, hands the file to the real input —
-	 *  the form only ever uploads what the `<input type="file">` holds, so a
-	 *  dropped file that stayed in the drop zone used to upload nothing. */
+	let percent = $derived(chosen && chosen.size ? Math.min(100, Math.floor((loaded / chosen.size) * 100)) : 0);
+	let allFields = $derived({ ...fields, ...uploadFields });
+	let problem = $derived(fileError || allFields.file);
+
+	/** Validates a pick and, for a drop, hands the file to the real input so
+	 *  the no-JS form post would carry it too. */
 	function pick(file: File | undefined | null, dropped = false) {
 		if (!file) return;
-		const problem = file.size > MAX_FILE_BYTES ? LIMIT : file.size === 0 ? 'That file is empty.' : '';
+		const tooBig = file.size > maxFileBytes ? `Files can be up to ${fmtBytes(maxFileBytes)}.` : '';
+		const problem = tooBig || (file.size === 0 ? 'That file is empty.' : '');
 		if (problem) {
 			chosen = null;
 			fileError = problem;
@@ -57,25 +61,74 @@
 			fileEl.files = transfer.files;
 		}
 		fileError = '';
-		chosen = { name: file.name, size: file.size };
+		uploadError = '';
+		uploadFields = {};
+		chosen = file;
 	}
 
 	function clear() {
+		if (uploading) {
+			controller?.abort();
+			return;
+		}
 		chosen = null;
 		if (fileEl) fileEl.value = '';
 	}
 
-	const submit: SubmitFunction = (input) => {
-		if (!chosen) {
-			fileError = 'Choose a file.';
-			input.cancel();
+	/**
+	 * With JavaScript the file never rides the form post: it is streamed to R2
+	 * in parts, which is what lifts the limit from a request body to
+	 * `maxFileBytes`. The form's own action stays for a browser without it.
+	 */
+	const submit: SubmitFunction = ({ cancel, formData }) => {
+		cancel();
+		if (!chosen || uploading) {
+			if (!chosen) fileError = 'Choose a file.';
 			return;
 		}
-		return saving.submit(input);
+		send(chosen, String(formData.get('slug') ?? ''), String(formData.get('expires') ?? ''));
 	};
 
-	let problem = $derived(fileError || fields.file);
+	async function send(file: File, slug: string, expires: string) {
+		uploading = true;
+		loaded = 0;
+		uploadError = '';
+		uploadFields = {};
+		controller = new AbortController();
+		try {
+			const result = await uploadFile(file, {
+				slug: slug.trim() || undefined,
+				expires,
+				signal: controller.signal,
+				onProgress: (n) => (loaded = n)
+			});
+			chosen = null;
+			if (fileEl) fileEl.value = '';
+			onDone?.(result.slug);
+		} catch (e) {
+			if (e instanceof DOMException && e.name === 'AbortError') return;
+			if (e instanceof FieldError) uploadFields = e.fields;
+			else uploadError = e instanceof Error ? e.message : 'The upload failed.';
+		} finally {
+			uploading = false;
+			loaded = 0;
+			controller = null;
+		}
+	}
+
+	// Leaving mid-upload cancels it, so it asks first.
+	beforeNavigate(({ cancel, type }) => {
+		if (!uploading || type === 'leave') return;
+		if (confirm('Leave and cancel the upload?')) controller?.abort();
+		else cancel();
+	});
+
+	function onbeforeunload(event: BeforeUnloadEvent) {
+		if (uploading) event.preventDefault();
+	}
 </script>
+
+<svelte:window {onbeforeunload} />
 
 <form
 	method="POST"
@@ -84,8 +137,8 @@
 	class="flex flex-col gap-4 md:gap-5"
 	use:enhance={submit}
 >
-	{#if error}
-		<p role="alert" class={notice.error}>{error}</p>
+	{#if error || uploadError}
+		<p role="alert" class={notice.error}>{error || uploadError}</p>
 	{/if}
 
 	<div class="flex flex-col gap-1.5">
@@ -112,9 +165,38 @@
 				</span>
 				<span class="min-w-0 flex-1">
 					<span class="block truncate text-sm font-medium">{chosen.name}</span>
-					<span class="block text-xs text-text-muted">{fmtBytes(chosen.size)}</span>
+					<span class="tnum block text-xs text-text-muted" aria-live="polite">
+						{#if uploading}
+							{percent}% · {fmtBytes(loaded)} of {fmtBytes(chosen.size)}
+						{:else}
+							{fmtBytes(chosen.size)}
+						{/if}
+					</span>
+					{#if uploading}
+						<!-- Width, not a transform: it moves a few times a second
+						     and must never overshoot what has actually arrived. -->
+						<span
+							class="mt-2 block h-1 overflow-hidden rounded-full bg-row-active"
+							role="progressbar"
+							aria-label="Upload progress"
+							aria-valuemin="0"
+							aria-valuemax="100"
+							aria-valuenow={percent}
+						>
+							<span
+								class="block h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
+								style="width: {percent}%"
+							></span>
+						</span>
+					{/if}
 				</span>
-				<button type="button" onclick={clear} aria-label="Remove file" class={iconButton}>
+				<button
+					type="button"
+					onclick={clear}
+					aria-label={uploading ? 'Cancel upload' : 'Remove file'}
+					title={uploading ? 'Cancel upload' : 'Remove file'}
+					class={iconButton}
+				>
 					<X size={15} aria-hidden="true" />
 				</button>
 			</div>
@@ -148,7 +230,7 @@
 				<span class="text-sm font-medium">
 					Choose a file<span class="pointer-coarse:hidden">&nbsp;or drop it here</span>
 				</span>
-				<span class="text-xs text-text-muted">Up to {(MAX_FILE_BYTES / 1024 / 1024).toFixed(0)} MB</span>
+				<span class="text-xs text-text-muted">Up to {fmtBytes(maxFileBytes)}</span>
 			</label>
 		{/if}
 
@@ -157,8 +239,10 @@
 		{/if}
 	</div>
 
-	<div class="grid gap-4 sm:grid-cols-2 md:gap-5">
-		<Field id="slug" label="Link" error={fields.slug}>
+	<!-- Locked while uploading: the name was claimed when the upload began,
+	     so an edit now would be silently ignored. -->
+	<fieldset disabled={uploading} class="grid gap-4 disabled:opacity-60 sm:grid-cols-2 md:gap-5">
+		<Field id="slug" label="Link" error={allFields.slug}>
 			{#snippet children({ id, describedBy, invalid })}
 				<div class={affixClass(invalid)}>
 					<span class={affixPrefix} aria-hidden="true">{host}/d/</span>
@@ -179,7 +263,7 @@
 			{/snippet}
 		</Field>
 
-		<Field id="expires" label="Expires" error={fields.expires}>
+		<Field id="expires" label="Expires" error={allFields.expires}>
 			{#snippet children({ id, describedBy, invalid })}
 				<input
 					{id}
@@ -191,10 +275,10 @@
 				/>
 			{/snippet}
 		</Field>
-	</div>
+	</fieldset>
 
 	<div class="flex pt-2 md:justify-end md:border-t md:border-border-subtle md:pt-4">
-		<Button type="submit" variant="primary" size="form" busy={saving.busy} busyLabel="Uploading…">
+		<Button type="submit" variant="primary" size="form" busy={uploading} busyLabel="Uploading…">
 			Upload
 		</Button>
 	</div>

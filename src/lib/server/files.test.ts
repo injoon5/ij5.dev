@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asciiName, cleanName, contentDisposition, randomFileSlug } from './files';
+import { asciiName, cleanName, contentDisposition, parseRange, randomFileSlug } from './files';
 import { SLUG_PATTERN } from '$lib/reserved';
 
 /**
@@ -48,5 +48,28 @@ describe('cleanName', () => {
 	it('caps length and never returns empty', () => {
 		expect(cleanName('x'.repeat(500))).toHaveLength(255);
 		expect(cleanName('   ')).toBe('file');
+	});
+});
+
+describe('parseRange', () => {
+	it('reads a closed, an open and a suffix range', () => {
+		expect(parseRange('bytes=0-99', 1000)).toEqual({ offset: 0, length: 100 });
+		expect(parseRange('bytes=900-', 1000)).toEqual({ offset: 900, length: 100 });
+		expect(parseRange('bytes=-10', 1000)).toEqual({ offset: 990, length: 10 });
+	});
+
+	it('clamps an end past the file to its last byte', () => {
+		expect(parseRange('bytes=990-5000', 1000)).toEqual({ offset: 990, length: 10 });
+	});
+
+	it('refuses a start past the end', () => {
+		expect(parseRange('bytes=1000-', 1000)).toBe('unsatisfiable');
+	});
+
+	it('serves the whole file for anything it does not understand', () => {
+		expect(parseRange(null, 1000)).toBeNull();
+		expect(parseRange('bytes=0-1,5-9', 1000)).toBeNull();
+		expect(parseRange('items=0-1', 1000)).toBeNull();
+		expect(parseRange('bytes=50-10', 1000)).toBeNull();
 	});
 });

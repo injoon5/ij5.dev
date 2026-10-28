@@ -34,11 +34,11 @@ export type PasteRow = {
 	cache: boolean;
 };
 
-/** Maximum bytes a shared file may be. A Workers form upload has to fit the
- * request body, so this stays well under the platform ceiling — big enough
- * for documents, archives and photos, too small for ISOs. Shared with the
- * admin form so the stated limit can never drift from the enforced one. */
-export const MAX_FILE_BYTES = 25 * 1024 * 1024;
+/** The largest file the no-JavaScript form post accepts. That path buffers the
+ * whole form in the Worker (128 MB of memory, shared), so it stays small; the
+ * normal path streams the file to R2 in parts and is limited only by
+ * `$lib/uploads`. */
+export const MAX_FORM_FILE_BYTES = 25 * 1024 * 1024;
 
 /** A shared file — bytes in R2, this row as its catalog entry. */
 export type FileRow = {

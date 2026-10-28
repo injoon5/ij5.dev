@@ -157,6 +157,7 @@
 			<DetailHeader title="Upload" close="/admin/files" backLabel="Files" />
 			<div class="p-4 md:p-5">
 				<FileForm
+					maxFileBytes={data.maxFileBytes}
 					fields={form?.intent === 'create' ? form.fields : undefined}
 					values={form?.intent === 'create' ? form.values : undefined}
 					error={form?.intent === 'create' ? form.error : undefined}
