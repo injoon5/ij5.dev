@@ -173,7 +173,9 @@
 	{#snippet meta()}
 		<span class="flex items-center gap-1.5 text-xs whitespace-nowrap text-text-muted" role="status">
 			<span class="size-1.5 rounded-full {status.dot}" aria-hidden="true"></span>
-			{status.label}
+			<!-- On a narrow phone the dot alone carries it; the words are still
+			     read out. -->
+			<span class="max-sm:sr-only">{status.label}</span>
 		</span>
 	{/snippet}
 	{#snippet actions()}
@@ -226,7 +228,7 @@
 	{/snippet}
 </PageHeader>
 
-<div class="flex flex-col gap-8 px-4 pt-2 pb-8 md:px-6 md:pt-6">
+<div class="flex flex-col gap-8 px-4 pt-5 pb-8 md:px-6 md:pt-6">
 	{#if form?.published}
 		<p role="status" class={notice.ok}>Published. The live page is up to date.</p>
 	{:else if form?.reverted}

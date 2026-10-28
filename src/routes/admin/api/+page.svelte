@@ -99,7 +99,7 @@
 
 <PageHeader title="API" />
 
-<div class="flex max-w-3xl flex-col gap-8 px-4 pt-1 pb-10 md:px-6 md:pt-8">
+<div class="flex max-w-3xl flex-col gap-8 px-4 pt-5 pb-10 md:px-6 md:pt-8">
 	<section>
 		<h2 class="{cardTitle} mb-1">Authentication</h2>
 		<p class="mb-3 text-sm text-pretty text-text-muted">

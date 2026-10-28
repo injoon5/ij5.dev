@@ -25,7 +25,6 @@
 		rowSub,
 		rowTitle,
 		table,
-		tableBody,
 		tableHead,
 		tableRow
 	} from '$lib/ui/styles';
@@ -77,15 +76,9 @@
 	{#snippet list()}
 		<PageHeader title="Files">
 			{#snippet actions()}
-				<Button
-					href="/admin/files?s=new"
-					variant="primary"
-					size="sm"
-					data-sveltekit-noscroll
-					class="max-md:size-9 max-md:rounded-full max-md:bg-accent-tint max-md:px-0 max-md:text-accent max-md:shadow-none"
-				>
-					<Plus size={15} aria-hidden="true" class="max-md:size-[18px]" strokeWidth={2.25} />
-					<span class="max-md:sr-only">Upload</span>
+				<Button href="/admin/files?s=new" variant="primary" size="sm" data-sveltekit-noscroll>
+					<Plus size={15} aria-hidden="true" />
+					Upload
 				</Button>
 			{/snippet}
 		</PageHeader>
@@ -97,7 +90,7 @@
 				{/snippet}
 			</Empty>
 		{:else}
-			<div class="px-4 pb-3 md:px-6 md:pt-3">
+			<div class="px-4 py-3 md:px-6">
 				<SearchField bind:value={query} bind:el={searchEl} label="Search files" />
 			</div>
 
@@ -119,7 +112,7 @@
 						<span class="text-right">Downloads</span>
 						<span class="text-right">Uploaded</span>
 					</div>
-					<ul class={tableBody}>
+					<ul>
 						{#each visible as row (row.slug)}
 							<li>
 								<a

@@ -19,11 +19,11 @@ export function inputClass(invalid = false): string {
 
 export const fieldClass = (invalid = false) => inputClass(invalid);
 
-/** A panel's surface: on a phone a white group on the gray canvas,
- *  borderless like a grouped list; on the white desktop canvas a hairline
- *  draws it. No padding — for lists and strips that run edge to edge. */
+/** A panel on the white canvas, drawn by a hairline — the same object on a
+ *  phone and a desktop. No padding: for lists and strips that run edge to
+ *  edge. */
 export const cardFlush =
-	'overflow-hidden rounded-[var(--radius-ui-lg)] bg-surface md:border md:border-border-subtle';
+	'overflow-hidden rounded-[var(--radius-ui-lg)] border border-border-subtle bg-surface';
 
 /** The same panel with its content inset. */
 export const card = `${cardFlush} p-4 md:p-5`;
@@ -33,30 +33,26 @@ export const cardTitle = 'text-sm font-semibold';
 
 /* ---------------------------------------------------------------------------
    Tables
-   Links, Pastes and Files are the same shape, tailored twice. On a wide
-   screen: a header row of column names, hairline rows edge to edge, the
-   selected row tinted. On a phone: an inset group of two-line rows on the
-   gray canvas — what it is and where it points on the left, its numbers on
-   the right — at a size a thumb and a glance both get right.
+   Links, Pastes and Files are the same shape: hairline rows edge to edge,
+   the selected row tinted. A wide screen gets a header row of column names;
+   a phone gets two-line rows — what it is and where it points on the left,
+   its numbers on the right — and no header, since nothing lines up under
+   one any more.
 --------------------------------------------------------------------------- */
 
 /** Wraps the header and the rows. */
-export const table =
-	'mx-4 overflow-hidden rounded-[var(--radius-ui-lg)] bg-surface md:mx-0 md:rounded-none md:border-t md:border-border-subtle';
+export const table = 'border-t border-border-subtle';
 
 /** The column-name row. Each table appends its own `md:grid-cols-…`. */
 export const tableHead =
 	'hidden h-9 items-center gap-4 border-b border-border-subtle px-6 text-xs text-text-subtle md:grid';
 
-/** The `<ul>` of rows: separators between rows in the phone's group. */
-export const tableBody = 'divide-y divide-border-subtle md:divide-y-0';
-
 /** A row. Each table appends the same `md:grid-cols-…` as its header. */
 export const tableRow =
-	'grid min-h-[3.25rem] grid-cols-[minmax(0,1fr)_auto] content-center items-center gap-x-4 gap-y-px px-4 py-2 transition-colors duration-100 ease-out active:bg-row-active aria-[current=true]:bg-row-active md:h-11 md:min-h-0 md:gap-y-0 md:border-b md:border-border-subtle md:px-6 md:py-0 md:hover:bg-row-hover';
+	'grid min-h-[3.25rem] grid-cols-[minmax(0,1fr)_auto] content-center items-center gap-x-4 gap-y-px border-b border-border-subtle px-4 py-2 transition-colors duration-100 ease-out active:bg-row-active aria-[current=true]:bg-row-active md:h-11 md:min-h-0 md:gap-y-0 md:px-6 md:py-0 md:hover:bg-row-hover';
 
 /** The first line of a row: its name. */
-export const rowTitle = 'text-[0.9375rem] font-medium md:text-sm';
+export const rowTitle = 'text-[0.875rem] font-medium md:text-sm';
 
 /** The second line on a phone, a column on a wide screen. */
 export const rowSub = 'truncate text-sm text-text-muted';

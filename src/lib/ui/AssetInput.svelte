@@ -108,8 +108,8 @@
 		/>
 
 		<div class="flex items-center gap-1.5">
-			<Button variant="secondary" size="sm" onclick={() => fileEl?.click()} {busy} busyLabel="Uploading…">
-				{value ? 'Replace' : 'Upload'}
+			<Button variant="secondary" size="sm" onclick={() => fileEl?.click()} {busy}>
+				{busy ? 'Uploading…' : value ? 'Replace' : 'Upload'}
 			</Button>
 			{#if value}
 				<Button

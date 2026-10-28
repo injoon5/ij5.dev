@@ -12,7 +12,6 @@
 	import LogOut from 'lucide-svelte/icons/log-out';
 	import ArrowUpRight from 'lucide-svelte/icons/arrow-up-right';
 	import Ellipsis from 'lucide-svelte/icons/ellipsis';
-	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -59,18 +58,20 @@
 	const sideLink =
 		'flex h-8 items-center gap-2.5 rounded-[var(--radius-ui-sm)] px-2.5 text-sm font-medium text-text-muted transition-colors duration-150 ease-out hover:bg-row-active hover:text-text aria-[current=page]:bg-surface aria-[current=page]:text-text aria-[current=page]:shadow-[0_0_0_1px_var(--border-subtle),0_1px_2px_oklch(0_0_0/0.04)] pointer-coarse:h-11';
 
+	// Monochrome: the current tab is full-strength ink, the rest recede. The
+	// one accent stays reserved for the primary action and focus.
 	const tab =
-		'flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 pt-0.5 text-[0.625rem] font-medium text-text-subtle transition-colors duration-150 ease-out active:opacity-60 aria-[current=page]:text-accent';
+		'flex min-h-12 flex-1 flex-col items-center justify-center gap-1 pt-0.5 text-[0.625rem] font-medium text-text-subtle transition-colors duration-150 ease-out active:text-text-muted aria-[current=page]:text-text';
 
 	const sheetRow =
-		'flex min-h-12 w-full items-center gap-3.5 px-4 text-[0.9375rem] font-medium transition-colors duration-100 ease-out active:bg-row-active';
+		'flex h-10 w-full items-center gap-2.5 rounded-[var(--radius-ui-sm)] px-2.5 text-sm font-medium transition-colors duration-100 ease-out active:bg-row-active';
 </script>
 
 <svelte:head>
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
-<div class="min-h-dvh bg-bg md:grid md:grid-cols-[13.5rem_minmax(0,1fr)]">
+<div class="min-h-dvh bg-surface md:grid md:grid-cols-[13.5rem_minmax(0,1fr)] md:bg-bg">
 	<a
 		href="#content"
 		class="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-3 focus-visible:left-3 focus-visible:z-50 focus-visible:rounded-[var(--radius-ui)] focus-visible:bg-surface focus-visible:px-3.5 focus-visible:py-2.5 focus-visible:text-sm focus-visible:font-medium focus-visible:shadow-[var(--shadow-pop)]"
@@ -128,10 +129,10 @@
 	</nav>
 
 	<!--
-		The canvas. On a phone it is the screen itself: the gray ground that
-		grouped lists and forms sit on. From `md` it is an inset white panel
-		that scrolls on its own, so the sidebar holds still and a sticky header
-		sticks to the panel rather than sliding under the window's edge.
+		The canvas. On a phone it is the screen itself, the same white surface
+		the desktop panel is. From `md` it is an inset panel that scrolls on
+		its own, so the sidebar holds still and a sticky header sticks to the
+		panel rather than sliding under the window's edge.
 	-->
 	<main
 		id="content"
@@ -144,12 +145,12 @@
 	<!-- The tab bar, below `md`. -->
 	<nav
 		aria-label="Admin"
-		class="fixed inset-x-0 bottom-0 z-30 flex border-t border-border-subtle bg-surface/85 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl backdrop-saturate-150 md:hidden"
+		class="fixed inset-x-0 bottom-0 z-30 flex border-t border-border-subtle bg-surface px-1 pb-[env(safe-area-inset-bottom)] md:hidden"
 	>
 		{#each TABS as item (item.href)}
 			{@const Icon = item.icon}
 			<a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined} class={tab}>
-				<Icon size={22} strokeWidth={1.75} aria-hidden="true" />
+				<Icon size={19} aria-hidden="true" />
 				{item.label}
 			</a>
 		{/each}
@@ -160,52 +161,49 @@
 			aria-haspopup="dialog"
 			onclick={() => sheet?.showModal()}
 		>
-			<Ellipsis size={22} strokeWidth={1.75} aria-hidden="true" />
+			<Ellipsis size={19} aria-hidden="true" />
 			More
 		</button>
 	</nav>
 </div>
 
 <!--
-	"More": a bottom sheet over the tab bar, the rest of the destinations as a
-	grouped list. Same open/close motion as the analytics sheet, no JS beyond
-	showing it.
+	"More": a compact menu that grows out of the More tab — origin bottom
+	right, where the finger is — with the rest of the destinations and
+	sign-out under a separator. Same open/close mechanics as the analytics
+	sheet: `transition-discrete` and `starting:`, no JS beyond showing it.
 -->
 <dialog
 	bind:this={sheet}
 	aria-label="More"
 	onclick={onbackdrop}
-	class="fixed inset-x-0 bottom-0 m-0 mt-auto w-full max-w-none translate-y-6 bg-transparent p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] text-text opacity-0 transition-[opacity,transform,display,overlay] duration-200 ease-out transition-discrete open:translate-y-0 open:opacity-100 backdrop:bg-black/35 backdrop:opacity-0 backdrop:transition-[opacity,display,overlay] backdrop:duration-200 backdrop:transition-discrete open:backdrop:opacity-100 starting:open:translate-y-6 starting:open:opacity-0 starting:open:backdrop:opacity-0 md:hidden"
+	class="fixed inset-auto right-2 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] m-0 w-56 origin-bottom-right scale-95 rounded-[var(--radius-ui-lg)] border-0 bg-surface p-1 text-text opacity-0 shadow-[var(--shadow-pop)] transition-[opacity,scale,display,overlay] duration-150 ease-out transition-discrete open:scale-100 open:opacity-100 backdrop:bg-transparent starting:open:scale-95 starting:open:opacity-0 md:hidden"
 >
-	<div class="overflow-hidden rounded-[var(--radius-widget)] bg-surface shadow-[var(--shadow-pop)] [corner-shape:squircle]">
-		<ul class="divide-y divide-border-subtle">
-			{#each MORE as item (item.href)}
-				{@const Icon = item.icon}
-				<li>
-					<a
-						href={item.href}
-						aria-current={isActive(item.href) ? 'page' : undefined}
-						class="{sheetRow} aria-[current=page]:text-accent"
-					>
-						<Icon size={20} strokeWidth={1.75} aria-hidden="true" class="text-text-muted" />
-						<span class="flex-1">{item.label}</span>
-						<ChevronRight size={18} aria-hidden="true" class="text-text-subtle" />
-					</a>
-				</li>
-			{/each}
+	<ul>
+		{#each MORE as item (item.href)}
+			{@const Icon = item.icon}
 			<li>
-				<a href="/" target="_blank" rel="noopener" class={sheetRow}>
-					<ArrowUpRight size={20} strokeWidth={1.75} aria-hidden="true" class="text-text-muted" />
-					<span class="flex-1">View site</span>
+				<a
+					href={item.href}
+					aria-current={isActive(item.href) ? 'page' : undefined}
+					class="{sheetRow} aria-[current=page]:bg-row-active"
+				>
+					<Icon size={16} aria-hidden="true" class="text-text-muted" />
+					{item.label}
 				</a>
 			</li>
-		</ul>
-	</div>
-	<form method="POST" action="/logout" class="mt-2">
-		<button
-			type="submit"
-			class="{sheetRow} justify-center rounded-[var(--radius-widget)] bg-surface text-danger [corner-shape:squircle]"
-		>
+		{/each}
+		<li>
+			<a href="/" target="_blank" rel="noopener" class={sheetRow}>
+				<ArrowUpRight size={16} aria-hidden="true" class="text-text-muted" />
+				View site
+			</a>
+		</li>
+	</ul>
+	<div class="mx-2 my-1 h-px bg-border-subtle" role="separator"></div>
+	<form method="POST" action="/logout">
+		<button type="submit" class="{sheetRow} text-danger">
+			<LogOut size={16} aria-hidden="true" />
 			Sign out
 		</button>
 	</form>

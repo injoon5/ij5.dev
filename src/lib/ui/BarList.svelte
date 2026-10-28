@@ -121,11 +121,9 @@
 	bind:this={dialog}
 	aria-labelledby={titleId}
 	onclick={onbackdrop}
-	class="fixed inset-0 m-auto mb-0 max-h-[min(85dvh,40rem)] w-full max-w-none translate-y-4 rounded-t-[var(--radius-widget)] border-0 bg-surface p-0 text-text opacity-0 shadow-[var(--shadow-pop)] transition-[opacity,translate,display,overlay] duration-200 ease-out transition-discrete open:flex open:translate-y-0 open:flex-col open:overflow-hidden open:opacity-100 backdrop:bg-black/35 backdrop:opacity-0 backdrop:transition-[opacity,display,overlay] backdrop:duration-200 backdrop:transition-discrete open:backdrop:opacity-100 starting:open:translate-y-4 starting:open:opacity-0 starting:open:backdrop:opacity-0 sm:m-auto sm:max-h-[min(32rem,calc(100dvh-4rem))] sm:w-[min(28rem,calc(100vw-2rem))] sm:translate-y-0 sm:scale-[0.98] sm:rounded-[var(--radius-ui-lg)] sm:transition-[opacity,scale,display,overlay] sm:open:scale-100 sm:starting:open:scale-[0.98]"
+	class="fixed inset-0 m-auto mb-0 max-h-[min(85dvh,40rem)] w-full max-w-none translate-y-4 rounded-t-[var(--radius-ui-lg)] border-0 bg-surface p-0 text-text opacity-0 shadow-[var(--shadow-pop)] transition-[opacity,translate,display,overlay] duration-200 ease-out transition-discrete open:flex open:translate-y-0 open:flex-col open:overflow-hidden open:opacity-100 backdrop:bg-black/35 backdrop:opacity-0 backdrop:transition-[opacity,display,overlay] backdrop:duration-200 backdrop:transition-discrete open:backdrop:opacity-100 starting:open:translate-y-4 starting:open:opacity-0 starting:open:backdrop:opacity-0 sm:m-auto sm:max-h-[min(32rem,calc(100dvh-4rem))] sm:w-[min(28rem,calc(100vw-2rem))] sm:translate-y-0 sm:scale-[0.98] sm:rounded-[var(--radius-ui-lg)] sm:transition-[opacity,scale,display,overlay] sm:open:scale-100 sm:starting:open:scale-[0.98]"
 >
-	<!-- The grabber says "sheet" before anything else does. -->
-	<span class="mx-auto mt-2 block h-1 w-9 shrink-0 rounded-full bg-border-strong sm:hidden" aria-hidden="true"></span>
-	<header class="flex items-center justify-between gap-4 ps-5 pe-3 pt-2 pb-1 sm:pt-3">
+	<header class="flex items-center justify-between gap-4 ps-5 pe-3 pt-3 pb-1">
 		<svelte:element this={`h${level}`} id={titleId} class="truncate text-[0.9375rem] font-semibold">
 			{current.title}
 		</svelte:element>

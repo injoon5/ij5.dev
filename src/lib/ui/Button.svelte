@@ -39,7 +39,7 @@
 		// The admin canvas is white, so a hover has to darken, not "lift" to
 		// the surface colour it is already standing on.
 		ghost: 'text-text-muted hover:bg-row-active hover:text-text',
-		danger: 'bg-surface text-danger hover:bg-danger-tint md:bg-transparent'
+		danger: 'text-danger shadow-[inset_0_0_0_1px_var(--border-subtle)] hover:bg-danger-tint md:shadow-none'
 	};
 
 	// Sized for a fingertip on touch (36–44px, the same rhythm as iOS

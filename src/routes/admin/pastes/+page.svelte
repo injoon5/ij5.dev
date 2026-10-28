@@ -12,7 +12,7 @@
 	import SearchField from '$lib/ui/SearchField.svelte';
 	import { fmtBytes, fmtDay } from '$lib/format';
 	import { listShortcuts } from '$lib/ui/shortcuts';
-	import { badge, iconButton, kbd, rowTitle, table, tableBody, tableHead, tableRow } from '$lib/ui/styles';
+	import { badge, iconButton, kbd, rowTitle, table, tableHead, tableRow } from '$lib/ui/styles';
 	import PasteForm from './PasteForm.svelte';
 	import type { ActionData, PageData } from './$types';
 
@@ -54,13 +54,9 @@
 	{#snippet list()}
 		<PageHeader title="Pastes">
 			{#snippet actions()}
-				<Button href="/admin/pastes?s=new" variant="primary"
-					size="sm"
-					data-sveltekit-noscroll
-					class="max-md:size-9 max-md:rounded-full max-md:bg-accent-tint max-md:px-0 max-md:text-accent max-md:shadow-none"
-				>
-					<Plus size={15} aria-hidden="true" class="max-md:size-[18px]" strokeWidth={2.25} />
-					<span class="max-md:sr-only">New paste</span>
+				<Button href="/admin/pastes?s=new" variant="primary" size="sm" data-sveltekit-noscroll>
+					<Plus size={15} aria-hidden="true" />
+					New paste
 				</Button>
 			{/snippet}
 		</PageHeader>
@@ -72,7 +68,7 @@
 				{/snippet}
 			</Empty>
 		{:else}
-			<div class="px-4 pb-3 md:px-6 md:pt-3">
+			<div class="px-4 py-3 md:px-6">
 				<SearchField bind:value={query} bind:el={searchEl} label="Search pastes" />
 			</div>
 
@@ -95,7 +91,7 @@
 						<span class="text-right">Size</span>
 						<span class="text-right">Created</span>
 					</div>
-					<ul class={tableBody}>
+					<ul>
 						{#each visible as row (row.slug)}
 							{@const views = data.recent[row.slug] ?? 0}
 							<li>

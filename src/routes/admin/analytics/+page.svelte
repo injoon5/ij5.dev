@@ -104,7 +104,7 @@
 	{/snippet}
 </PageHeader>
 
-<div class="flex flex-col gap-4 px-4 pt-1 pb-8 md:px-6 md:pt-6">
+<div class="flex flex-col gap-4 px-4 pt-4 pb-8 md:px-6 md:pt-6">
 	<div class="md:hidden">{@render ranges()}</div>
 
 	{#if !hasData}
