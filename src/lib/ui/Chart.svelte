@@ -19,7 +19,7 @@
 
 	type Point = { day: string; hits: number };
 
-	let { data, label = 'hits' }: { data: Point[]; label?: string } = $props();
+	let { data, label = 'visits' }: { data: Point[]; label?: string } = $props();
 
 	// The wash gradient needs a stable, unique id per instance — a hardcoded id
 	// would collide the day a page renders two charts.
@@ -92,7 +92,11 @@
 	const compact = (v: number) =>
 		v >= 10000 ? `${Math.round(v / 1000)}k` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v);
 
-	let current = $derived(active !== null ? data[active] : null);
+	// At rest the readout is the whole range; under the pointer it is that
+	// day. The marker and the day only exist while something is pointing.
+	let shownIndex = $derived(active ?? data.length - 1);
+	let current = $derived(active !== null ? (data[active] ?? null) : null);
+	let total = $derived(data.reduce((sum, d) => sum + d.hits, 0));
 
 	const fmtDay = (day: string) =>
 		new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short' }).format(
@@ -100,7 +104,9 @@
 		);
 
 	let readout = $derived(
-		current ? `${current.hits} ${label} on ${fmtDay(current.day)}` : `peak ${max} ${label} in range`
+		current
+			? `${current.hits} ${label} on ${fmtDay(current.day)}`
+			: `${total.toLocaleString('en')} ${label} in range`
 	);
 
 	function indexAt(clientX: number) {
@@ -151,7 +157,7 @@
 	function onkeydown(event: KeyboardEvent) {
 		if (!data.length) return;
 		const last = data.length - 1;
-		const at = active ?? last;
+		const at = shownIndex;
 		let to: number | null = null;
 
 		if (event.key === 'ArrowLeft') to = Math.max(0, at - 1);
@@ -173,21 +179,24 @@
 {#if !data.length}
 	<p class="py-10 text-center text-sm text-pretty text-text-muted">No traffic in this range yet.</p>
 {:else}
-	<!-- The number is the headline and the chart is the footnote. No transition
-	     on the value: scrubbing is direct manipulation, and a number easing
-	     toward the day under the pointer reads as lag. -->
-	<!-- No live region: `aria-valuetext` on the plot below is the spoken
-	     channel, and announcing both means every scrub is said twice. -->
-	<div class="flex items-baseline gap-2" aria-hidden="true">
-		<span class="tnum text-2xl font-semibold">{(current ?? { hits: max }).hits}</span>
-		<span class="text-sm text-text-muted">
-			{#if current}{label} on {fmtDay(current.day)}{:else}peak {label} in range{/if}
-		</span>
-	</div>
+	<!-- A quiet line, not a headline — the totals above the chart are the
+	     headline. No transition on the value: scrubbing is direct
+	     manipulation, and a number easing toward the pointer reads as lag.
+	     No live region either: `aria-valuetext` on the plot is the spoken
+	     channel, and announcing both says every scrub twice. -->
+	<p class="tnum text-sm text-text-muted" aria-hidden="true">
+		{#if current}
+			<span class="font-medium text-text">{current.hits.toLocaleString('en')}</span>
+			{label} on {fmtDay(current.day)}
+		{:else}
+			<span class="font-medium text-text">{total.toLocaleString('en')}</span>
+			{label}
+		{/if}
+	</p>
 
 	<!-- A vertical swipe still scrolls the page; a horizontal drag scrubs. -->
 	<div
-		class="mt-3 h-44 [touch-action:pan-y] select-none sm:h-52"
+		class="mt-2 h-40 [touch-action:pan-y] select-none sm:h-52"
 		bind:this={plot}
 		bind:clientWidth={width}
 		bind:clientHeight={height}
@@ -196,7 +205,7 @@
 		aria-label="Traffic over time"
 		aria-valuemin="0"
 		aria-valuemax={data.length - 1}
-		aria-valuenow={active ?? data.length - 1}
+		aria-valuenow={shownIndex}
 		aria-valuetext={readout}
 		{onkeydown}
 		{onpointerdown}
@@ -220,7 +229,7 @@
 			     not even a tick mark. The numbers are there to size the line, and
 			     anything drawn to connect them to it competes with the line. -->
 			{#each ticks as tick (tick)}
-				<text class="fill-text-subtle text-[11px] tnum" x="0" y={y(tick)} dominant-baseline="middle">{compact(tick)}</text>
+				<text class="fill-text-subtle text-[11px]" x="0" y={y(tick)} dominant-baseline="middle">{compact(tick)}</text>
 			{/each}
 
 			{#if single}
@@ -247,7 +256,7 @@
 				/>
 			{/if}
 
-			{#if current && !single}
+			{#if active !== null && current && !single}
 				<line
 					x1={x(active!)}
 					x2={x(active!)}
@@ -282,7 +291,7 @@
 		distance nobody measures; two staggered left edges is one anybody sees.
 	-->
 	<div class="mt-2 flex justify-between text-xs text-text-subtle">
-		<span class="tnum">{fmtDay(data[0].day)}</span>
-		{#if !single}<span class="tnum">{fmtDay(data[data.length - 1].day)}</span>{/if}
+		<span>{fmtDay(data[0].day)}</span>
+		{#if !single}<span>{fmtDay(data[data.length - 1].day)}</span>{/if}
 	</div>
 {/if}

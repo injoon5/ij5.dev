@@ -1,6 +1,13 @@
 import type { KVNamespace, D1Database, R2Bucket, ExecutionContext } from '@cloudflare/workers-types';
 
 declare global {
+	/** Workers runtime: an identity stream of a declared length, so a body of
+	 *  known size can be handed on (to R2) without being buffered. */
+	// eslint-disable-next-line no-var
+	var FixedLengthStream: {
+		new (length: number | bigint): TransformStream<Uint8Array, Uint8Array>;
+	};
+
 	namespace App {
 		interface Locals {
 			authed: boolean;
@@ -38,6 +45,10 @@ declare global {
 				/** Required for `grass` — the contribution calendar is GraphQL-only
 				 * and GitHub refuses anonymous GraphQL outright. */
 				GITHUB_TOKEN?: string;
+
+				/** The largest part of a file upload, in MiB — keep it under the
+				 *  zone plan's request-body limit (`$lib/uploads`). Default 90. */
+				UPLOAD_PART_MIB?: string;
 
 			};
 			context: ExecutionContext;

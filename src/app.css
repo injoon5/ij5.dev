@@ -36,7 +36,7 @@
 
 /* Geist Mono, same latin subset, self-hosted. The secondary voice: code, inline
    code, and the small mono accents (the contribution caption, the footer). Not
-   preloaded — Inter is the page's first paint; this loads with `swap`. */
+   preloaded — Interlude is the page's first paint; this loads with `swap`. */
 @font-face {
 	font-family: 'Geist Mono';
 	font-style: normal;
@@ -66,6 +66,11 @@
 	--surface-hover: oklch(0.988 0 0);
 	--surface-sunken: oklch(0.941 0 0);
 	--surface-inverse: oklch(0.22 0 0);
+
+	/* Admin rows sit directly on a white panel, where `surface-hover` (tuned
+	   for a white widget on the gray page) is invisible. */
+	--row-hover: oklch(0.975 0 0);
+	--row-active: oklch(0.955 0 0);
 
 	/* Text */
 	--text: oklch(0.22 0 0);
@@ -124,6 +129,9 @@
 		--surface-sunken: oklch(0.185 0 0);
 		--surface-inverse: oklch(0.95 0 0);
 
+		--row-hover: oklch(0.24 0 0);
+		--row-active: oklch(0.265 0 0);
+
 		--text: oklch(0.955 0 0);
 		--text-muted: oklch(0.712 0 0);
 		--text-subtle: oklch(0.6 0 0);
@@ -162,6 +170,8 @@
 	--surface-hover: oklch(0.246 0 0);
 	--surface-sunken: oklch(0.185 0 0);
 	--surface-inverse: oklch(0.95 0 0);
+	--row-hover: oklch(0.24 0 0);
+	--row-active: oklch(0.265 0 0);
 	--text: oklch(0.955 0 0);
 	--text-muted: oklch(0.712 0 0);
 	--text-subtle: oklch(0.6 0 0);
@@ -197,6 +207,8 @@
 	--color-surface-hover: var(--surface-hover);
 	--color-surface-sunken: var(--surface-sunken);
 	--color-surface-inverse: var(--surface-inverse);
+	--color-row-hover: var(--row-hover);
+	--color-row-active: var(--row-active);
 
 	--color-text: var(--text);
 	--color-text-muted: var(--text-muted);
@@ -322,6 +334,11 @@
 	html {
 		-webkit-tap-highlight-color: transparent;
 		-webkit-text-size-adjust: 100%;
+		/* No double-tap-to-zoom wait on taps. */
+		touch-action: manipulation;
+		/* Safari shows the root's background when a page is pulled past its
+		   end; it must be the canvas, not a white band. */
+		background-color: var(--bg);
 	}
 
 	body {
@@ -350,11 +367,11 @@
 		outline: none;
 	}
 
-	/* Numbers that change must not shift layout. */
-	.tnum,
-	table,
-	time,
-	[data-numeric] {
+	/* Numbers that change in place must not shift layout — a scrubbed chart
+	   readout, a live counter. Only those: proportional figures are the face's
+	   natural rhythm, and fixed-width digits in running text and static
+	   columns read as a spreadsheet. */
+	.tnum {
 		font-variant-numeric: tabular-nums;
 	}
 
@@ -369,18 +386,53 @@
 		text-wrap: pretty;
 	}
 
-	/* iOS Safari zooms any input under 16px and never zooms back. Hard floor,
-	   at every width — a landscape phone or iPad is still a touch screen with
-	   the same zoom-on-focus behaviour, so nothing drops below 16px. */
+	/* iOS Safari zooms any input under 16px and never zooms back, so a touch
+	   screen gets a hard 16px floor at every width. A fine pointer has no zoom
+	   to dodge, and there a field set larger than its own label reads as a
+	   different, clumsier interface — it follows the type around it instead. */
 	input,
 	textarea,
 	select {
-		font-size: max(16px, 1em);
 		font-family: inherit;
+		font-size: inherit;
+	}
+	@media (pointer: coarse) {
+		input,
+		textarea,
+		select {
+			font-size: max(16px, 1em);
+		}
 	}
 
 	svg {
 		flex-shrink: 0;
+	}
+
+	/* Safari draws a native select as a glossy pill with its own arrows, and
+	   a different one in every engine. One flat field, one chevron. */
+	select {
+		appearance: none;
+		padding-inline-end: 2.25rem;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23888' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 6.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 0.75rem center;
+		background-size: 1rem;
+	}
+
+	/* iOS Safari collapses an empty date field to the height of nothing and
+	   centres a filled one. Same height and alignment as every other field. */
+	input[type='date'] {
+		-webkit-appearance: none;
+		appearance: none;
+		text-align: start;
+	}
+	@media (pointer: coarse) {
+		input[type='date'] {
+			min-height: calc(1lh + 1rem);
+		}
+	}
+	input[type='date']::-webkit-date-and-time-value {
+		text-align: start;
 	}
 
 	/* Less motion, not none. Narrowing the property list drops anything that
@@ -444,6 +496,28 @@
 			box-shadow: var(--shadow-widget-lift);
 			background-color: var(--surface-hover);
 		}
+	}
+
+	/* The homepage arrives in reading order: the masthead, then the first
+	   blocks of the body, each a beat after the last. Short and small — a
+	   6px rise over 500ms, 60ms apart, done before the eye has finished the
+	   name — and only the first few blocks, so a long page never waits on its
+	   own entrance. Reduced motion collapses it (see base). */
+	.stagger > * {
+		animation: rise 500ms var(--ease-out) both;
+		animation-delay: calc(var(--i, 0) * 60ms);
+	}
+	.stagger > .prose > :nth-child(-n + 6) {
+		animation: rise 500ms var(--ease-out) both;
+	}
+	.stagger > .prose > :nth-child(1) { animation-delay: 120ms; }
+	.stagger > .prose > :nth-child(2) { animation-delay: 180ms; }
+	.stagger > .prose > :nth-child(3) { animation-delay: 240ms; }
+	.stagger > .prose > :nth-child(4) { animation-delay: 300ms; }
+	.stagger > .prose > :nth-child(5) { animation-delay: 360ms; }
+	.stagger > .prose > :nth-child(6) { animation-delay: 420ms; }
+	.stagger > .prose {
+		animation: none;
 	}
 
 	/* ---------------------------------------------------------------------
@@ -645,6 +719,12 @@
 		border-radius: var(--radius-inner-md);
 		border: 1px solid var(--img-outline);
 		background-color: var(--surface-sunken);
+	}
+
+	/* `/w.js` marks a figure whose photo failed to load; an empty frame with a
+	   caption under it is worse than no figure. */
+	.gallery-item[data-image-failed] {
+		display: none;
 	}
 
 	.gallery-img {
@@ -891,6 +971,13 @@
 	}
 	.contrib-grid > i[data-l='4'] {
 		background-color: var(--grass-4);
+	}
+	/* The graph is a link, but `.prose a` would underline and tint its caption
+	   like a run of text. The whole object is the target; hover says so. */
+	.prose a.contrib,
+	.prose a.contrib:hover {
+		color: inherit;
+		text-decoration: none;
 	}
 	.contrib-cap {
 		font-family: var(--font-mono);

@@ -272,7 +272,12 @@ md.block.ruler.before('fence', 'links', linksRule);
 md.block.ruler.before('fence', 'gallery', galleryRule);
 md.inline.ruler.after('escape', 'icon', iconRule);
 
-md.renderer.rules.links_block = (tokens: any, idx: number) => renderLinks(tokens[idx].content);
+md.renderer.rules.links_block = (tokens: any, idx: number, _o: any, env: any) => {
+	// The buttons press, and iOS only shows a press once `/w.js` listens for
+	// touches.
+	(env as RenderEnv).needsScript = true;
+	return renderLinks(tokens[idx].content);
+};
 
 md.renderer.rules.gallery_block = (tokens: any, idx: number, _o: any, env: any) => {
 	const e = env as RenderEnv;
@@ -286,7 +291,10 @@ md.renderer.rules.contrib_block = (tokens: any, idx: number, _o: any, env: any) 
 	const data = e.live?.[meta.id]?.data as ContribData | undefined;
 	// The edge fades track the scroll position, which wants `/w.js`.
 	e.needsScript = true;
-	return renderContribGraph(data, meta.user) + '\n';
+	// The site owner's graph goes through the `/gh` short link, so the click is
+	// counted like any other; anyone else's goes straight to their profile.
+	const href = meta.user === e.contribUser ? '/gh' : undefined;
+	return renderContribGraph(data, meta.user, href) + '\n';
 };
 
 md.renderer.rules.icon_inline = (tokens: any, idx: number) =>

@@ -37,6 +37,11 @@
 		// Origin allowlist for the binary upload endpoint (§5). Secrets live in
 		// `wrangler secret put`, never here.
 		"PUBLIC_ORIGIN": "https://ij5.dev",
-		"ASSETS_ORIGIN": "https://assets.ij5.dev"
+		"ASSETS_ORIGIN": "https://assets.ij5.dev",
+		// The largest part of a file upload, in MiB. A part is one request, so
+		// it must fit the zone plan's request-body limit: 100 MB on Free/Pro
+		// (90 here), 200 MB on Business (~190), up to 5 GB on Enterprise. The
+		// file limit is 10,000 parts of this, up to R2's ~5 TiB (`src/lib/uploads.ts`).
+		"UPLOAD_PART_MIB": "90"
 	}
 }

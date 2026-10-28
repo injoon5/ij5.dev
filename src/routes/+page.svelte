@@ -75,8 +75,8 @@
 	     \u003c so the JSON can never terminate the element early. -->
 	{@html `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`}
 
-	<meta name="theme-color" content="#f5f5f5" media="(prefers-color-scheme: light)" />
-	<meta name="theme-color" content="#181818" media="(prefers-color-scheme: dark)" />
+	<meta name="theme-color" content="#f4f4f4" media="(prefers-color-scheme: light)" />
+	<meta name="theme-color" content="#0e0e0e" media="(prefers-color-scheme: dark)" />
 
 	{#if data.needsScript}
 		<script src="/w.js" defer></script>
@@ -89,12 +89,12 @@
 </svelte:head>
 
 <main
-	class="mx-auto flex min-h-dvh max-w-[42rem] flex-col pt-[clamp(4rem,12vh,7rem)] pr-[max(1.5rem,env(safe-area-inset-right))] pb-[calc(2.5rem+env(safe-area-inset-bottom))] pl-[max(1.5rem,env(safe-area-inset-left))]"
+	class="stagger mx-auto flex min-h-dvh max-w-[42rem] flex-col pt-[clamp(4rem,12vh,7rem)] pr-[max(1.5rem,env(safe-area-inset-right))] pb-[calc(2.5rem+env(safe-area-inset-bottom))] pl-[max(1.5rem,env(safe-area-inset-left))]"
 >
 	<header class="mb-11">
 		{#if avatarUrl}
 			<img
-				class="mb-[1.15rem] block size-16 rounded-full bg-surface-sunken object-cover"
+				class="mb-[1.15rem] block size-16 rounded-full bg-surface-sunken object-cover outline outline-1 -outline-offset-1 outline-[var(--img-outline)]"
 				src={avatarUrl}
 				alt=""
 				width="64"
@@ -118,7 +118,7 @@
 	-->
 	<article class="prose">{@html data.html}</article>
 
-	<footer class="mt-auto pt-16 font-mono text-xs text-text-muted">
+	<footer class="mt-auto pt-16 font-mono text-xs text-text-muted" style="--i: 8">
 		<span>© {year} {data.profile.name}</span>
 	</footer>
 </main>

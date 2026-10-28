@@ -1,6 +1,6 @@
 /*
  * The only script the public page ever loads, and only when a block on it
- * actually needs one. Two behaviours, no framework, no state.
+ * actually needs one. Three small behaviours, no framework, no state.
  *
  * It is a file rather than an inline script so `script-src 'self'` stays
  * intact: hashing inline handlers would mean `unsafe-hashes`, and reaching for
@@ -10,9 +10,13 @@
 (function () {
 	'use strict';
 
+	// iOS Safari applies `:active` only once something listens for touches;
+	// this is what lets the link buttons visibly press on an iPhone.
+	document.addEventListener('touchstart', function () {}, { passive: true });
+
 	// `error` does not bubble, so this listens in the capture phase. A missing
-	// R2 object then collapses to the widget surface rather than showing a
-	// broken-image glyph.
+	// R2 object then disappears — and takes its gallery frame and caption with
+	// it — rather than showing a broken-image glyph.
 	document.addEventListener(
 		'error',
 		function (event) {
@@ -31,13 +35,17 @@
 	// scroll offsets disagree between engines. The mask is written here, not
 	// in CSS, because a per-side alpha wants a single gradient that no
 	// `mask-composite` expression reproduced consistently across engines.
-	var grass = document.querySelector('.contrib-scroll');
-	if (grass) {
+	// One pass per graph: a page may carry more than one `::contributions`.
+	var graphs = document.querySelectorAll('.contrib-scroll');
+	for (var i = 0; i < graphs.length; i++) wire(graphs[i]);
+
+	function wire(grass) {
 		var grassGrid = grass.firstElementChild;
 		var grassMask = grass.parentElement;
+		if (!grassGrid || !grassMask) return;
 		var paintGrass = function () {
 			var max = grass.scrollWidth - grass.clientWidth;
-			if (max <= 0 || !grassGrid || !grassMask) {
+			if (max <= 0) {
 				grassMask.style.maskImage = 'none';
 				grassMask.style.webkitMaskImage = 'none';
 				return;
