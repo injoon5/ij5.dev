@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
-	import { fieldClass } from '$lib/ui/styles';
+	import { affixClass, affixInput, affixPrefix, fieldClass, notice, switchClass } from '$lib/ui/styles';
 	import { pending } from '$lib/ui/pending.svelte';
 	import { MAX_PASTE_CHARS, type PasteRow } from '$lib/types';
 
@@ -13,24 +15,32 @@
 		fields?: Record<string, string>;
 		values?: Record<string, string>;
 		error?: string;
-		onDone?: () => void;
+		/** After a create, with the new slug; after a delete, with nothing. */
+		onDone?: (slug?: string) => void;
 	};
 
 	let { row, fields = {}, values = {}, error, onDone }: Props = $props();
 
 	let mode = $derived(row ? 'update' : 'create');
+	let host = $derived(page.url.host);
+
+	let saved = $state(false);
+	let savedTimer: ReturnType<typeof setTimeout> | undefined;
 
 	const saving = pending({
 		reset: () => mode === 'create',
-		onSuccess: () => onDone?.()
+		onSuccess: (data) => {
+			if (mode === 'create') return onDone?.(String(data?.created ?? ''));
+			saved = true;
+			clearTimeout(savedTimer);
+			savedTimer = setTimeout(() => (saved = false), 1600);
+		}
 	});
 
 	const deleting = pending({ onSuccess: () => onDone?.() });
 
-	// Destructive and one click away, so it asks first — the same confirm the
-	// asset list uses, so the whole admin behaves one way.
-	const confirmDelete: import('@sveltejs/kit').SubmitFunction = (input) => {
-		if (!confirm(`Delete ij5.dev/p/${row?.slug}? Analytics history is kept.`)) {
+	const confirmDelete: SubmitFunction = (input) => {
+		if (!confirm(`Delete ${host}/p/${row?.slug}? Its analytics are kept.`)) {
 			input.cancel();
 			return;
 		}
@@ -41,8 +51,10 @@
 		ms ? new Date(ms).toISOString().slice(0, 10) : '';
 
 	// Rejected input is echoed back so a typo never costs the whole form. A
-	// checkbox's `values` entry is "on" or ""; `row.cache` is the DB value.
-	const cacheInitial = $derived(values.cache !== undefined ? values.cache === 'on' : (row?.cache ?? true));
+	// checkbox's `values` entry is "on" or ""; `row.cache` is the stored value.
+	const cacheInitial = $derived(
+		values.cache !== undefined ? values.cache === 'on' : (row?.cache ?? true)
+	);
 
 	let initial = $derived({
 		slug: values.slug ?? row?.slug ?? '',
@@ -51,8 +63,8 @@
 	});
 
 	// The body is bound so the counter tracks typing. It re-seeds when the
-	// selected paste (or echoed-back values) change, but `untrack` keeps that
-	// reseed from firing on every keystroke and wiping what someone is typing.
+	// echoed-back values change, but `untrack` keeps that reseed from firing
+	// on every keystroke and wiping what someone is typing.
 	// svelte-ignore state_referenced_locally
 	let body = $state(values.body ?? row?.body ?? '');
 	$effect(() => {
@@ -62,76 +74,67 @@
 		});
 	});
 
-	let bodyLen = $derived(body.length);
+	// The limit only matters near it, so the count appears only then.
+	let nearLimit = $derived(body.length > MAX_PASTE_CHARS * 0.9);
 </script>
 
-<form
-	method="POST"
-	action="?/{mode}"
-	class="flex flex-col gap-4"
-	use:enhance={saving.submit}
->
+<form method="POST" action="?/{mode}" class="flex flex-col gap-4 md:gap-5" use:enhance={saving.submit}>
 	{#if error}
-		<p class="rounded-[var(--radius-ui)] bg-danger-tint px-3 py-2 text-sm text-danger">{error}</p>
+		<p role="alert" class={notice.error}>{error}</p>
 	{/if}
 
-	<Field
-		id="slug"
-		label="Slug"
-		error={fields.slug}
-		hint={row ? undefined : 'The part after ij5.dev/p/ — this is the link you share.'}
-	>
-		{#snippet children({ id, describedBy, invalid })}
-			<div class="flex items-center gap-2">
-				<span class="text-sm text-text-subtle">ij5.dev/p/</span>
-				<input
-					{id}
-					name="slug"
-					value={initial.slug}
-					readonly={Boolean(row)}
-					aria-describedby={describedBy}
-					aria-invalid={invalid || undefined}
-					required
-					spellcheck="false"
-					autocapitalize="off"
-					autocorrect="off"
-					placeholder="notes"
-					class="{fieldClass(invalid)} {row ? 'text-text-muted' : ''}"
-				/>
-			</div>
-		{/snippet}
-	</Field>
+	{#if row}
+		<input type="hidden" name="slug" value={row.slug} />
+	{:else}
+		<Field id="slug" label="Link" error={fields.slug}>
+			{#snippet children({ id, describedBy, invalid })}
+				<div class={affixClass(invalid)}>
+					<span class={affixPrefix} aria-hidden="true">{host}/p/</span>
+					<input
+						{id}
+						name="slug"
+						value={initial.slug}
+						aria-describedby={describedBy}
+						aria-invalid={invalid || undefined}
+						required
+						spellcheck="false"
+						autocapitalize="off"
+						autocorrect="off"
+						autocomplete="off"
+						placeholder="notes"
+						class={affixInput}
+					/>
+				</div>
+			{/snippet}
+		</Field>
+	{/if}
 
 	<Field
 		id="body"
 		label="Text"
 		error={fields.body}
-		hint="Plaintext, served exactly as written — no formatting, no markup."
+		hint={nearLimit
+			? `${body.length.toLocaleString('en')} of ${MAX_PASTE_CHARS.toLocaleString('en')} characters`
+			: undefined}
 	>
 		{#snippet children({ id, describedBy, invalid })}
-			<div>
-				<textarea
-					{id}
-					name="body"
-					rows={14}
-					bind:value={body}
-					aria-describedby={describedBy}
-					aria-invalid={invalid || undefined}
-					required
-					spellcheck="false"
-					placeholder="Paste something worth sharing…"
-					maxlength={MAX_PASTE_CHARS}
-					class="w-full resize-y rounded-[var(--radius-ui)] bg-surface px-3 py-2.5 font-mono text-text shadow-[inset_0_0_0_1px_var(--border-subtle)] transition-shadow duration-150 ease-out placeholder:text-text-subtle focus:shadow-[inset_0_0_0_1px_var(--accent)] focus-visible:outline-none"
-				></textarea>
-				<p class="tnum mt-1 text-right text-xs text-text-subtle">
-					{bodyLen.toLocaleString('en')} / {MAX_PASTE_CHARS.toLocaleString('en')} chars
-				</p>
-			</div>
+			<textarea
+				{id}
+				name="body"
+				rows={14}
+				bind:value={body}
+				aria-describedby={describedBy}
+				aria-invalid={invalid || undefined}
+				required
+				spellcheck="false"
+				maxlength={MAX_PASTE_CHARS}
+				class="{fieldClass(invalid)} resize-y font-mono text-[13px] leading-[1.6] max-md:h-56 pointer-fine:text-[12.5px]"
+			></textarea>
 		{/snippet}
 	</Field>
 
-	<div class="grid gap-4 sm:grid-cols-2">
-		<Field id="expires" label="Expires" optional error={fields.expires}>
+	<div class="grid gap-4 sm:grid-cols-2 md:gap-5">
+		<Field id="expires" label="Expires" error={fields.expires}>
 			{#snippet children({ id, describedBy, invalid })}
 				<input
 					{id}
@@ -144,76 +147,56 @@
 			{/snippet}
 		</Field>
 
-		<!--
-			Caching is the default; the checkbox is the opt-out. Checked means
-			"cache this paste" (checked by default), unchecked means every view
-			re-renders from D1 and edits propagate instantly.
-		-->
-		<div class="flex flex-col justify-end gap-1.5 pb-0.5">
-			<label for="cache" class="flex items-center gap-2.5 text-sm font-medium">
+		<Field id="note" label="Note" error={fields.note}>
+			{#snippet children({ id, describedBy, invalid })}
 				<input
-					id="cache"
-					name="cache"
-					type="checkbox"
-					checked={cacheInitial}
-					class="size-4 accent-[var(--accent)]"
+					{id}
+					name="note"
+					value={initial.note}
+					aria-describedby={describedBy}
+					maxlength="200"
+					class={fieldClass(invalid)}
 				/>
-				<span>Cache this paste</span>
-			</label>
-			<p id="cache-hint" class="pl-6.5 text-xs text-text-subtle">
-				Off answers every request no-store, so edits win immediately — at the cost of a
-				database read per view.
-			</p>
-		</div>
+			{/snippet}
+		</Field>
 	</div>
 
-	<Field id="note" label="Note" optional error={fields.note}>
-		{#snippet children({ id, describedBy, invalid })}
-			<input
-				{id}
-				name="note"
-				value={initial.note}
-				aria-describedby={describedBy}
-				placeholder="What this one is for"
-				class={fieldClass(invalid)}
-			/>
-		{/snippet}
-	</Field>
-
-	<div class="flex items-center gap-2 pt-1">
-		<Button type="submit" variant="primary" busy={saving.busy} busyLabel="Saving…">
-			{row ? 'Save changes' : 'Create paste'}
-		</Button>
-
-		{#if row}
-			<span class="flex-1"></span>
-			<Button href="/admin/pastes" variant="ghost">Close</Button>
-		{/if}
-	</div>
-</form>
-
-{#if row}
-	<form
-		method="POST"
-		action="?/delete"
-		class="mt-6 border-t border-border-subtle pt-5"
-		use:enhance={confirmDelete}
+	<!-- Caching is the default and the box is the opt-out: off, every view
+	     reads the database, so an edit shows everywhere immediately. -->
+	<label
+		class="flex cursor-pointer items-center justify-between gap-4 rounded-[var(--radius-ui)] bg-surface px-3 py-2.5 shadow-[inset_0_0_0_1px_var(--border-subtle)] select-none pointer-fine:py-2"
 	>
-		<input type="hidden" name="slug" value={row.slug} />
-		<div class="flex items-center justify-between gap-4">
-			<p class="text-xs text-pretty text-text-muted">
-				Deleting keeps the analytics history. The paste stops resolving within five
-				minutes{cacheInitial ? '' : ' — it was never cached, so it stops immediately'}.
-			</p>
+		<span class="text-sm">Cache for 5 minutes</span>
+		<input name="cache" type="checkbox" role="switch" checked={cacheInitial} class={switchClass} />
+	</label>
+
+	<!-- On a phone the primary action is the full-width bar at the foot of the
+	     form and Delete sits under it; from `md` they share one row, Delete
+	     at the far end from Save. -->
+	<div class="flex flex-col-reverse gap-2 pt-2 md:flex-row md:items-center md:border-t md:border-border-subtle md:pt-4">
+		{#if row}
+			<!-- Submits the separate delete form below; forms cannot nest. -->
 			<Button
 				type="submit"
+				form="delete-paste"
 				variant="danger"
-				size="sm"
+				size="form"
+				class="md:-ms-3"
 				busy={deleting.busy}
 				busyLabel="Deleting…"
 			>
 				Delete
 			</Button>
-		</div>
+		{/if}
+		<span class="hidden flex-1 md:block"></span>
+		<Button type="submit" variant="primary" size="form" busy={saving.busy} busyLabel="Saving…">
+			{row ? (saved ? 'Saved' : 'Save') : 'Create paste'}
+		</Button>
+	</div>
+</form>
+
+{#if row}
+	<form id="delete-paste" method="POST" action="?/delete" use:enhance={confirmDelete} hidden>
+		<input type="hidden" name="slug" value={row.slug} />
 	</form>
 {/if}

@@ -124,7 +124,9 @@ describe('renderMarkdown — contribution graph', () => {
 		const { html } = renderMarkdown('::contributions user=octocat', { assetsOrigin: ORIGIN, live });
 		expect(html).toContain('class="contrib"');
 		expect(html).toContain('1,234 contributions');
-		expect(html).toContain('href="/gh"');
+		// Someone else's graph links to their profile, not the owner's `/gh`.
+		expect(html).toContain('href="https://github.com/octocat"');
+		expect(renderMarkdown('::contributions', { assetsOrigin: ORIGIN }).html).toContain('href="/gh"');
 	});
 
 	it('falls back to an empty lattice with no data', () => {

@@ -43,12 +43,8 @@ export function apiError(status: number, error: string, extra?: Record<string, u
 		{ error, ...extra },
 		{
 			status,
-			headers: {
-				// This API is called from scripts, never from a browser page, so
-				// there is no origin to allow. Saying so explicitly stops a
-				// future edit from reaching for `*`.
-				'cache-control': 'no-store'
-			}
+			// An error answer is about this request only; nothing should keep it.
+			headers: { 'cache-control': 'no-store' }
 		}
 	);
 }

@@ -74,6 +74,11 @@ async function shoot(name, url, viewport, { dark = false, full = true } = {}) {
 	const page = watch(await context.newPage());
 	await page.goto(`${BASE}${url}`, { waitUntil: 'networkidle' });
 	await page.waitForTimeout(250);
+	// From `md` the admin canvas scrolls on its own, which a full-page
+	// screenshot cannot see past; let it grow to its content instead.
+	if (url.startsWith('/admin')) {
+		await page.addStyleTag({ content: 'main#content{height:auto!important;overflow:visible!important}' });
+	}
 
 	const overflow = await page.evaluate(
 		() => document.documentElement.scrollWidth - document.documentElement.clientWidth
@@ -94,15 +99,15 @@ await shoot('home-phone-dark', '/', 'phone', { dark: true });
 await shoot('error-404', '/definitely-not-a-real-slug-here', 'desktop');
 await shoot('login', '/login', 'desktop');
 
-// §13/§14 — the public page is server-rendered HTML. If the grid disappears
+// §13/§14 — the public page is server-rendered HTML. If the body disappears
 // with scripting off, something started depending on hydration.
 {
 	const context = await browser.newContext({ ...VIEWPORTS.phone, javaScriptEnabled: false });
 	const page = await context.newPage();
 	await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
-	const widgets = await page.locator('[data-span]').count();
-	if (widgets === 0) problems.push('[no-js] / rendered no widgets with JavaScript disabled');
-	console.log(`no-js: ${widgets} widgets rendered`);
+	const blocks = await page.locator('.prose > *').count();
+	if (blocks === 0) problems.push('[no-js] / rendered no content with JavaScript disabled');
+	console.log(`no-js: ${blocks} blocks rendered`);
 	await page.screenshot({ path: `${OUT}/home-phone-nojs.png`, fullPage: true });
 	await context.close();
 }

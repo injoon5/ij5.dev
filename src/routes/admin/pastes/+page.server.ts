@@ -16,19 +16,18 @@ import { MAX_PASTE_CHARS, type PasteRow } from '$lib/types';
 
 /**
  * The admin's pastes screen: a master–detail list like the links screen, with
- * the body edited in a textarea. D1 stays the source of truth; every write
- * mirrors into KV through `pastes.ts`, and the hook picks the change up on
- * the next request.
+ * the body edited in a textarea. D1 is the only store — `/p/{slug}` reads it
+ * directly — so a write is visible on the next uncached view.
  */
 
 const form = z.object({
 	slug: z
 		.string()
 		.trim()
-		.regex(SLUG_PATTERN, 'Letters, numbers, hyphens and underscores. No dots or slashes.'),
+		.regex(SLUG_PATTERN, 'Use letters, numbers, hyphens and underscores.'),
 	body: z
 		.string()
-		.min(1, 'A paste needs at least one character.')
+		.min(1, 'Write something to share.')
 		.max(MAX_PASTE_CHARS, `Keep it under ${MAX_PASTE_CHARS.toLocaleString('en')} characters.`),
 	note: z
 		.string()
@@ -89,7 +88,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 		),
 		env.DB.prepare(
 			`SELECT slug, SUM(n) AS hits FROM hits
-			 WHERE kind = 'paste' AND device != 'bot' AND day >= date('now','-7 day')
+			 WHERE kind = 'paste' AND device != 'bot' AND day >= date('now','-6 day')
 			 GROUP BY slug`
 		)
 	]);
@@ -130,8 +129,8 @@ export const actions: Actions = {
 			});
 		}
 
-		// The hook checks links before pastes, so a paste that shares a name
-		// with a link would silently never resolve.
+		// Links, pastes and files share one namespace of names, so a name means
+		// one thing wherever it is typed.
 		if (await getSlug(env, parsed.row.slug)) {
 			return fail(409, {
 				intent: 'create',
@@ -181,7 +180,7 @@ export const actions: Actions = {
 		if (!env) return fail(500, { error: 'No platform bindings.' });
 
 		const slug = String((await request.formData()).get('slug') ?? '');
-		if (!slug) return fail(400, { error: 'No slug given.' });
+		if (!slug) return fail(400, { intent: 'delete', error: 'No paste given.' });
 
 		await deletePaste(env, slug);
 		await purgePasteCache(platform, slug, new URL(request.url).origin);

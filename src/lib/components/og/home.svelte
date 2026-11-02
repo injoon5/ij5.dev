@@ -13,7 +13,7 @@
 <!--
 	The share card for `/`. One light ground, three steps of the site's neutral
 	scale, no icons: the domain mark, then a name and tagline that carry the
-	whole message, then the row of link labels that proves the page links out.
+	whole message, then the row of link labels — the page's destinations.
 	Every size is set large enough to survive a preview scaled down to a few
 	hundred pixels.
 -->
@@ -40,20 +40,15 @@
 	</div>
 
 	{#if links.length}
-		<div style="display:flex;align-items:center;justify-content:space-between;">
-			<div style="font-family:'Geist Mono';font-size:24px;color:#7b7b7b;">
-				Links&nbsp;→
-			</div>
-			<div
-				style="display:flex;align-items:center;gap:16px;font-family:'Inter';font-size:27px;font-weight:500;letter-spacing:-0.008em;color:#1b1b1b;"
-			>
-				{#each links as link, i}
-					{#if i > 0}
-						<span style="color:#c8c8c8;">·</span>
-					{/if}
-					<span>{link}</span>
-				{/each}
-			</div>
+		<div
+			style="display:flex;align-items:center;gap:16px;font-family:'Inter';font-size:27px;font-weight:500;letter-spacing:-0.008em;color:#1b1b1b;"
+		>
+			{#each links as link, i}
+				{#if i > 0}
+					<span style="color:#c8c8c8;">·</span>
+				{/if}
+				<span>{link}</span>
+			{/each}
 		</div>
 	{/if}
 </div>

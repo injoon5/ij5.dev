@@ -1,9 +1,14 @@
 <script lang="ts">
-	import Upload from 'lucide-svelte/icons/upload';
-	import X from 'lucide-svelte/icons/x';
-	import { inputClass } from './styles';
-	import { uploadImage, MAX_EDGE } from './upload';
+	import ImageIcon from 'lucide-svelte/icons/image';
+	import Button from './Button.svelte';
+	import { uploadImage } from './upload';
 
+	/**
+	 * An image field shown as the image: a round preview, then Upload (or
+	 * Replace) and Remove. The stored key rides in a hidden input — it is an
+	 * opaque hash nobody reads or types, so it does not earn a text field.
+	 * Dropping an image anywhere on the row uploads it too.
+	 */
 	type Props = {
 		id: string;
 		name: string;
@@ -11,16 +16,26 @@
 		assetsOrigin: string;
 		describedBy?: string;
 		invalid?: boolean;
+		/** Fires whenever the value changes by upload or removal. */
+		onchange?: () => void;
 	};
 
-	let { id, name, value = $bindable(), assetsOrigin, describedBy, invalid = false }: Props = $props();
+	let {
+		id,
+		name,
+		value = $bindable(),
+		assetsOrigin,
+		describedBy,
+		invalid = false,
+		onchange
+	}: Props = $props();
 
 	let busy = $state(false);
 	let error = $state('');
 	let dragging = $state(false);
 	let fileEl = $state<HTMLInputElement | null>(null);
 
-	let errorId = $derived(error ? `${id}-error` : undefined);
+	let errorId = $derived(error ? `${id}-upload-error` : undefined);
 	let described = $derived([describedBy, errorId].filter(Boolean).join(' ') || undefined);
 
 	async function upload(file: File) {
@@ -29,103 +44,89 @@
 		try {
 			const { key } = await uploadImage(file);
 			value = key;
+			onchange?.();
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Upload failed.';
+			error = e instanceof Error ? e.message : 'That image could not be uploaded.';
 		} finally {
 			busy = false;
 		}
 	}
-
-	function onDrop(event: DragEvent) {
-		event.preventDefault();
-		dragging = false;
-		const file = event.dataTransfer?.files?.[0];
-		if (file) upload(file);
-	}
 </script>
 
-<div class="flex flex-col gap-2">
-	<div class="flex items-center gap-2">
+<div class="flex flex-col gap-1.5">
+	<div
+		class="-m-1 flex items-center gap-3 rounded-[var(--radius-ui)] p-1 transition-colors duration-150 ease-out {dragging
+			? 'bg-accent-tint'
+			: ''}"
+		ondragover={(e) => {
+			e.preventDefault();
+			dragging = true;
+		}}
+		ondragleave={() => (dragging = false)}
+		ondrop={(e) => {
+			e.preventDefault();
+			dragging = false;
+			const file = e.dataTransfer?.files?.[0];
+			if (file) upload(file);
+		}}
+		role="presentation"
+	>
 		{#if value}
 			<img
 				src="{assetsOrigin}/{value}"
 				alt=""
 				width="40"
 				height="40"
-				class="size-10 shrink-0 rounded-[var(--radius-ui-sm)] bg-surface-sunken object-cover"
+				class="size-10 shrink-0 rounded-full bg-surface-sunken object-cover outline outline-1 -outline-offset-1 outline-[var(--img-outline)] {busy
+					? 'opacity-50'
+					: ''} transition-opacity duration-150 ease-out"
 			/>
-		{/if}
-
-		<input
-			{id}
-			{name}
-			bind:value
-			aria-describedby={described}
-			aria-invalid={invalid || Boolean(error) || undefined}
-			placeholder="img/…"
-			spellcheck="false"
-			class={inputClass(invalid)}
-		/>
-
-		{#if value}
-			<button
-				type="button"
-				onclick={() => (value = '')}
-				aria-label="Clear image"
-				class="grid size-11 shrink-0 place-items-center rounded-[var(--radius-ui)] text-text-muted transition-colors duration-150 ease-out hover:bg-surface-sunken hover:text-text pointer-fine:size-9"
+		{:else}
+			<span
+				class="grid size-10 shrink-0 place-items-center rounded-full bg-surface-sunken text-text-subtle {invalid
+					? 'ring-1 ring-danger'
+					: ''}"
+				aria-hidden="true"
 			>
-				<X size={15} aria-hidden="true" />
-			</button>
+				<ImageIcon size={16} />
+			</span>
 		{/if}
-	</div>
 
-	<!--
-		A drop zone that only exists where a pointer does. On touch the file
-		picker below is the whole affordance, and it is not hidden behind hover.
-	-->
-	<div
-		class="rounded-[var(--radius-ui)] border border-dashed transition-colors duration-150 ease-out {dragging
-			? 'border-accent bg-accent-tint'
-			: 'border-border-subtle'}"
-		ondragover={(e) => {
-			e.preventDefault();
-			dragging = true;
-		}}
-		ondragleave={() => (dragging = false)}
-		ondrop={onDrop}
-		role="presentation"
-	>
+		<input type="hidden" {name} {value} />
 		<input
 			bind:this={fileEl}
+			{id}
 			type="file"
 			accept="image/png,image/jpeg,image/webp,image/avif"
 			class="sr-only"
+			aria-describedby={described}
 			onchange={(e) => {
 				const file = e.currentTarget.files?.[0];
 				if (file) upload(file);
 				e.currentTarget.value = '';
 			}}
 		/>
-		<button
-			type="button"
-			onclick={() => fileEl?.click()}
-			disabled={busy}
-			class="flex min-h-11 w-full items-center justify-center gap-2 text-xs text-text-muted transition-colors duration-150 ease-out hover:text-text disabled:opacity-50 pointer-fine:min-h-9"
-		>
-			<Upload size={14} aria-hidden="true" />
-			{#if busy}
-				Uploading…
-			{:else}
-				Choose an image<span class="hidden sm:inline"> or drop one here</span>
+
+		<div class="flex items-center gap-1.5">
+			<Button variant="secondary" size="sm" onclick={() => fileEl?.click()} {busy}>
+				{busy ? 'Uploading…' : value ? 'Replace' : 'Upload'}
+			</Button>
+			{#if value}
+				<Button
+					variant="ghost"
+					size="sm"
+					onclick={() => {
+						value = '';
+						onchange?.();
+					}}
+				>
+					Remove
+				</Button>
 			{/if}
-		</button>
+		</div>
 	</div>
 
 	{#if error}
 		<p id={errorId} class="text-xs text-danger">{error}</p>
-	{:else}
-		<p class="text-xs text-text-subtle">
-			Resized to {MAX_EDGE}px and re-encoded to WebP in the browser before it is sent.
-		</p>
 	{/if}
 </div>

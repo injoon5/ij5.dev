@@ -11,7 +11,11 @@ import type { SubmitFunction } from '@sveltejs/kit';
  * empty fields someone is still in. Pass a function when it depends on props.
  */
 export function pending(
-	options: { reset?: boolean | (() => boolean); onSuccess?: () => void } = {}
+	options: {
+		reset?: boolean | (() => boolean);
+		/** Runs after a successful round trip, with whatever the action returned. */
+		onSuccess?: (data: Record<string, unknown> | undefined) => void;
+	} = {}
 ) {
 	let busy = $state(false);
 
@@ -21,7 +25,7 @@ export function pending(
 			const reset = typeof options.reset === 'function' ? options.reset() : (options.reset ?? false);
 			await update({ reset });
 			busy = false;
-			if (result.type === 'success') options.onSuccess?.();
+			if (result.type === 'success') options.onSuccess?.(result.data);
 		};
 	};
 

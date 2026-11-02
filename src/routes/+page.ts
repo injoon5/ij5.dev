@@ -4,7 +4,8 @@
  * states, the dark-mode swap and the contribution graph all survive
  * `csr = false` because none of them were built on hydration in the first place.
  *
- * The one behaviour that genuinely needs script — collapsing a failed image —
- * is wired by `/w.js`, loaded only when the rendered document contains an image.
+ * The few behaviours that genuinely need script — collapsing a failed image,
+ * fading the graph's clipped edge, letting iOS show a button press — are
+ * wired by `/w.js`, loaded only when the document has something that uses one.
  */
 export const csr = false;

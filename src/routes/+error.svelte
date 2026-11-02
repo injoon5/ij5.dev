@@ -14,13 +14,10 @@
 	const COPY: Record<number, { title: string; body: string }> = {
 		404: {
 			title: 'Nothing at this address',
-			body: 'That link may have expired, or it may never have existed. Either way it is not here now.'
+			body: 'The link may have expired, or it never existed.'
 		},
-		401: { title: 'Not signed in', body: 'This page needs a session.' },
-		500: {
-			title: 'Something broke on our side',
-			body: 'This is being recorded. Trying again in a moment usually works.'
-		}
+		401: { title: 'Sign in to see this page', body: 'This page is for the site owner.' },
+		500: { title: 'Something broke', body: 'Trying again in a moment usually works.' }
 	};
 
 	let copy = $derived(
@@ -35,12 +32,16 @@
 
 <main class="grid min-h-dvh place-items-center px-6 py-16">
 	<div class="max-w-[38ch] text-center">
-		<p class="tnum text-sm font-medium text-text-subtle">{page.status}</p>
+		<p class="text-sm font-medium text-text-subtle">{page.status}</p>
 		<h1 class="mt-2 text-2xl font-semibold text-balance">{copy.title}</h1>
 		<p class="mt-2 text-base text-pretty text-text-muted">{copy.body}</p>
 
 		<div class="mt-7">
-			<Button href="/" variant="primary">Go to the homepage</Button>
+			{#if page.status === 401}
+				<Button href="/login" variant="primary">Sign in</Button>
+			{:else}
+				<Button href="/" variant="primary">Go to the homepage</Button>
+			{/if}
 		</div>
 	</div>
 </main>

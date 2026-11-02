@@ -79,7 +79,9 @@ export const GET: RequestHandler = async ({ platform, url }) => {
 	}
 
 	const domain = new URL(env?.PUBLIC_ORIGIN || url.origin).hostname;
-	const tagline = profile.tagline ?? `${profile.name} — writing, links and work.`;
+	// No invented fallback: "Name — writing, links and work." under the name
+	// it repeats is the card saying the same thing twice.
+	const tagline = profile.tagline;
 	const links = linkLabels(profile.links);
 
 	let res: Response;

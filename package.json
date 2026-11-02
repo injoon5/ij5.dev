@@ -4,6 +4,7 @@
 	"version": "0.1.0",
 	"type": "module",
 	"scripts": {
+		"predev": "node -e \"process.exit(require('fs').existsSync('.svelte-kit/cloudflare/_worker.js') ? 0 : 1)\" || vite build",
 		"dev": "vite dev --config vite.config.dev.ts",
 		"build": "vite build",
 		"preview": "wrangler dev",
