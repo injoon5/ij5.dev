@@ -4,6 +4,7 @@
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import Fingerprint from 'lucide-svelte/icons/fingerprint';
 	import KeyRound from 'lucide-svelte/icons/key-round';
+	import Hourglass from 'lucide-svelte/icons/hourglass';
 	import Trash from 'lucide-svelte/icons/trash-2';
 	import Button from '$lib/ui/Button.svelte';
 	import PageHeader from '$lib/ui/PageHeader.svelte';
@@ -36,6 +37,26 @@
 			busy = false;
 		}
 	}
+
+	let revoking = $state<string | null>(null);
+
+	/** "3:42 PM" — keys live thirty minutes, so the day never matters. */
+	const fmtTime = (ms: number) =>
+		new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' }).format(ms);
+
+	const confirmRevoke =
+		(key: { id: string }): SubmitFunction =>
+		(input) => {
+			if (!confirm('Revoke this install key? An agent still holding it will get a 401.')) {
+				input.cancel();
+				return;
+			}
+			revoking = key.id;
+			return async ({ update }) => {
+				await update();
+				revoking = null;
+			};
+		};
 
 	const confirmDelete =
 		(key: { id: string; name: string }): SubmitFunction =>
@@ -138,6 +159,58 @@
 		</form>
 		{#if error}
 			<p id="passkey-error" role="alert" class="-mt-2 px-4 pb-4 text-xs text-danger md:px-5">{error}</p>
+		{/if}
+	</div>
+
+	<h2 class="{cardTitle} mt-6">Install keys</h2>
+	<p class="-mt-2 text-sm text-pretty text-text-muted">
+		One-time keys Shelf puts in the prompts it copies. Each installs or updates one app, once, within 30 minutes.
+	</p>
+
+	<div class={cardFlush}>
+		{#if data.installKeys.length}
+			<ul class="divide-y divide-border-subtle">
+				{#each data.installKeys as key (key.id)}
+					<li
+						class="flex items-center gap-3 py-3 ps-4 pe-2 transition-opacity duration-150 ease-out md:ps-5 {revoking ===
+						key.id
+							? 'opacity-50'
+							: ''}"
+					>
+						<span
+							class="grid size-9 shrink-0 place-items-center rounded-full bg-surface-sunken text-text-muted"
+							aria-hidden="true"
+						>
+							<Hourglass size={16} />
+						</span>
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-[0.9375rem] font-medium md:text-sm">
+								{key.slug ? `Update ${key.slug}` : 'Create one new app'}
+							</p>
+							<p class="mt-0.5 text-xs text-text-muted">
+								<span class="font-mono">{key.id}</span> · Expires {fmtTime(key.expires_at)}{key.attempts
+									? ` · ${key.attempts} failed ${key.attempts === 1 ? 'try' : 'tries'}`
+									: ''}
+							</p>
+						</div>
+
+						<form method="POST" action="?/revokeKey" use:enhance={confirmRevoke(key)}>
+							<input type="hidden" name="id" value={key.id} />
+							<button
+								type="submit"
+								class="{iconButton} hover:text-danger"
+								aria-label="Revoke key {key.id}"
+								title="Revoke"
+								disabled={revoking === key.id}
+							>
+								<Trash size={15} aria-hidden="true" />
+							</button>
+						</form>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p class="px-4 py-5 text-sm text-text-muted md:px-5">No live install keys.</p>
 		{/if}
 	</div>
 </div>

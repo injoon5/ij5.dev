@@ -6,6 +6,7 @@
 	import LinkIcon from 'lucide-svelte/icons/link-2';
 	import FileText from 'lucide-svelte/icons/file-text';
 	import Download from 'lucide-svelte/icons/download';
+	import Smartphone from 'lucide-svelte/icons/smartphone';
 	import ChartLine from 'lucide-svelte/icons/chart-line';
 	import Terminal from 'lucide-svelte/icons/terminal';
 	import KeyRound from 'lucide-svelte/icons/key-round';
@@ -21,19 +22,20 @@
 	const pastes: Item = { href: '/admin/pastes', label: 'Pastes', icon: FileText };
 	const files: Item = { href: '/admin/files', label: 'Files', icon: Download };
 	const home: Item = { href: '/admin/home', label: 'Home', icon: LayoutGrid };
+	const apps: Item = { href: '/admin/apps', label: 'Apps', icon: Smartphone };
 	const analytics: Item = { href: '/admin/analytics', label: 'Analytics', icon: ChartLine };
 	const api: Item = { href: '/admin/api', label: 'API', icon: Terminal };
 	const security: Item = { href: '/admin/security', label: 'Security', icon: KeyRound };
 
 	// The sidebar groups by what things are — what you share, the site, the
 	// settings — and lets the gap between groups do a heading's work.
-	const SIDEBAR = [[links, pastes, files], [home, analytics], [api, security]];
+	const SIDEBAR = [[links, pastes, files], [home, apps, analytics], [api, security]];
 
 	// A phone gets a tab bar, and a tab bar holds five: the four screens used
 	// on the go, then "More" for the rest. Eight icons in a row was a bar of
 	// unlabelled glyphs nobody could hit or tell apart.
 	const TABS = [links, pastes, files, analytics];
-	const MORE = [home, api, security];
+	const MORE = [home, apps, api, security];
 
 	let current = $derived(page.url.pathname);
 	const isActive = (href: string) =>
