@@ -41,6 +41,9 @@ const SECURITY_HEADERS: Array<[string, string]> = [
 	['Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()']
 ];
 
+/** API prefixes that check their own bearer token and never take the cookie. */
+const BEARER_APIS = ['/api/links', '/api/apps', '/api/install-keys'];
+
 function harden(res: Response) {
 	for (const [k, v] of SECURITY_HEADERS) res.headers.set(k, v);
 	return res;
@@ -193,7 +196,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	 * `/api` has no `+layout.server.ts`, so it guards here — but only the
 	 * cookie-authenticated half.
 	 *
-	 * `/api/links` authenticates itself with a bearer token and deliberately
+	 * `/api/links` (and Shelf's `/api/apps` and `/api/install-keys`, which
+	 * follow the same rule) authenticates itself with a bearer token and deliberately
 	 * does *not* accept the session cookie: a cookie is attached by the browser
 	 * to whatever request the browser is talked into making, which is the whole
 	 * of CSRF, while a bearer token has to be supplied by the caller. Letting
@@ -211,7 +215,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	 * instead of the designed 404 page.
 	 */
 	const isApi = path === '/api' || path.startsWith('/api/');
-	const isBearerApi = path === '/api/links' || path.startsWith('/api/links/');
+	const isBearerApi = BEARER_APIS.some((p) => path === p || path.startsWith(`${p}/`));
 	const isPasskeyLogin =
 		path === '/api/passkey/login/begin' || path === '/api/passkey/login/complete';
 
