@@ -1,6 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { errorRedirect, issueCode, issuer, oidcConfigured, parseAuthorize, tooOld } from '$lib/server/oidc';
+import { errorRedirect, issueCode, issuer, oidcConfigured, parseAuthorize, tooOld } from '$lib/auth/oidc.server';
 
 /**
  * The OIDC authorization endpoint (§4). With a live session it answers at

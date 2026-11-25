@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { apiError, authorize } from '$lib/server/api';
-import { appsEtag, etagMatches, listApps } from '$lib/server/apps';
+import { appsEtag, etagMatches, listApps } from '$lib/apps/apps.server';
 
 /**
  * The app index Shelf syncs on every launch (plan §1.3). Metadata only — the

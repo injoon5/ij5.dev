@@ -1,6 +1,6 @@
 # Reply parser fixtures
 
-Shared by the two copies of the reply parser: `src/lib/replyParser.ts` in
+Shared by the two copies of the reply parser: `src/lib/apps/replyParser.ts` in
 ij5.dev and the Swift parser in Shelf. Each `<case>.md` is an input (a chat
 reply or a raw Swift file); `<case>.json` beside it is the exact result both
 parsers must return. Change a rule here, in both parsers and in the fixtures

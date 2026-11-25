@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
-import { apiError, authorizeApp } from '$lib/server/api';
-import { getSource } from '$lib/server/apps';
+import { apiError } from '$lib/server/api';
+import { authorizeApp } from '$lib/apps/appAuth.server';
+import { getSource } from '$lib/apps/apps.server';
 
 /**
  * The raw file, for `curl -o App.swift` (plan §9.5, Appendix D). With Include

@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
-import { MAX_LIVE_KEYS, mintKey } from '$lib/server/installKeys';
-import { SLUG_PATTERN } from '$lib/reserved';
+import { MAX_LIVE_KEYS, mintKey } from '$lib/apps/installKeys.server';
+import { SLUG_PATTERN } from '$lib/slugs/slugs';
 
 /**
  * Mints a one-time install key (plan §9.5). Admin token only: Shelf mints one

@@ -1,16 +1,17 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { clientIp, eq, sha256 } from '$lib/server/auth';
-import { safeNext } from '$lib/server/next';
-import { newChallenge } from '$lib/server/puzzle';
+import { clientIp } from '$lib/server/request';
+import { eq, sha256 } from '$lib/server/crypto';
+import { safeNext } from '$lib/auth/next';
+import { newChallenge } from '$lib/auth/puzzle.server';
 import {
 	passwordAndPuzzle,
 	passwordAndRecoveryCode,
 	passwordConfigured,
 	startSession,
 	type Outcome
-} from '$lib/server/signIn';
-import { turnstileEnabled, turnstileOk } from '$lib/server/turnstile';
+} from '$lib/auth/signIn.server';
+import { turnstileEnabled, turnstileOk } from '$lib/auth/turnstile.server';
 
 /**
  * Four doors (§4), strongest first:

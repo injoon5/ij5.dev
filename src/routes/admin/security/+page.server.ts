@@ -1,14 +1,14 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { requireFull } from '$lib/server/guard';
-import { requestMeta } from '$lib/server/auth';
-import { deletePasskey, listPasskeys } from '$lib/server/webauthn';
-import { listLiveKeys, revokeKey } from '$lib/server/installKeys';
-import { deleteOtherSessions, deleteSession, listSessions } from '$lib/server/sessions';
-import { describeAgent, listEvents, logEvent } from '$lib/server/events';
-import { regenerate, remaining } from '$lib/server/recovery';
-import { passwordConfigured } from '$lib/server/signIn';
-import { issuer, oidcConfigured } from '$lib/server/oidc';
+import { requireFull } from '$lib/auth/guard.server';
+import { requestMeta } from '$lib/server/request';
+import { deletePasskey, listPasskeys } from '$lib/auth/webauthn.server';
+import { listLiveKeys, revokeKey } from '$lib/apps/installKeys.server';
+import { deleteOtherSessions, deleteSession, listSessions } from '$lib/auth/sessions.server';
+import { describeAgent, listEvents, logEvent } from '$lib/auth/events.server';
+import { regenerate, remaining } from '$lib/auth/recovery.server';
+import { passwordConfigured } from '$lib/auth/signIn.server';
+import { issuer, oidcConfigured } from '$lib/auth/oidc.server';
 
 /**
  * Everything about getting in (§4): passkeys, sessions, recovery codes, the

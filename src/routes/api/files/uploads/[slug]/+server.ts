@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { cleanName, fileKey, insertFileRow, parseExpiry, slugAvailable } from '$lib/server/files';
+import { cleanName, fileKey, insertFileRow, parseExpiry, slugAvailable } from '$lib/files/files.server';
 import { sameOrigin } from '$lib/server/origin';
-import { MAX_PARTS, uploadLimits } from '$lib/uploads';
+import { MAX_PARTS, uploadLimits } from '$lib/files/uploads';
 
 /**
  * The rest of a multipart upload, keyed by the slug its create step chose:

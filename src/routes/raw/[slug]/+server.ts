@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
-import { getPaste } from '$lib/server/pastes';
-import { track } from '$lib/server/track';
+import { getPaste } from '$lib/pastes/pastes.server';
+import { track } from '$lib/analytics/track.server';
 
 /**
  * The stable raw URL for a paste: `ij5.dev/raw/{slug}` returns the body as

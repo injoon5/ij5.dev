@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { SESSION_COOKIE, cookieOptions, deleteSession } from '$lib/server/sessions';
+import { SESSION_COOKIE, cookieOptions, deleteSession } from '$lib/auth/sessions.server';
 
 /**
  * POST only, so a prefetch or an image tag cannot sign you out. The hook's

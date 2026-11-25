@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { getPaste } from '$lib/server/pastes';
-import { track } from '$lib/server/track';
+import { getPaste } from '$lib/pastes/pastes.server';
+import { track } from '$lib/analytics/track.server';
 
 /**
  * The paste view, as a real page.

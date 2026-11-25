@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { jwks, oidcConfigured } from '$lib/server/oidc';
+import { jwks, oidcConfigured } from '$lib/auth/oidc.server';
 
 /** The public half of the ID-token signing key (§4). */
 export const GET: RequestHandler = async ({ platform }) => {

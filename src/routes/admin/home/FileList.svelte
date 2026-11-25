@@ -6,7 +6,7 @@
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import { cardTitle, iconButton } from '$lib/ui/styles';
 	import { fmtBytes } from '$lib/format';
-	import type { AssetRow } from '$lib/types';
+	import type { AssetRow } from '$lib/home/types';
 
 	/**
 	 * Every uploaded image, as a grid of thumbnails — these are pictures, and

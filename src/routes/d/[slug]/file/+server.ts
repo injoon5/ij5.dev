@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { bumpDownloads, contentDisposition, getFile, parseRange } from '$lib/server/files';
+import { bumpDownloads, contentDisposition, getFile, parseRange } from '$lib/files/files.server';
 
 /**
  * The bytes. Streamed from R2 with `Content-Disposition: attachment`, so the

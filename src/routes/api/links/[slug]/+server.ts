@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
-import { deleteSlug, getSlug, isTargetUrl, purgeLocalCache, updateSlug } from '$lib/server/slugs';
-import type { SlugRow } from '$lib/types';
+import { deleteSlug, getSlug, isTargetUrl, purgeLocalCache, updateSlug } from '$lib/links/links.server';
+import type { SlugRow } from '$lib/links/link';
 
 /** Item routes for the shortener API. */
 

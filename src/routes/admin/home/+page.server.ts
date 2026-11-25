@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
-import { requireFull } from '$lib/server/guard';
+import { requireFull } from '$lib/auth/guard.server';
 import {
 	clearCache,
 	hasPrevious,
@@ -12,11 +12,11 @@ import {
 	restoreToD1,
 	revert,
 	syncDraft
-} from '$lib/server/home';
-import { docKeys, isAssetKey, isReferenced, releaseAssets, removeAsset } from '$lib/server/assets';
-import { parseLines } from '$lib/lines';
-import { imageKeysIn } from '$lib/markdown';
-import type { AssetRow } from '$lib/types';
+} from '$lib/home/home.server';
+import { docKeys, isAssetKey, isReferenced, releaseAssets, removeAsset } from '$lib/home/assets.server';
+import { parseLines } from '$lib/home/lines';
+import { imageKeysIn } from '$lib/home/markdown';
+import type { AssetRow } from '$lib/home/types';
 
 const noEnv = () => fail(500, { error: 'No platform bindings.' });
 

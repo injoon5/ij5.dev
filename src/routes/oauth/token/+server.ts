@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { authenticateClient, mintTokens, oidcConfigured, redeemCode, type TokenError } from '$lib/server/oidc';
+import { authenticateClient, mintTokens, oidcConfigured, redeemCode, type TokenError } from '$lib/auth/oidc.server';
 
 /**
  * The OIDC token endpoint (§4). Called by Cloudflare Access from its servers,

@@ -6,7 +6,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import PageHeader from '$lib/ui/PageHeader.svelte';
 	import { card, cardFlush, cardTitle } from '$lib/ui/styles';
-	import { RANGE_LABELS } from './ranges';
+	import { RANGE_LABELS } from '$lib/analytics/ranges';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();

@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
-import { DATA_LIMITS, KEY_RULE, isDataKey, readOne, writeData } from '$lib/server/appData';
-import { MAX_DATA_VALUE_BYTES } from '$lib/types';
+import { DATA_LIMITS, KEY_RULE, isDataKey, readOne, writeData } from '$lib/apps/appData.server';
+import { MAX_DATA_VALUE_BYTES } from '$lib/apps/app';
 
 /** One key of an app's data: read it, replace it, delete it. Admin token only. */
 

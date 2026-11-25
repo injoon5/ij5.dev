@@ -9,7 +9,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import { affixClass, affixInput, affixPrefix, fieldClass, iconButton, notice } from '$lib/ui/styles';
-	import { FieldError, uploadFile } from '$lib/ui/multipart';
+	import { FieldError, uploadFile } from '$lib/files/multipart';
 	import { fmtBytes } from '$lib/format';
 
 	type Props = {

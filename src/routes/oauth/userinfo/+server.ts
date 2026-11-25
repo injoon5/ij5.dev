@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { oidcConfigured, userinfo } from '$lib/server/oidc';
+import { oidcConfigured, userinfo } from '$lib/auth/oidc.server';
 
 /** OIDC UserInfo (§4): the same claims as the ID token, for a live access token. */
 const handler: RequestHandler = async ({ request, platform }) => {

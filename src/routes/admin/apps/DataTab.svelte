@@ -9,7 +9,7 @@
 	import { fmtBytes, fmtDate } from '$lib/format';
 	import { pending } from '$lib/ui/pending.svelte';
 	import { cardFlush, fieldClass, iconButton, notice } from '$lib/ui/styles';
-	import { MAX_DATA_APP_BYTES, MAX_DATA_KEYS } from '$lib/types';
+	import { MAX_DATA_APP_BYTES, MAX_DATA_KEYS } from '$lib/apps/app';
 
 	/**
 	 * An app's data (plan §8.2): its keys with their size and when each

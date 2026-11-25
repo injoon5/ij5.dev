@@ -1,10 +1,11 @@
 import type { RequestHandler } from './$types';
-import { apiError, apiJson, authorize, authorizeApp } from '$lib/server/api';
-import { appContent, deleteApp, getApp, getAppMeta, putApp, utf8Bytes } from '$lib/server/apps';
-import { KEY_ERROR, newClaim, spendAttempt } from '$lib/server/installKeys';
-import { SLUG_PATTERN } from '$lib/reserved';
-import { parseReply } from '$lib/replyParser';
-import { MAX_APP_BYTES } from '$lib/types';
+import { apiError, apiJson, authorize } from '$lib/server/api';
+import { authorizeApp } from '$lib/apps/appAuth.server';
+import { appContent, deleteApp, getApp, getAppMeta, putApp, utf8Bytes } from '$lib/apps/apps.server';
+import { KEY_ERROR, newClaim, spendAttempt } from '$lib/apps/installKeys.server';
+import { SLUG_PATTERN } from '$lib/slugs/slugs';
+import { parseReply } from '$lib/apps/replyParser';
+import { MAX_APP_BYTES } from '$lib/apps/app';
 
 /**
  * Item routes for Shelf's apps (plan §1.3, §9.5).

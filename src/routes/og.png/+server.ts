@@ -1,9 +1,9 @@
 import { ImageResponse } from '@ethercorps/sveltekit-og';
 import { GoogleFont, resolveFonts } from '@ethercorps/sveltekit-og/fonts';
 import type { RequestHandler } from '@sveltejs/kit';
-import HomeCard from '$lib/components/og/home.svelte';
-import { loadFromD1, readPublished } from '$lib/server/home';
-import type { Profile } from '$lib/types';
+import HomeCard from '$lib/home/OgCard.svelte';
+import { loadFromD1, readPublished } from '$lib/home/home.server';
+import type { Profile } from '$lib/home/types';
 
 /**
  * The Open Graph image for `/`, rendered on demand from the published profile

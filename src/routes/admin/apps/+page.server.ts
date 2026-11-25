@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { requireFull } from '$lib/server/guard';
-import { SLUG_PATTERN } from '$lib/reserved';
+import { requireFull } from '$lib/auth/guard.server';
+import { SLUG_PATTERN } from '$lib/slugs/slugs';
 import {
 	appContent,
 	deleteApp,
@@ -12,9 +12,9 @@ import {
 	putApp,
 	revertApp,
 	utf8Bytes
-} from '$lib/server/apps';
-import { DATA_LIMITS, KEY_RULE, isDataKey, listEntries, readOne, writeData } from '$lib/server/appData';
-import { MAX_APP_BYTES } from '$lib/types';
+} from '$lib/apps/apps.server';
+import { DATA_LIMITS, KEY_RULE, isDataKey, listEntries, readOne, writeData } from '$lib/apps/appData.server';
+import { MAX_APP_BYTES } from '$lib/apps/app';
 
 /**
  * Shelf's apps in the admin (plan §1.4, §8.2, §9.3): a master–detail list, an

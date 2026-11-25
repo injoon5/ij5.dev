@@ -1,5 +1,5 @@
-import { eq, sha256 } from './auth';
-import { checkKey, KEY_ERROR, KEY_PREFIX, type InstallKeyRow } from './installKeys';
+import { eq, sha256 } from '$lib/server/crypto';
+import { KEY_ERROR, KEY_PREFIX } from '$lib/apps/installKeys.server';
 
 /**
  * Bearer auth for the shortener API (§4's credential, a second door).
@@ -19,10 +19,8 @@ export type ApiAuth = { ok: true } | { ok: false; status: number; error: string 
 export async function authorize(request: Request, hash: string | undefined): Promise<ApiAuth> {
 	if (!hash) return { ok: false, status: 503, error: 'Auth is not configured on this deployment.' };
 
-	const header = request.headers.get('authorization') ?? '';
-	const [scheme, token] = header.split(' ');
-
-	if (!token || scheme?.toLowerCase() !== 'bearer') {
+	const token = bearerToken(request);
+	if (!token) {
 		return { ok: false, status: 401, error: 'Send an Authorization: Bearer <token> header.' };
 	}
 
@@ -38,45 +36,6 @@ export async function authorize(request: Request, hash: string | undefined): Pro
 	}
 
 	return { ok: true };
-}
-
-export type AppAuth =
-	| { ok: true; origin: 'admin' }
-	| { ok: true; origin: 'key'; key: InstallKeyRow }
-	| { ok: false; status: number; error: string };
-
-/**
- * The single door for the two routes an install key may use (Shelf plan §9.5):
- * `PUT /api/apps/{slug}` (`write`) and `GET /api/apps/{slug}/source`
- * (`read-source`). Every other route calls plain `authorize`, which turns a key
- * away — so widening what a key can do means changing this function, and
- * nothing else can do it by accident.
- *
- * The admin token passes for both. A key passes only while it is live and only
- * within its scope: a create key (no slug) may write any slug — whether it is
- * free is the write's question, answered with a 409 — and may read nothing; an
- * update key may write and read its own slug only. Every key failure is the
- * same 401 sentence.
- */
-export async function authorizeApp(
-	request: Request,
-	env: App.Platform['env'],
-	{ slug, action }: { slug: string; action: 'read-source' | 'write' }
-): Promise<AppAuth> {
-	const header = request.headers.get('authorization') ?? '';
-	const [scheme, token] = header.split(' ');
-
-	if (!token?.startsWith(KEY_PREFIX) || scheme?.toLowerCase() !== 'bearer') {
-		const auth = await authorize(request, env.AUTH_HASH);
-		return auth.ok ? { ok: true, origin: 'admin' } : auth;
-	}
-
-	const key = await checkKey(env, token);
-	const denied = { ok: false, status: 401, error: KEY_ERROR } as const;
-	if (!key) return denied;
-	if (action === 'read-source' && key.slug !== slug) return denied;
-	if (action === 'write' && key.slug !== null && key.slug !== slug) return denied;
-	return { ok: true, origin: 'key', key };
 }
 
 /**
@@ -97,4 +56,10 @@ export function apiError(status: number, error: string, extra?: Record<string, u
 
 export function apiJson(body: unknown, status = 200) {
 	return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
+}
+
+/** The token from `Authorization: Bearer <token>`, or null. */
+export function bearerToken(request: Request): string | null {
+	const [scheme, token] = (request.headers.get('authorization') ?? '').split(' ');
+	return token && scheme?.toLowerCase() === 'bearer' ? token : null;
 }

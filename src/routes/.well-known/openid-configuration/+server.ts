@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { discovery, oidcConfigured } from '$lib/server/oidc';
+import { discovery, oidcConfigured } from '$lib/auth/oidc.server';
 
 /** OIDC discovery (§4). 404 until the provider is configured. */
 export const GET: RequestHandler = ({ platform }) => {

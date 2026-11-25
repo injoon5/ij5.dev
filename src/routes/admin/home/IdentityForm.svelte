@@ -2,11 +2,11 @@
 	import { enhance } from '$app/forms';
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
-	import AssetInput from '$lib/ui/AssetInput.svelte';
+	import AssetInput from '$lib/home/AssetInput.svelte';
 	import { cardTitle, fieldClass } from '$lib/ui/styles';
 	import { pending } from '$lib/ui/pending.svelte';
-	import { serializeLines } from '$lib/lines';
-	import type { Profile } from '$lib/types';
+	import { serializeLines } from '$lib/home/lines';
+	import type { Profile } from '$lib/home/types';
 
 	/**
 	 * The masthead: name, tagline, avatar, and the links the share card and

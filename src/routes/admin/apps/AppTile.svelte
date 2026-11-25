@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { Tint } from '$lib/types';
-	import { TINT_HEX } from './tints';
+	import type { Tint } from '$lib/apps/app';
+	import { TINT_HEX } from '$lib/apps/tints';
 
 	/**
 	 * The app's icon as near as a browser can draw it. SF Symbols only render

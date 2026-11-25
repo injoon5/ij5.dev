@@ -10,7 +10,7 @@
  * Put each value in with `npx wrangler secret put NAME` (and in `.dev.vars` for
  * local dev). The password and the client secret themselves are never stored.
  *
- * Keep the hashing here identical to `src/lib/server/password.ts`.
+ * Keep the hashing here identical to `src/lib/auth/password.server.ts`.
  */
 import { argon2id } from '@noble/hashes/argon2.js';
 import { createHash, randomBytes, randomInt } from 'node:crypto';

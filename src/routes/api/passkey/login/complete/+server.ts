@@ -1,8 +1,8 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/browser';
-import { startSession } from '$lib/server/signIn';
-import { finishAuthentication } from '$lib/server/webauthn';
+import { startSession } from '$lib/auth/signIn.server';
+import { finishAuthentication } from '$lib/auth/webauthn.server';
 
 /**
  * Step two of passkey sign-in: verify the assertion the authenticator produced

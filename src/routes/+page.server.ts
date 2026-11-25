@@ -1,8 +1,8 @@
 import type { PageServerLoad } from './$types';
-import { loadFromD1, readPublished } from '$lib/server/home';
-import { planRefresh, readLive } from '$lib/server/live';
-import { renderMarkdown, findLiveRequests, imageKeysIn } from '$lib/markdown';
-import type { HomeDoc } from '$lib/types';
+import { loadFromD1, readPublished } from '$lib/home/home.server';
+import { planRefresh, readLive } from '$lib/home/live.server';
+import { renderMarkdown, findLiveRequests, imageKeysIn } from '$lib/home/markdown';
+import type { HomeDoc } from '$lib/home/types';
 
 const EMPTY: HomeDoc = {
 	v: 0,

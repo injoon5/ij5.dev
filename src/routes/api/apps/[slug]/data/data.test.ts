@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import * as data from './+server';
 import * as item from './[key]/+server';
 import { call, sqlite, testEnv } from '$lib/server/testing/d1';
-import { MAX_DATA_APP_BYTES, MAX_DATA_KEYS, MAX_DATA_VALUE_BYTES } from '$lib/types';
+import { MAX_DATA_APP_BYTES, MAX_DATA_KEYS, MAX_DATA_VALUE_BYTES } from '$lib/apps/app';
 
 /**
  * Per-app data (Shelf plan §8.2): rev ordering, tombstones, atomic batches and

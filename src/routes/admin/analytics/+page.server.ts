@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { RANGES, fillDays, isRange, type RangeKey } from './ranges';
+import { RANGES, fillDays, isRange, type RangeKey } from '$lib/analytics/ranges';
 
 /**
  * Every query on this page runs in one `DB.batch()` — one round trip to D1,

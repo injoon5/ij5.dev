@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
-import { DATA_LIMITS, KEY_RULE, isDataKey, readAll, readSince, writeData } from '$lib/server/appData';
-import { MAX_DATA_APP_BYTES } from '$lib/types';
+import { DATA_LIMITS, KEY_RULE, isDataKey, readAll, readSince, writeData } from '$lib/apps/appData.server';
+import { MAX_DATA_APP_BYTES } from '$lib/apps/app';
 
 /**
  * An app's data (Shelf plan §8.2): all of it, everything since a rev, or a

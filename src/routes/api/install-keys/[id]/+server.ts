@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
-import { getKey, keyStatus, revokeKey } from '$lib/server/installKeys';
+import { getKey, keyStatus, revokeKey } from '$lib/apps/installKeys.server';
 
 /**
  * A key's status, polled by Shelf while its sheet is open so it can close the

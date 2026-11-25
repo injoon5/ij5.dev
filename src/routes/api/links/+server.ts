@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
-import { RESERVED, SLUG_PATTERN } from '$lib/reserved';
-import { getFile } from '$lib/server/files';
-import { getPaste } from '$lib/server/pastes';
-import { createSlug, getSlug, isTargetUrl, listSlugs } from '$lib/server/slugs';
-import type { SlugRow } from '$lib/types';
+import { RESERVED, SLUG_PATTERN } from '$lib/slugs/slugs';
+import { getFile } from '$lib/files/files.server';
+import { getPaste } from '$lib/pastes/pastes.server';
+import { createSlug, getSlug, isTargetUrl, listSlugs } from '$lib/links/links.server';
+import type { SlugRow } from '$lib/links/link';
 
 /**
  * The shortener API. Collection routes; `[slug]` handles the item routes.

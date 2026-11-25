@@ -10,8 +10,8 @@ import * as dataKey from './[slug]/data/[key]/+server';
 import * as keys from '../install-keys/+server';
 import * as keyItem from '../install-keys/[id]/+server';
 import { call, sqlite, testEnv } from '$lib/server/testing/d1';
-import { KEY_ERROR, MAX_KEY_ATTEMPTS } from '$lib/server/installKeys';
-import { MAX_APP_BYTES } from '$lib/types';
+import { KEY_ERROR, MAX_KEY_ATTEMPTS } from '$lib/apps/installKeys.server';
+import { MAX_APP_BYTES } from '$lib/apps/app';
 
 /**
  * The apps API and install keys end to end (Shelf plan §1.5, §9.5): the real

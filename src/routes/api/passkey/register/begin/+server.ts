@@ -1,8 +1,8 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { FULL_ONLY, isFull } from '$lib/server/guard';
+import { FULL_ONLY, isFull } from '$lib/auth/guard.server';
 import { sameOrigin } from '$lib/server/origin';
-import { beginRegistration } from '$lib/server/webauthn';
+import { beginRegistration } from '$lib/auth/webauthn.server';
 
 /**
  * Step one of registering a passkey: the server returns the options the

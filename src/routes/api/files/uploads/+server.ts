@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { fileKey, freeRandomSlug, slugProblem } from '$lib/server/files';
+import { fileKey, freeRandomSlug, slugProblem } from '$lib/files/files.server';
 import { sameOrigin } from '$lib/server/origin';
 import { fmtBytes } from '$lib/format';
-import { partSizeFor, uploadLimits } from '$lib/uploads';
+import { partSizeFor, uploadLimits } from '$lib/files/uploads';
 
 /**
  * Step one of sharing a file: reserve a name and open a multipart upload in

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import ImagePlus from 'lucide-svelte/icons/image-plus';
 	import Button from '$lib/ui/Button.svelte';
-	import { renderMarkdown } from '$lib/markdown';
-	import { uploadImage } from '$lib/ui/upload';
+	import { renderMarkdown } from '$lib/home/markdown';
+	import { uploadImage } from '$lib/home/imageUpload';
 	import { cardFlush, cardTitle } from '$lib/ui/styles';
-	import type { AssetRow } from '$lib/types';
+	import type { AssetRow } from '$lib/home/types';
 
 	/**
 	 * The Markdown body and its live preview. Side by side where there is

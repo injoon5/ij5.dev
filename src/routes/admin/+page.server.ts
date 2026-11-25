@@ -1,10 +1,10 @@
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
-import { requireFull } from '$lib/server/guard';
-import { RESERVED, SLUG_PATTERN } from '$lib/reserved';
-import { getFile } from '$lib/server/files';
-import { getPaste } from '$lib/server/pastes';
+import { requireFull } from '$lib/auth/guard.server';
+import { RESERVED, SLUG_PATTERN } from '$lib/slugs/slugs';
+import { getFile } from '$lib/files/files.server';
+import { getPaste } from '$lib/pastes/pastes.server';
 import {
 	createSlug,
 	deleteSlug,
@@ -13,8 +13,8 @@ import {
 	listSlugs,
 	purgeLocalCache,
 	updateSlug
-} from '$lib/server/slugs';
-import type { SlugRow } from '$lib/types';
+} from '$lib/links/links.server';
+import type { SlugRow } from '$lib/links/link';
 
 const form = z.object({
 	slug: z

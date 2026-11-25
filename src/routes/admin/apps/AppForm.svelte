@@ -7,10 +7,10 @@
 	import { fieldClass, notice } from '$lib/ui/styles';
 	import { pending } from '$lib/ui/pending.svelte';
 	import { fmtBytes } from '$lib/format';
-	import { parseReply, slugify } from '$lib/replyParser';
-	import { MAX_APP_BYTES, MAX_APP_NAME, TINTS, type AppFull } from '$lib/types';
+	import { parseReply, slugify } from '$lib/apps/replyParser';
+	import { MAX_APP_BYTES, MAX_APP_NAME, TINTS, type AppFull } from '$lib/apps/app';
 	import AppTile from './AppTile.svelte';
-	import { TINT_HEX } from './tints';
+	import { TINT_HEX } from '$lib/apps/tints';
 
 	type Props = {
 		/** `null` puts the form in New App mode. */

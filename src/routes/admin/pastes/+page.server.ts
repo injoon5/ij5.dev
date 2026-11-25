@@ -1,9 +1,9 @@
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
-import { requireFull } from '$lib/server/guard';
-import { RESERVED, SLUG_PATTERN } from '$lib/reserved';
-import { getFile } from '$lib/server/files';
+import { requireFull } from '$lib/auth/guard.server';
+import { RESERVED, SLUG_PATTERN } from '$lib/slugs/slugs';
+import { getFile } from '$lib/files/files.server';
 import {
 	createPaste,
 	deletePaste,
@@ -11,9 +11,9 @@ import {
 	listPastes,
 	purgePasteCache,
 	updatePaste
-} from '$lib/server/pastes';
-import { getSlug } from '$lib/server/slugs';
-import { MAX_PASTE_CHARS, type PasteRow } from '$lib/types';
+} from '$lib/pastes/pastes.server';
+import { getSlug } from '$lib/links/links.server';
+import { MAX_PASTE_CHARS, type PasteRow } from '$lib/pastes/paste';
 
 /**
  * The admin's pastes screen: a master–detail list like the links screen, with

@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { beginAuthentication } from '$lib/server/webauthn';
+import { beginAuthentication } from '$lib/auth/webauthn.server';
 
 /**
  * Step one of passkey sign-in: the server returns the options the browser

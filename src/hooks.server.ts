@@ -1,9 +1,10 @@
 import type { Handle } from '@sveltejs/kit';
-import { isSlugCandidate } from '$lib/reserved';
-import { readSession, SESSION_COOKIE } from '$lib/server/sessions';
+import { isSlugCandidate } from '$lib/slugs/slugs';
+import { readSession, SESSION_COOKIE } from '$lib/auth/sessions.server';
 import { crossSiteForm } from '$lib/server/csrf';
-import { track } from '$lib/server/track';
-import type { HomeDoc, SlugRecord } from '$lib/types';
+import { track } from '$lib/analytics/track.server';
+import type { HomeDoc } from '$lib/home/types';
+import type { SlugRecord } from '$lib/links/link';
 
 /**
  * SvelteKit owns the request but not the redirect (§2).

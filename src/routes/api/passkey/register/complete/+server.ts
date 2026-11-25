@@ -1,9 +1,9 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { FULL_ONLY, isFull } from '$lib/server/guard';
+import { FULL_ONLY, isFull } from '$lib/auth/guard.server';
 import { sameOrigin } from '$lib/server/origin';
 import type { RegistrationResponseJSON } from '@simplewebauthn/browser';
-import { finishRegistration } from '$lib/server/webauthn';
+import { finishRegistration } from '$lib/auth/webauthn.server';
 
 /**
  * Step two of registering a passkey: verify the attestation the authenticator

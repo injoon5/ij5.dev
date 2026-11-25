@@ -10,7 +10,7 @@
 	import LogOut from 'lucide-svelte/icons/log-out';
 	import Button from '$lib/ui/Button.svelte';
 	import PageHeader from '$lib/ui/PageHeader.svelte';
-	import { registerPasskey } from '$lib/ui/passkey';
+	import { registerPasskey } from '$lib/auth/passkey';
 	import { fmtDate } from '$lib/format';
 	import { badge, card, cardFlush, cardTitle, fieldClass, iconButton, notice } from '$lib/ui/styles';
 	import { pending } from '$lib/ui/pending.svelte';

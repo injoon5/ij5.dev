@@ -8,7 +8,7 @@
 	import PageHeader from '$lib/ui/PageHeader.svelte';
 	import { pending } from '$lib/ui/pending.svelte';
 	import { iconButton, notice } from '$lib/ui/styles';
-	import type { AssetRow } from '$lib/types';
+	import type { AssetRow } from '$lib/home/types';
 	import type { ActionData, PageData } from './$types';
 	import IdentityForm from './IdentityForm.svelte';
 	import PageEditor from './PageEditor.svelte';

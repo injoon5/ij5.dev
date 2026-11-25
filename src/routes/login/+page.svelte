@@ -5,9 +5,9 @@
 	import Fingerprint from 'lucide-svelte/icons/fingerprint';
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
-	import { signInWithPasskey } from '$lib/ui/passkey';
+	import { signInWithPasskey } from '$lib/auth/passkey';
 	import { fieldClass } from '$lib/ui/styles';
-	import { turnstile } from '$lib/ui/turnstile';
+	import { turnstile } from '$lib/auth/turnstileWidget';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();

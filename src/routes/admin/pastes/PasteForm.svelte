@@ -7,7 +7,7 @@
 	import Field from '$lib/ui/Field.svelte';
 	import { affixClass, affixInput, affixPrefix, fieldClass, notice, switchClass } from '$lib/ui/styles';
 	import { pending } from '$lib/ui/pending.svelte';
-	import { MAX_PASTE_CHARS, type PasteRow } from '$lib/types';
+	import { MAX_PASTE_CHARS, type PasteRow } from '$lib/pastes/paste';
 
 	type Props = {
 		/** `null` puts the form in create mode. */

@@ -1,6 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { requireFull } from '$lib/server/guard';
+import { requireFull } from '$lib/auth/guard.server';
 import {
 	cleanName,
 	createFile,
@@ -10,10 +10,10 @@ import {
 	listFiles,
 	parseExpiry,
 	slugProblem
-} from '$lib/server/files';
+} from '$lib/files/files.server';
 import { fmtBytes } from '$lib/format';
-import { MAX_FORM_FILE_BYTES, type FileRow } from '$lib/types';
-import { uploadLimits } from '$lib/uploads';
+import { MAX_FORM_FILE_BYTES, type FileRow } from '$lib/files/file';
+import { uploadLimits } from '$lib/files/uploads';
 
 /**
  * The admin's file screen. Uploading is the only write that matters: a file's

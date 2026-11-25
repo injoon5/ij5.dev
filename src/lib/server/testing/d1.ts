@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { sha256 } from '../auth';
+import { sha256 } from '$lib/server/crypto';
 
 /**
  * A D1 stand-in backed by real SQLite (`node:sqlite`), for tests only — the

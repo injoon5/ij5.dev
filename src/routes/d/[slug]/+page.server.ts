@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { getFile } from '$lib/server/files';
+import { getFile } from '$lib/files/files.server';
 
 /**
  * The download landing page. Existence and expiry are judged here on the

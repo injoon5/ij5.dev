@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
-import { revertApp } from '$lib/server/apps';
+import { revertApp } from '$lib/apps/apps.server';
 
 /**
  * Undo for a bad push (plan §9.5): the current version and the newest one in

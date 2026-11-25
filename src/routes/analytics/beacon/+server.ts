@@ -9,7 +9,7 @@ import {
 	today,
 	visitorHash,
 	VISITORS_INSERT
-} from '$lib/server/track';
+} from '$lib/analytics/track.server';
 
 /**
  * The fingerprint half of §6's identity (§6). `/a.js` posts the stable signal

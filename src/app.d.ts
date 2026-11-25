@@ -11,7 +11,7 @@ declare global {
 	namespace App {
 		interface Locals {
 			/** The signed-in session, if the cookie names a live one (§4). */
-			session: import('$lib/server/sessions').SessionRow | null;
+			session: import('$lib/auth/sessions.server').SessionRow | null;
 			/** `session !== null`, kept for the many places that only ask that. */
 			authed: boolean;
 			/**

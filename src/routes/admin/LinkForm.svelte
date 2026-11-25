@@ -6,7 +6,7 @@
 	import Field from '$lib/ui/Field.svelte';
 	import { affixClass, affixInput, affixPrefix, fieldClass, notice } from '$lib/ui/styles';
 	import { pending } from '$lib/ui/pending.svelte';
-	import type { SlugRow } from '$lib/types';
+	import type { SlugRow } from '$lib/links/link';
 
 	type Props = {
 		/** `null` puts the form in create mode. */
