@@ -1,6 +1,18 @@
 import { z } from 'zod';
-import { MAX_APP_BYTES, MAX_APP_NAME, TINTS, type AppFull, type AppMeta, type Tint } from '$lib/apps/app';
-import { base64url, MAX_KEY_ATTEMPTS } from './installKeys.server';
+import {
+	MAX_APP_BYTES,
+	MAX_APP_NAME,
+	normalizeSource,
+	SOURCE_TOO_BIG,
+	TINTS,
+	utf8Bytes,
+	type AppFull,
+	type AppMeta,
+	type Tint
+} from '$lib/apps/app';
+import { b64url } from '$lib/server/crypto';
+import { forgetAllData } from './appData.server';
+import { claimed, claimKey, newClaim, type InstallKeyRow } from './installKeys.server';
 
 /**
  * Shelf's apps (plan §1): one Swift file each, read by the phone through
@@ -20,13 +32,7 @@ export type AppOrigin = 'admin' | 'key';
 
 export type AppContent = { name: string; icon: string | null; tint: Tint; source: string };
 
-export const utf8Bytes = (s: string) => new TextEncoder().encode(s).length;
-
-/**
- * What an app is made of, as the API and the admin form both check it. The
- * size limit is not here: an oversized source is a 413, not a field error, so
- * callers check `utf8Bytes(source)` against `MAX_APP_BYTES` first.
- */
+/** What an app is made of, as the API and the admin form both check it. */
 export const appContent = z.object({
 	name: z
 		.string()
@@ -43,8 +49,9 @@ export const appContent = z.object({
 	tint: z.enum(TINTS, `Use one of: ${TINTS.join(', ')}.`),
 	source: z
 		.string()
+		.transform(normalizeSource)
 		.refine((s) => s.trim() !== '', 'The source is empty.')
-		.refine((s) => utf8Bytes(s) <= MAX_APP_BYTES, `Keep the source under ${MAX_APP_BYTES / 1024} KB.`)
+		.refine((s) => utf8Bytes(s) <= MAX_APP_BYTES, SOURCE_TOO_BIG)
 });
 
 /** Versions kept per app, not counting the current one. */
@@ -64,7 +71,7 @@ type MetaRow = Omit<AppMeta, 'revertible'> & { revertible: number };
 const toMeta = ({ revertible, ...row }: MetaRow): AppMeta => ({ ...row, revertible: !!revertible });
 
 const digest = async (s: string) =>
-	base64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))));
+	b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
 
 /**
  * A hash of the content, 16 base64url characters (96 bits). The fields are
@@ -139,9 +146,8 @@ export type PutResult =
 	/** Another request consumed the key first; nothing was written. */
 	| { ok: false; reason: 'key' };
 
-export type PutOptions =
-	| { origin: 'admin' }
-	| { origin: 'key'; keyId: string; createOnly: boolean; claim: string };
+/** Who is writing: the admin, or the holder of an install key (checked live by the caller). */
+export type Writer = { origin: 'admin' } | { origin: 'key'; key: Pick<InstallKeyRow, 'id' | 'slug'> };
 
 /**
  * Creates or updates an app. Writing content identical to the current version
@@ -160,32 +166,24 @@ export async function putApp(
 	env: Env,
 	slug: string,
 	content: AppContent,
-	opts: PutOptions
+	writer: Writer
 ): Promise<PutResult> {
 	const now = Date.now();
 	const version = await appVersion(content);
 	const existed = (await env.DB.prepare(`SELECT 1 FROM apps WHERE slug = ?`).bind(slug).first()) !== null;
+	const key = writer.origin === 'key' ? writer.key : null;
+	// A key minted without a slug creates one new app and never overwrites.
+	const createOnly = key !== null && key.slug === null;
 
-	if (opts.origin === 'key' && opts.createOnly && existed) return { ok: false, reason: 'taken' };
+	if (createOnly && existed) return { ok: false, reason: 'taken' };
 
 	// With a key, every write is gated on this request's claim; without one the
 	// gate is always true.
-	const gate =
-		opts.origin === 'key'
-			? `EXISTS (SELECT 1 FROM install_keys WHERE id = ? AND claim = ?)`
-			: `1`;
-	const gateArgs = opts.origin === 'key' ? [opts.keyId, opts.claim] : [];
+	const claim = key ? newClaim() : '';
+	const { sql: gate, args: gateArgs } = key ? claimed(key.id, claim) : { sql: '1', args: [] };
 
 	const statements = [];
-
-	if (opts.origin === 'key') {
-		statements.push(
-			env.DB.prepare(
-				`UPDATE install_keys SET used_at = ?, used_slug = ?, claim = ?
-				 WHERE id = ? AND used_at IS NULL AND expires_at > ? AND attempts < ?`
-			).bind(now, slug, opts.claim, opts.keyId, now, MAX_KEY_ATTEMPTS)
-		);
-	}
+	if (key) statements.push(claimKey(env, key.id, claim, slug, now));
 
 	// The version being replaced goes into history — read from the row itself
 	// inside the batch, so a racing write can never push a stale copy.
@@ -197,9 +195,9 @@ export async function putApp(
 		).bind(now, slug, version, ...gateArgs)
 	);
 
-	const values = [slug, content.name, content.icon, content.tint, content.source, version, opts.origin, now, now];
+	const values = [slug, content.name, content.icon, content.tint, content.source, version, writer.origin, now, now];
 	statements.push(
-		opts.origin === 'key' && opts.createOnly
+		createOnly
 			? env.DB.prepare(
 					`INSERT INTO apps (slug, name, icon, tint, source, version, origin, created_at, updated_at)
 					 SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${gate}`
@@ -235,13 +233,13 @@ export async function putApp(
 		// Only the create key's plain INSERT can hit the primary key: a slug
 		// created between the read above and this batch. The batch has rolled
 		// back, key included.
-		if (opts.origin === 'key' && opts.createOnly && /UNIQUE|constraint/i.test(String(e))) {
+		if (createOnly && /UNIQUE|constraint/i.test(String(e))) {
 			return { ok: false, reason: 'taken' };
 		}
 		throw e;
 	}
 
-	if (opts.origin === 'key' && (results[0]?.meta?.changes ?? 0) === 0) {
+	if (key && (results[0]?.meta?.changes ?? 0) === 0) {
 		return { ok: false, reason: 'key' };
 	}
 
@@ -308,6 +306,6 @@ export async function deleteApp(env: Env, slug: string, withData: boolean): Prom
 		env.DB.prepare(`DELETE FROM apps WHERE slug = ?`).bind(slug),
 		env.DB.prepare(`DELETE FROM app_versions WHERE slug = ?`).bind(slug)
 	];
-	if (withData) statements.push(env.DB.prepare(`DELETE FROM app_data WHERE slug = ?`).bind(slug));
+	if (withData) statements.push(forgetAllData(env, slug));
 	await env.DB.batch(statements);
 }

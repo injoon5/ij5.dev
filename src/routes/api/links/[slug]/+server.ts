@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
-import { fieldErrors, linkFields } from '$lib/links/input';
+import { fieldErrors } from '$lib/forms';
+import { linkFields } from '$lib/links/input';
 import { linkJson } from '$lib/links/link';
 import { deleteLink, getLink, updateLink } from '$lib/links/links.server';
 import { bindings } from '$lib/server/bindings';

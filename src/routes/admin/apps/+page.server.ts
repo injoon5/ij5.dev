@@ -1,7 +1,8 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireFull } from '$lib/auth/guard.server';
-import { SLUG_PATTERN } from '$lib/slugs/slugs';
+import { fieldErrors } from '$lib/forms';
+import { SLUG_MESSAGE, SLUG_PATTERN } from '$lib/slugs/slugs';
 import {
 	appContent,
 	deleteApp,
@@ -10,11 +11,9 @@ import {
 	listApps,
 	listVersions,
 	putApp,
-	revertApp,
-	utf8Bytes
+	revertApp
 } from '$lib/apps/apps.server';
 import { DATA_LIMITS, KEY_RULE, isDataKey, listEntries, readOne, writeData } from '$lib/apps/appData.server';
-import { MAX_APP_BYTES } from '$lib/apps/app';
 import { bindings } from '$lib/server/bindings';
 
 /**
@@ -57,22 +56,12 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const values: Values = Object.fromEntries(FIELDS.map((k) => [k, String(data.get(k) ?? '')]));
 		const creating = data.get('mode') === 'create';
-		const fields: Record<string, string> = {};
-
 		const slug = (values.slug ?? '').trim();
-		if (!SLUG_PATTERN.test(slug)) fields.slug = 'Use letters, numbers, hyphens and underscores.';
-
-		// The textarea posts CRLF line endings; the stored source, like the
-		// parser's, has "\n" only, so the version does not depend on the browser.
-		const source = (values.source ?? '').replace(/\r\n?/g, '\n');
-		if (utf8Bytes(source) > MAX_APP_BYTES) {
-			fields.source = `Keep the source under ${MAX_APP_BYTES / 1024} KB.`;
-		}
-
-		const parsed = appContent.safeParse({ ...values, source });
-		if (!parsed.success) {
-			for (const issue of parsed.error.issues) fields[String(issue.path[0])] ??= issue.message;
-		}
+		const parsed = appContent.safeParse(values);
+		const fields = {
+			...(parsed.success ? {} : fieldErrors(parsed.error)),
+			...(SLUG_PATTERN.test(slug) ? {} : { slug: SLUG_MESSAGE })
+		};
 		if (!parsed.success || Object.keys(fields).length) {
 			return fail(400, { intent: 'save', fields, values });
 		}

@@ -11,7 +11,7 @@ import * as keys from '../install-keys/+server';
 import * as keyItem from '../install-keys/[id]/+server';
 import { call, sqlite, testEnv } from '$lib/server/testing/d1';
 import { KEY_ERROR, MAX_KEY_ATTEMPTS } from '$lib/apps/installKeys.server';
-import { MAX_APP_BYTES } from '$lib/apps/app';
+import { MAX_APP_BYTES, SOURCE_TOO_BIG } from '$lib/apps/app';
 
 /**
  * The apps API and install keys end to end (Shelf plan §1.5, §9.5): the real
@@ -117,7 +117,7 @@ withSqlite('apps API', () => {
 
 			const big = await put('a', { ...APP, source: 'x'.repeat(MAX_APP_BYTES + 1) });
 			expect(big.status).toBe(413);
-			expect((await big.json()).error).toBe('An app can be at most 256 KB.');
+			expect((await big.json()).error).toBe(SOURCE_TOO_BIG);
 			const bigSwift = await put('a', `// Name: A\n${'x'.repeat(MAX_APP_BYTES)}`, undefined, 'text/x-swift');
 			expect(bigSwift.status).toBe(413);
 		});

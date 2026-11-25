@@ -1,4 +1,4 @@
-import { eq, sha256 } from '$lib/server/crypto';
+import { eq, randomToken, sha256 } from '$lib/server/crypto';
 
 /**
  * One-time install keys (Shelf plan §9.5).
@@ -34,6 +34,9 @@ export const MAX_LIVE_KEYS = 20;
  * status as "used" or "expired" rather than "unknown", then purged. */
 const KEEP_DEAD_MS = 24 * 60 * 60 * 1000;
 
+/** A key that can still be used: bind with `[now, MAX_KEY_ATTEMPTS]`. */
+const LIVE = `used_at IS NULL AND expires_at > ? AND attempts < ?`;
+
 /**
  * The one sentence every key failure gets — wrong secret, unknown id, used,
  * expired, burned, wrong slug, wrong route. A caller holding a key learns
@@ -58,16 +61,8 @@ export type InstallKeyRow = {
 
 export type KeyStatus = 'waiting' | 'used' | 'expired';
 
-export function base64url(bytes: Uint8Array): string {
-	let s = '';
-	for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-	return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-const random = (n: number) => base64url(crypto.getRandomValues(new Uint8Array(n)));
-
-/** A per-request nonce for the consume statement (see `0011_install_keys.sql`). */
-export const newClaim = () => random(16);
+/** A random value that marks one request's use of a key (see `claimKey`). */
+export const newClaim = () => randomToken(16);
 
 /** Splits `shelf_ik_{id}_{secret}`, or null for anything that is not one. */
 export function splitKey(token: string): { id: string; secret: string } | null {
@@ -100,15 +95,14 @@ export async function mintKey(env: Env, slug: string | null): Promise<MintResult
 		.run();
 
 	const live = await env.DB.prepare(
-		`SELECT COUNT(*) AS n FROM install_keys
-		 WHERE used_at IS NULL AND expires_at > ? AND attempts < ?`
+		`SELECT COUNT(*) AS n FROM install_keys WHERE ${LIVE}`
 	)
 		.bind(now, MAX_KEY_ATTEMPTS)
 		.first<{ n: number }>();
 	if ((live?.n ?? 0) >= MAX_LIVE_KEYS) return { ok: false, reason: 'too-many' };
 
-	const id = random(8);
-	const secret = random(32);
+	const id = randomToken(8);
+	const secret = randomToken(32);
 	const expires_at = now + KEY_TTL_MS;
 
 	await env.DB.prepare(
@@ -142,9 +136,7 @@ export async function listLiveKeys(
 	env: Env
 ): Promise<Array<Pick<InstallKeyRow, 'id' | 'slug' | 'created_at' | 'expires_at' | 'attempts'>>> {
 	const { results } = await env.DB.prepare(
-		`SELECT id, slug, created_at, expires_at, attempts FROM install_keys
-		 WHERE used_at IS NULL AND expires_at > ? AND attempts < ?
-		 ORDER BY created_at DESC`
+		`SELECT id, slug, created_at, expires_at, attempts FROM install_keys WHERE ${LIVE} ORDER BY created_at DESC`
 	)
 		.bind(Date.now(), MAX_KEY_ATTEMPTS)
 		.all<Pick<InstallKeyRow, 'id' | 'slug' | 'created_at' | 'expires_at' | 'attempts'>>();
@@ -175,3 +167,24 @@ export async function spendAttempt(env: Env, id: string): Promise<void> {
 		.bind(id)
 		.run();
 }
+
+/**
+ * Marks a live key as used by the request holding `claim`, as one statement of
+ * that request's write batch. Of two requests racing with one key only one
+ * matches; `claimed(claim)` is the condition every other statement in the
+ * batch adds, so the loser's writes match nothing.
+ */
+export const claimKey = (env: Env, keyId: string, claim: string, slug: string, now: number) =>
+	env.DB.prepare(`UPDATE install_keys SET used_at = ?, used_slug = ?, claim = ? WHERE id = ? AND ${LIVE}`).bind(
+		now,
+		slug,
+		claim,
+		keyId,
+		now,
+		MAX_KEY_ATTEMPTS
+	);
+
+export const claimed = (keyId: string, claim: string) => ({
+	sql: `EXISTS (SELECT 1 FROM install_keys WHERE id = ? AND claim = ?)`,
+	args: [keyId, claim]
+});

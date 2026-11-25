@@ -1,4 +1,4 @@
-import { DATA_KEY_PATTERN, MAX_DATA_APP_BYTES, MAX_DATA_KEYS, MAX_DATA_VALUE_BYTES } from '$lib/apps/app';
+import { DATA_KEY_PATTERN, MAX_DATA_APP_BYTES, MAX_DATA_KEYS, MAX_DATA_VALUE_BYTES, utf8Bytes } from '$lib/apps/app';
 
 /**
  * A small key-value store per app (Shelf plan §8). Values are JSON, keys are
@@ -29,7 +29,7 @@ export const KEY_RULE = 'Keys are 1–128 printable characters with no "/".';
 
 export const isDataKey = (key: string) => DATA_KEY_PATTERN.test(key);
 
-const bytes = (s: string) => new TextEncoder().encode(s).length;
+const bytes = utf8Bytes;
 
 export type DataEntry = { key: string; bytes: number; updated_at: number; rev: number };
 
@@ -156,3 +156,6 @@ export async function writeData(
 
 	return { ok: true, rev: (results[0].results[0] as { rev: number }).rev };
 }
+
+/** Every entry an app has, as one statement of the app's own delete batch. */
+export const forgetAllData = (env: Env, slug: string) => env.DB.prepare(`DELETE FROM app_data WHERE slug = ?`).bind(slug);

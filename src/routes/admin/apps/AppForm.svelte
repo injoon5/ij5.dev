@@ -8,7 +8,7 @@
 	import { pending } from '$lib/ui/pending.svelte';
 	import { fmtBytes } from '$lib/format';
 	import { parseReply, slugify } from '$lib/apps/replyParser';
-	import { MAX_APP_BYTES, MAX_APP_NAME, TINTS, type AppFull } from '$lib/apps/app';
+	import { MAX_APP_BYTES, MAX_APP_NAME, TINTS, type AppFull, DEFAULT_TINT, normalizeSource, utf8Bytes } from '$lib/apps/app';
 	import AppTile from './AppTile.svelte';
 	import { TINT_HEX } from '$lib/apps/tints';
 
@@ -36,7 +36,7 @@
 		slug: values.slug ?? app?.slug ?? '',
 		name: values.name ?? app?.name ?? '',
 		icon: values.icon ?? app?.icon ?? '',
-		tint: values.tint ?? app?.tint ?? 'blue',
+		tint: values.tint ?? app?.tint ?? DEFAULT_TINT,
 		source: values.source ?? app?.source ?? ''
 	});
 	// svelte-ignore state_referenced_locally
@@ -69,8 +69,7 @@
 		parsedFrom = true;
 	}
 
-	const encoder = new TextEncoder();
-	let bytes = $derived(encoder.encode(form.source.replace(/\r\n?/g, '\n')).length);
+	let bytes = $derived(utf8Bytes(normalizeSource(form.source)));
 	let over = $derived(bytes > MAX_APP_BYTES);
 
 	let saved = $state(false);

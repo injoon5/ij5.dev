@@ -28,6 +28,20 @@ export const TINTS = [
 ] as const;
 export type Tint = (typeof TINTS)[number];
 
+/** What an app without a tint gets. */
+export const DEFAULT_TINT: Tint = 'blue';
+
+export const utf8Bytes = (s: string) => new TextEncoder().encode(s).length;
+
+/**
+ * Sources are stored with "\n" line endings only, so a version never depends
+ * on whether a browser textarea, a Windows tool or curl sent the file. A
+ * leading BOM goes too.
+ */
+export const normalizeSource = (s: string) => s.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+
+export const SOURCE_TOO_BIG = `Keep the source under ${MAX_APP_BYTES / 1024} KB.`;
+
 /** What `/api/apps` lists — everything but the source, which the index never
  * reads. `version` is opaque to clients: compare it, never parse it. */
 export type AppMeta = {

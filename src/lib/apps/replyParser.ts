@@ -1,4 +1,4 @@
-import { TINTS, type Tint } from '$lib/apps/app';
+import { TINTS, type Tint, DEFAULT_TINT, normalizeSource } from '$lib/apps/app';
 
 /**
  * Turns a chat reply — or a raw Swift file — into an app (Shelf plan §9.4).
@@ -35,7 +35,7 @@ const isBlank = (line: string) => line.trim() === '';
  * the stored source, and a BOM would hide the first `// Name:` line.
  */
 function normalise(input: string): string {
-	return input.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+	return normalizeSource(input);
 }
 
 /** Every ```swift block, joined with a blank line; null when there are none. */
@@ -129,7 +129,7 @@ export function parseReply(input: string): ParsedReply {
 	return {
 		name,
 		icon,
-		tint: (TINTS as readonly string[]).includes(tint) ? (tint as Tint) : 'blue',
+		tint: (TINTS as readonly string[]).includes(tint) ? (tint as Tint) : DEFAULT_TINT,
 		slug: slugify(name),
 		source
 	};

@@ -1,11 +1,12 @@
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
 import { authorizeApp } from '$lib/apps/appAuth.server';
-import { appContent, deleteApp, getApp, getAppMeta, putApp, utf8Bytes } from '$lib/apps/apps.server';
-import { KEY_ERROR, newClaim, spendAttempt } from '$lib/apps/installKeys.server';
+import { appContent, deleteApp, getApp, getAppMeta, putApp } from '$lib/apps/apps.server';
+import { fieldErrors } from '$lib/forms';
+import { KEY_ERROR, spendAttempt } from '$lib/apps/installKeys.server';
 import { SLUG_PATTERN } from '$lib/slugs/slugs';
 import { parseReply } from '$lib/apps/replyParser';
-import { MAX_APP_BYTES } from '$lib/apps/app';
+import { MAX_APP_BYTES, SOURCE_TOO_BIG, utf8Bytes } from '$lib/apps/app';
 import { bindings } from '$lib/server/bindings';
 
 /**
@@ -19,16 +20,9 @@ import { bindings } from '$lib/server/bindings';
  * parser the admin and the phone use.
  */
 
-const TOO_BIG = `An app can be at most ${MAX_APP_BYTES / 1024} KB.`;
 // A JSON body carries the source plus a few short fields and the escaping
 // JSON adds; anything this far past the limit cannot hold a valid app.
 const MAX_JSON_BODY = MAX_APP_BYTES * 2;
-
-const fieldErrors = (issues: { path: PropertyKey[]; message: string }[]) => {
-	const fields: Record<string, string> = {};
-	for (const i of issues) fields[String(i.path[0])] ??= i.message;
-	return fields;
-};
 
 export const GET: RequestHandler = async ({ request, params, platform }) => {
 	const env = bindings(platform);
@@ -57,7 +51,7 @@ export const PUT: RequestHandler = async ({ request, params, platform }) => {
 
 	if (!SLUG_PATTERN.test(params.slug)) {
 		return fail(422, 'That app is not valid.', {
-			fields: { slug: 'Use letters, numbers, hyphens and underscores; 1–64 characters.' }
+			fields: { slug: 'Use letters, numbers, hyphens and underscores; 1–64 letters, numbers, hyphens and underscores.' }
 		});
 	}
 
@@ -67,12 +61,12 @@ export const PUT: RequestHandler = async ({ request, params, platform }) => {
 	const limit = isSwift ? MAX_APP_BYTES : MAX_JSON_BODY;
 
 	// Refuse an announced oversize body before reading a byte of it.
-	if (Number(request.headers.get('content-length') ?? 0) > limit) return fail(413, TOO_BIG);
+	if (Number(request.headers.get('content-length') ?? 0) > limit) return fail(413, SOURCE_TOO_BIG);
 
 	let input: unknown;
 	if (isSwift) {
 		const text = await request.text();
-		if (utf8Bytes(text) > MAX_APP_BYTES) return fail(413, TOO_BIG);
+		if (utf8Bytes(text) > MAX_APP_BYTES) return fail(413, SOURCE_TOO_BIG);
 		const parsed = parseReply(text);
 		// The parser falls back to a default for every field but the name: a
 		// tint it does not know is `blue`, a missing icon is `app`. A nameless
@@ -85,28 +79,26 @@ export const PUT: RequestHandler = async ({ request, params, platform }) => {
 		input = { name: parsed.name, icon: parsed.icon, tint: parsed.tint, source: parsed.source };
 	} else {
 		const text = await request.text();
-		if (utf8Bytes(text) > limit) return fail(413, TOO_BIG);
+		if (utf8Bytes(text) > limit) return fail(413, SOURCE_TOO_BIG);
 		try {
 			input = JSON.parse(text);
 		} catch {
 			return fail(400, 'Body must be JSON.');
 		}
 		const source = (input as { source?: unknown } | null)?.source;
-		if (typeof source === 'string' && utf8Bytes(source) > MAX_APP_BYTES) return fail(413, TOO_BIG);
+		if (typeof source === 'string' && utf8Bytes(source) > MAX_APP_BYTES) return fail(413, SOURCE_TOO_BIG);
 	}
 
 	const parsed = appContent.safeParse(input);
 	if (!parsed.success) {
-		return fail(422, 'That app is not valid.', { fields: fieldErrors(parsed.error.issues) });
+		return fail(422, 'That app is not valid.', { fields: fieldErrors(parsed.error) });
 	}
 
 	const result = await putApp(
 		env,
 		params.slug,
 		parsed.data,
-		auth.origin === 'key'
-			? { origin: 'key', keyId: auth.key.id, createOnly: auth.key.slug === null, claim: newClaim() }
-			: { origin: 'admin' }
+		auth.origin === 'key' ? { origin: 'key', key: auth.key } : { origin: 'admin' }
 	);
 
 	if (!result.ok) {

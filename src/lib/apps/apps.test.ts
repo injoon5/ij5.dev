@@ -133,12 +133,12 @@ withSqlite('history', () => {
 		await put('a\n');
 		const key = await mintKey(env, 'habits');
 		if (!key.ok) throw new Error('mint failed');
-		const opts = (claim: string) => ({ origin: 'key' as const, keyId: key.id, createOnly: false, claim });
+		const writer = { origin: 'key' as const, key: { id: key.id, slug: 'habits' } };
 
-		const first = await putApp(env, 'habits', { ...APP, source: 'b\n' }, opts('first'));
+		const first = await putApp(env, 'habits', { ...APP, source: 'b\n' }, writer);
 		// The second request already passed its key check before the first
 		// consumed the key; the batch is what has to stop it.
-		const second = await putApp(env, 'habits', { ...APP, source: 'c\n' }, opts('second'));
+		const second = await putApp(env, 'habits', { ...APP, source: 'c\n' }, writer);
 		expect(first.ok).toBe(true);
 		expect(second).toEqual({ ok: false, reason: 'key' });
 		expect((await listVersions(env, 'habits')).map((v) => v.version)).toHaveLength(1);
