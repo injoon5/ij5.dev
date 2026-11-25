@@ -1,7 +1,7 @@
 import { sha256url } from '$lib/server/crypto';
 
 /**
- * Paper recovery codes (§4): the way back in with nothing on you — no phone,
+ * Paper recovery codes: the way back in with nothing on you — no phone,
  * no laptop, no password manager. Ten codes, ten Crockford base32 characters
  * each (50 random bits), printed and kept in a wallet or a drawer.
  *

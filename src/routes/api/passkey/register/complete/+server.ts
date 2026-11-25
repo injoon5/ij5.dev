@@ -13,7 +13,7 @@ import { bindings } from '$lib/server/bindings';
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const env = bindings(platform);
-	// A limited session must not be able to plant its own passkey (§4).
+	// A limited session must not be able to plant its own passkey.
 	if (!isFull(locals)) error(403, FULL_ONLY);
 	if (!sameOrigin(request)) error(403, 'Cross-origin request refused.');
 

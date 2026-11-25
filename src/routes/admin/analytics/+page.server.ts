@@ -86,7 +86,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 			)
 		]);
 
-	// §6 — `visitors` is the only table that grows, so prune it opportunistically
+	// `visitors` is the only table that grows, so prune it opportunistically
 	// rather than running a scheduled job for it.
 	if (Math.random() < 0.05) {
 		afterResponse(platform, env.DB.prepare(`DELETE FROM visitors WHERE day < date('now','-180 day')`).run());

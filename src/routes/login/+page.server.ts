@@ -16,7 +16,7 @@ import { turnstileEnabled, turnstileOk } from '$lib/auth/turnstile.server';
 import { bindings } from '$lib/server/bindings';
 
 /**
- * Four doors (§4), strongest first:
+ * Four doors, strongest first:
  *
  * - passkey — the everyday one (its two steps are `/api/passkey/login/*`);
  * - the admin token, from a password manager;

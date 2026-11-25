@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { DEVICE_UPSERT, HITS_UPSERT, MIGRATE_VISITOR, PURGE_VISITOR, VISITORS_INSERT } from './track.server';
 
 /**
- * §13, test 3 — the `hits` upsert increments rather than duplicating.
+ * The `hits` upsert increments rather than duplicating.
  *
  * D1 is SQLite, so the real migration and the real statements run here against
  * an in-memory database. That makes this a test of the schema as much as the

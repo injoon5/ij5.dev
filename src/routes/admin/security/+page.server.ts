@@ -13,7 +13,7 @@ import { issuer, oidcConfigured } from '$lib/auth/oidc.server';
 import { bindings } from '$lib/server/bindings';
 
 /**
- * Everything about getting in (§4): passkeys, sessions, recovery codes, the
+ * Everything about getting in: passkeys, sessions, recovery codes, the
  * sign-in log, and install keys.
  *
  * Registration and passkey sign-in are two-step JSON exchanges with the `/api`
@@ -21,7 +21,7 @@ import { bindings } from '$lib/server/bindings';
  * JavaScript); the server actions here are the rest. All of them except
  * revoking an install key and ending your own session need a `full` session.
  *
- * Live install keys (Shelf plan §9.5) are listed by id, scope and expiry —
+ * Live install keys are listed by id, scope and expiry —
  * never the secret, which is not stored — so a key minted into a prompt that
  * should not have been shared can be killed before it is used.
  */

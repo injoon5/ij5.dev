@@ -8,7 +8,7 @@ import { decodeClientDataJSON, isoBase64URL } from '@simplewebauthn/server/helpe
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/browser';
 
 /**
- * Passkey sign-in (§4) — WebAuthn for the single admin user.
+ * Passkey sign-in — WebAuthn for the single admin user.
  *
  * The token login proves you know a secret. A passkey proves you hold a
  * private key that never leaves your device, so there is nothing to type, leak

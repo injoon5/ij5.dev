@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { jwks, oidcConfigured } from '$lib/auth/oidc.server';
 import { bindings } from '$lib/server/bindings';
 
-/** The public half of the ID-token signing key (§4). */
+/** The public half of the ID-token signing key. */
 export const GET: RequestHandler = async ({ platform }) => {
 	const env = bindings(platform);
 	if (!oidcConfigured(env)) error(404, 'Not found');

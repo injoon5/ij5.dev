@@ -198,7 +198,7 @@ async function saveContent(env: App.Platform['env'], content: string) {
 
 	// Read what the body referenced before overwriting it: content-addressed
 	// keys mean an image dropped from the document would otherwise linger in
-	// R2 forever with nothing left pointing at it (§5).
+	// R2 forever with nothing left pointing at it.
 	const before = await env.DB.prepare(`SELECT content FROM profile WHERE id = 1`).first<{
 		content: string | null;
 	}>();

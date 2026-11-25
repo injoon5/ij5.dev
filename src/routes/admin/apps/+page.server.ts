@@ -17,7 +17,7 @@ import { DATA_LIMITS, KEY_RULE, isDataKey, listEntries, readOne, writeData } fro
 import { bindings } from '$lib/server/bindings';
 
 /**
- * Shelf's apps in the admin (plan §1.4, §8.2, §9.3): a master–detail list, an
+ * Shelf's apps in the admin: a master–detail list, an
  * editor per app with its history and its data, and New App, which fills
  * itself from a pasted chat reply. It writes through the same `apps.ts` and
  * `appData.ts` as the API, so a save here is exactly a `PUT` with the admin

@@ -10,7 +10,7 @@ declare global {
 
 	namespace App {
 		interface Locals {
-			/** The signed-in session, if the cookie names a live one (§4). */
+			/** The signed-in session, if the cookie names a live one. */
 			session: import('$lib/auth/sessions.server').SessionRow | null;
 			/** `session !== null`, kept for the many places that only ask that. */
 			authed: boolean;
@@ -33,7 +33,7 @@ declare global {
 				SESSION_SECRET: string;
 
 				/**
-				 * Password + puzzle sign-in (§4). All three, or the door stays
+				 * Password + puzzle sign-in. All three, or the door stays
 				 * closed. Generate with `node scripts/auth.mjs password`.
 				 */
 				/** PHC string: `$argon2id$v=19$m=…,t=…,p=1$salt$hash`. */
@@ -59,7 +59,7 @@ declare global {
 				/** The `email` claim — what Access policies match on. */
 				OIDC_EMAIL?: string;
 				OIDC_NAME?: string;
-				/** 32 random bytes, base64. Visitor hashing (§6). */
+				/** 32 random bytes, base64. Visitor hashing. */
 				SALT: string;
 
 				PUBLIC_ORIGIN: string;

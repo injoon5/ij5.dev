@@ -5,7 +5,7 @@ import { SLUG_PATTERN } from '$lib/slugs/slugs';
 import { bindings } from '$lib/server/bindings';
 
 /**
- * Mints a one-time install key (plan §9.5). Admin token only: Shelf mints one
+ * Mints a one-time install key. Admin token only: Shelf mints one
  * when a New App or Change… sheet opens, and only the key goes into the
  * prompt. `{ slug }` makes an update key for that app; no slug makes a key
  * that can create one new app under a free slug.

@@ -12,7 +12,7 @@ const config = {
 	kit: {
 		adapter: adapter(),
 
-		// §13. SvelteKit owns the policy because it is the only thing that can
+		// SvelteKit owns the policy because it is the only thing that can
 		// hash its own inline bootstrap script; reaching for 'unsafe-inline'
 		// instead would defeat the directive entirely.
 		//

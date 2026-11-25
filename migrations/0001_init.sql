@@ -1,4 +1,4 @@
--- ij5.dev initial schema (§3)
+-- ij5.dev initial schema
 -- Applied explicitly: `wrangler d1 migrations apply ij5 --remote`.
 
 CREATE TABLE slugs (
@@ -23,7 +23,7 @@ CREATE TABLE profile (
 CREATE TABLE blocks (
   id       TEXT PRIMARY KEY,
   ord      INTEGER NOT NULL,
-  kind     TEXT NOT NULL,               -- widget catalog, §7
+  kind     TEXT NOT NULL,               -- widget catalog
   span     TEXT NOT NULL,               -- '1x1' | '2x1' | '2x2' | 'full'
   data     TEXT NOT NULL                -- JSON, validated by the kind's schema
 );

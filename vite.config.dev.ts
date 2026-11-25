@@ -5,7 +5,7 @@ import base from './vite.config';
 /**
  * The dev server, and only the dev server.
  *
- * The Cloudflare plugin is not optional here (§2): without it `event.platform`
+ * The Cloudflare plugin is not optional here: without it `event.platform`
  * is undefined under `vite dev`, so every load falls through to its
  * no-bindings branch and the local site renders as an empty shell with no KV,
  * no D1 and no R2. Running the real workerd against local bindings is the only

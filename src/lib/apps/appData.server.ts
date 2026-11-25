@@ -1,7 +1,7 @@
 import { DATA_KEY_PATTERN, MAX_DATA_APP_BYTES, MAX_DATA_KEYS, MAX_DATA_VALUE_BYTES, utf8Bytes } from '$lib/apps/app';
 
 /**
- * A small key-value store per app (Shelf plan §8). Values are JSON, keys are
+ * A small key-value store per app. Values are JSON, keys are
  * strings, and the slug needs no row in `apps`.
  *
  * Every write takes the next value of one global counter as its `rev`, in the

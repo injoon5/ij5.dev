@@ -3,7 +3,7 @@ import { b64url, eq, randomToken, sha256, sha256url } from '$lib/server/crypto';
 import type { SessionRow } from './sessions.server';
 
 /**
- * ij5.dev as an OpenID Connect provider (§4) — with exactly one client,
+ * ij5.dev as an OpenID Connect provider — with exactly one client,
  * Cloudflare Access, so every project behind Access can be signed into with
  * the doors here, including the ones that need no device.
  *

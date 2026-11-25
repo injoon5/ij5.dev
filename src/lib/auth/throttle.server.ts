@@ -1,5 +1,5 @@
 /**
- * Failed-guess limits for the password doors (§4).
+ * Failed-guess limits for the password doors.
  *
  * Every attempt is counted against two buckets: the caller's IP (a /64 for
  * IPv6) and a global one. The IP bucket stops one machine quickly; the global

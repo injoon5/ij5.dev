@@ -10,7 +10,7 @@ import { MAX_APP_BYTES, SOURCE_TOO_BIG, utf8Bytes } from '$lib/apps/app';
 import { bindings } from '$lib/server/bindings';
 
 /**
- * Item routes for Shelf's apps (plan §1.3, §9.5).
+ * Item routes for Shelf's apps.
  *
  * `PUT` is the one write, whoever makes it: the admin editor, Shelf's Install
  * button, or an agent holding an install key and running `curl -T`. An app is
@@ -42,7 +42,7 @@ export const PUT: RequestHandler = async ({ request, params, platform }) => {
 	const auth = await authorizeApp(request, env, { slug: params.slug, action: 'write' });
 	if (!auth.ok) return apiError(auth.status, auth.error);
 
-	// A failed attempt with a key costs it one try (§9.5): enough to let an
+	// A failed attempt with a key costs it one try : enough to let an
 	// agent fix its code and retry, not enough to let it guess forever.
 	const fail = async (status: number, error: string, extra?: Record<string, unknown>) => {
 		if (auth.origin === 'key') await spendAttempt(env, auth.key.id);

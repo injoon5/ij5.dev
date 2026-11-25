@@ -3,7 +3,7 @@ import { HOME_KEYS, type HomeDoc } from '$lib/home/types';
 
 /**
  * Uploaded images are content-addressed and shared, so an R2 object may only
- * go when nothing can still draw it (§5). "Anything" is wider than the editor:
+ * go when nothing can still draw it. "Anything" is wider than the editor:
  * the D1 draft, the published document visitors are looking at right now, and
  * the previous one a revert would bring back. Checking D1 alone deleted a
  * photo the moment it left the *draft*, breaking the live page until the next

@@ -1,5 +1,5 @@
 /**
- * Where to go after signing in (§4). The login page takes a `next` so the OIDC
+ * Where to go after signing in. The login page takes a `next` so the OIDC
  * flow can come back to `/oauth/authorize`; anything that is not that or the
  * admin collapses to `/admin`, so the parameter can never send anyone off-site.
  */

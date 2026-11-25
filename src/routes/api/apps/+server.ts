@@ -4,7 +4,7 @@ import { appsEtag, etagMatches, listApps } from '$lib/apps/apps.server';
 import { bindings } from '$lib/server/bindings';
 
 /**
- * The app index Shelf syncs on every launch (plan §1.3). Metadata only — the
+ * The app index Shelf syncs on every launch. Metadata only — the
  * query never reads `source` — with a strong ETag over the whole body, so a
  * launch with nothing new costs one 304 and no D1 read beyond the list.
  */

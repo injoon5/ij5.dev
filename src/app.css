@@ -109,7 +109,7 @@
 	--grass-3: color-mix(in oklab, var(--accent) 70%, var(--surface));
 	--grass-4: var(--accent);
 
-	/* §7.5 — contact shadow plus ambient shadow, never a single blur. */
+	/* Contact shadow plus ambient shadow, never a single blur. */
 	--sh-widget:
 		0 1px 2px oklch(0 0 0 / 0.04),
 		0 8px 24px -12px oklch(0 0 0 / 0.1);
@@ -156,7 +156,7 @@
 		   same inversion the shadows make in dark mode. */
 		--grass-0: oklch(0.27 0 0);
 
-		/* §7.5 — shadows on a dark ground read as grime. The surface is
+		/* Shadows on a dark ground read as grime. The surface is
 		   already lighter than the page; that lift is the separation. */
 		--sh-widget: none;
 		--sh-widget-lift: none;
@@ -270,7 +270,7 @@
 	--text-2xl--line-height: 1.2;
 	--text-2xl--letter-spacing: -0.021em;
 
-	/* §7.2 — concentric radii. Inner = outer − padding, every time. */
+	/* Concentric radii. Inner = outer − padding, every time. */
 	--radius-widget: 22px;
 	--radius-inner: 6px;
 	--radius-inner-md: 10px;

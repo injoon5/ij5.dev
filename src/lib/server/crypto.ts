@@ -1,5 +1,5 @@
 /**
- * Small crypto primitives shared by every sign-in door (§4). The doors
+ * Small crypto primitives shared by every sign-in door. The doors
  * themselves live in `sessions.ts`, `password.ts`, `puzzle.ts`,
  * `recovery.ts` and `webauthn.ts`.
  *

@@ -1,4 +1,4 @@
--- ij5.dev — richer device breakdown (§6). Same pre-aggregated-on-write model
+-- ij5.dev — richer device breakdown. Same pre-aggregated-on-write model
 -- as `hits`, but without the dimensions that would blow up its primary key:
 -- no country, no referrer, no device class (bot rows are never written, so the
 -- dashboard's "exclude bots" convention is a write-time decision instead of a

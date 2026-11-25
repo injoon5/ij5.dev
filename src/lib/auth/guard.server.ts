@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 
 /**
- * What a `limited` session (password + puzzle, §4) may not do: anything on the
+ * What a `limited` session (password + puzzle) may not do: anything on the
  * security page, and anything that deletes. It can still read everything and
  * create or edit — the point of it is getting something done from a borrowed
  * computer, not getting the keys to the house.

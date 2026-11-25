@@ -5,7 +5,7 @@ import { MAX_DATA_APP_BYTES } from '$lib/apps/app';
 import { bindings } from '$lib/server/bindings';
 
 /**
- * An app's data (Shelf plan §8.2): all of it, everything since a rev, or a
+ * An app's data: all of it, everything since a rev, or a
  * batch of sets and deletes in one transaction. Admin token only — an install
  * key never reaches data.
  */

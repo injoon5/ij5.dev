@@ -20,7 +20,7 @@ import { defineConfig } from 'vite';
  * `node:module` and `node:fs/promises`; without a shim, rolldown hoists the
  * import into a statically-loaded chunk and every Worker request fails at
  * startup (the same imports are what `nodejs_compat` would let through, and
- * this project deliberately runs without it, §11). The shims satisfy the
+ * this project deliberately runs without it). The shims satisfy the
  * bundle; the provider never executes on Cloudflare.
  */
 const shim = (file: string) => fileURLToPath(new URL(`./shims/${file}`, import.meta.url));

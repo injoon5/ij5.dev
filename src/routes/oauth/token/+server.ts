@@ -4,7 +4,7 @@ import { authenticateClient, mintTokens, oidcConfigured, redeemCode, type TokenE
 import { bindings } from '$lib/server/bindings';
 
 /**
- * The OIDC token endpoint (§4). Called by Cloudflare Access from its servers,
+ * The OIDC token endpoint. Called by Cloudflare Access from its servers,
  * so it is the one form POST the hook's cross-site check lets through without
  * an Origin header — the client secret is its authentication instead.
  */

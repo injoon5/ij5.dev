@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { parseReply, slugify } from './replyParser';
 
 /**
- * The parser against every shared fixture (Shelf plan §9.4). The Swift copy
+ * The parser against every shared fixture. The Swift copy
  * in Shelf runs the same files, so a case that passes here and fails there is
  * drift between the two copies — fix the copy, never the fixture alone. The
  * rules themselves are written out in `fixtures/replies/README.md`.

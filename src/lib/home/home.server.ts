@@ -1,7 +1,7 @@
 import { EMPTY_PROFILE, HOME_KEYS, type HomeDoc, type Profile } from '$lib/home/types';
 
 /**
- * The homepage document lives in three KV keys (§11):
+ * The homepage document lives in three KV keys:
  *
  *   `home:draft`  every editor save, instant, no version bump
  *   `home`        the published document, `{ v, profile, markdown }`
@@ -120,7 +120,7 @@ export async function revert(env: Env): Promise<HomeDoc | null> {
  * escape hatch for the homepage.
  *
  * The edge cache is version-keyed (`home/v${v}` in the hook) precisely because
- * `cache.delete()` only reaches the colo it runs in (§11): a bump swaps the
+ * `cache.delete()` only reaches the colo it runs in: a bump swaps the
  * key everywhere at once, so the next visitor to `/` misses, re-renders from
  * scratch (live widgets included), and repopulates the cache. Content is
  * untouched, and so is the draft — unsaved edits in the editor are not

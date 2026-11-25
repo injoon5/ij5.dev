@@ -99,7 +99,7 @@ await shoot('home-phone-dark', '/', 'phone', { dark: true });
 await shoot('error-404', '/definitely-not-a-real-slug-here', 'desktop');
 await shoot('login', '/login', 'desktop');
 
-// §13/§14 — the public page is server-rendered HTML. If the body disappears
+// The public page is server-rendered HTML. If the body disappears
 // with scripting off, something started depending on hydration.
 {
 	const context = await browser.newContext({ ...VIEWPORTS.phone, javaScriptEnabled: false });

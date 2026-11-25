@@ -3,13 +3,13 @@
 	"name": "ij5",
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"compatibility_date": "2025-08-01",
-	// §11: `nodejs_compat` measurably increases cold start. Nothing here needs it.
+	// `nodejs_compat` measurably increases cold start. Nothing here needs it.
 	"compatibility_flags": [],
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
 	},
-	// §11: watch CPU time, not wall-clock. Wall-clock includes KV/D1 waits.
+	// Watch CPU time, not wall-clock. Wall-clock includes KV/D1 waits.
 	"observability": {
 		"enabled": true
 	},
@@ -34,7 +34,7 @@
 		}
 	],
 	"vars": {
-		// Origin allowlist for the binary upload endpoint (§5). Secrets live in
+		// Origin allowlist for the binary upload endpoint. Secrets live in
 		// `wrangler secret put`, never here.
 		"PUBLIC_ORIGIN": "https://ij5.dev",
 		"ASSETS_ORIGIN": "https://assets.ij5.dev",

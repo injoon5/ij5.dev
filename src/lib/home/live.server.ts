@@ -161,7 +161,7 @@ export function planRefresh(requests: LiveRequest[], live: LiveDoc | null, env: 
 			}
 		}
 
-		// KV writes are the tightest free-tier limit (§10), so skip the write
+		// KV writes are the tightest free-tier limit, so skip the write
 		// entirely when every fetch failed.
 		if (changed) await env.KV.put(KEY, JSON.stringify(next));
 	};

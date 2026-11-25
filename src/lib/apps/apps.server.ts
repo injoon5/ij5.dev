@@ -15,7 +15,7 @@ import { forgetAllData } from './appData.server';
 import { claimed, claimKey, newClaim, type InstallKeyRow } from './installKeys.server';
 
 /**
- * Shelf's apps (plan §1): one Swift file each, read by the phone through
+ * Shelf's apps: one Swift file each, read by the phone through
  * `/api/apps`. D1 is the only store — there is no edge mirror — so a write is
  * visible on the phone's next sync.
  *

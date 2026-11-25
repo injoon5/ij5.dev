@@ -4,7 +4,7 @@ import { errorRedirect, issueCode, issuer, oidcConfigured, parseAuthorize, tooOl
 import { bindings } from '$lib/server/bindings';
 
 /**
- * The OIDC authorization endpoint (§4). With a live session it answers at
+ * The OIDC authorization endpoint. With a live session it answers at
  * once with a code for Cloudflare Access; without one it sends you to sign in
  * and back here after.
  *

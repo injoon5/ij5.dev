@@ -1,7 +1,7 @@
 import { TINTS, type Tint, DEFAULT_TINT, normalizeSource } from '$lib/apps/app';
 
 /**
- * Turns a chat reply — or a raw Swift file — into an app (Shelf plan §9.4).
+ * Turns a chat reply — or a raw Swift file — into an app.
  *
  * There are two copies of this parser: this one (the admin's New App form and
  * `PUT /api/apps/{slug}` with `Content-Type: text/x-swift`) and a Swift one in

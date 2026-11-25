@@ -146,7 +146,7 @@
 		class="min-w-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] focus:outline-none md:m-2 md:ms-0 md:h-[calc(100dvh-1rem)] md:overflow-y-auto md:rounded-[var(--radius-ui-lg)] md:border md:border-border-subtle md:bg-surface md:pb-0 md:shadow-[0_1px_3px_oklch(0_0_0/0.03)]"
 	>
 		{#if data.session.strength === 'limited'}
-			<!-- Password + puzzle (§4): say plainly what this session cannot do. -->
+			<!-- Password + puzzle: say plainly what this session cannot do. -->
 			<p
 				role="status"
 				class="border-b border-border-subtle bg-surface-sunken px-4 py-2 text-xs text-pretty text-text-muted md:px-6"

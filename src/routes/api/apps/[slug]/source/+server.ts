@@ -5,7 +5,7 @@ import { getSource } from '$lib/apps/apps.server';
 import { bindings } from '$lib/server/bindings';
 
 /**
- * The raw file, for `curl -o App.swift` (plan §9.5, Appendix D). With Include
+ * The raw file, for `curl -o App.swift`. With Include
  * Source off, Shelf's change prompt carries this command instead of the
  * source, so the source never enters the chat's history and an agent with a
  * shell still sees all of it. An update key may read its own slug here;

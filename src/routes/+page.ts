@@ -1,5 +1,5 @@
 /**
- * The public artifact ships no framework JavaScript (§14). Everything on this
+ * The public artifact ships no framework JavaScript. Everything on this
  * page is server-rendered HTML and CSS; the prose, the link-button press
  * states, the dark-mode swap and the contribution graph all survive
  * `csr = false` because none of them were built on hydration in the first place.

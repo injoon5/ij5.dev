@@ -6,7 +6,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { SLUG_PATTERN } from '$lib/slugs/slugs';
 
 /**
- * Analytics write path (§6). A single D1 batch of upserts into pre-aggregated
+ * Analytics write path. A single D1 batch of upserts into pre-aggregated
  * tables, off the response path. No event stream and no rollup job — the
  * aggregate *is* the storage, so counts are exact and history is permanent.
  *
@@ -188,7 +188,7 @@ export function readCookie(header: string | null, name: string): string | null {
  * Fire-and-forget. Callers pass only `{ slug, kind }`; everything else —
  * referrer, device, country, visitor hash, and the 404 bucketing above — is
  * derived here. Never awaited by a handler, never able to fail a response:
- * analytics are not worth a failed request (§13).
+ * analytics are not worth a failed request.
  */
 export function track(event: RequestEvent, e: { slug: string; kind: Kind }) {
 	const platform = event.platform;
@@ -223,11 +223,11 @@ export function track(event: RequestEvent, e: { slug: string; kind: Kind }) {
 
 			// The fingerprint cookie replaces the IP+UA guess whenever it exists;
 			// the beacon that set it also folded any cookie-less rows into the
-			// fingerprint identity, so the two paths never double count (§6).
+			// fingerprint identity, so the two paths never double count.
 			const fp = readCookie(req.headers.get('cookie'), FP_COOKIE);
 			const vh = fp ? await visitorHash(salt, day, fp) : await anonymousVisitor(salt, day, req);
 
-			// §11 — the `visitors` insert is a no-op whenever this visitor already
+			// The `visitors` insert is a no-op whenever this visitor already
 			// hit this slug today. A per-colo marker turns the common repeat visit
 			// into one write instead of two.
 			const marker = new Request(`https://seen.internal/${vh}/${day}/${encodeURIComponent(slug)}`);

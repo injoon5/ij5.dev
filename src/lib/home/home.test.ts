@@ -11,7 +11,7 @@ import {
 import type { HomeDoc, Profile } from '$lib/home/types';
 
 /**
- * The publish invariant behind §11's edge cache: a new document is a new
+ * The publish invariant behind the edge cache: a new document is a new
  * version, and a new version is a new cache key. `cache.delete()` only reaches
  * the colo it runs in, so if `v` ever failed to move, an edit would sit behind
  * stale HTML in every other region with nothing able to purge it.

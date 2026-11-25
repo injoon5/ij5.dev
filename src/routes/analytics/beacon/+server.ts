@@ -15,7 +15,7 @@ import { HOME_SLUG } from '$lib/analytics/visit';
 import { afterResponse, bindings } from '$lib/server/bindings';
 
 /**
- * The fingerprint half of §6's identity (§6). `/a.js` posts the stable signal
+ * The fingerprint half of the visitor identity. `/a.js` posts the stable signal
  * set from the home page; this hashes it into a per-device fingerprint, sets a
  * 24-hour first-party cookie, and folds any cookie-less identity already
  * recorded for this visitor today into the fingerprint identity so the two
@@ -59,7 +59,7 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
 	// The migration folds in every cookie-less row from earlier today (all slugs
 	// — a redirect clicked before the beacon is still the same person); the purge
 	// clears any it could not move; the INSERT OR IGNORE guarantees the home row
-	// exists even if it landed late. Analytics never fail a request (§13), so a
+	// exists even if it landed late. Analytics never fail a request, so a
 	// storage hiccup here must not cost the visitor their fingerprint cookie.
 	const stmts = [
 		env.DB.prepare(MIGRATE_VISITOR).bind(day, vh, old),

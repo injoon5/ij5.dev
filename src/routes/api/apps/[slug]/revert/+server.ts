@@ -4,7 +4,7 @@ import { revertApp } from '$lib/apps/apps.server';
 import { bindings } from '$lib/server/bindings';
 
 /**
- * Undo for a bad push (plan §9.5): the current version and the newest one in
+ * Undo for a bad push: the current version and the newest one in
  * history trade places, so a second revert is a redo. Admin token only — an
  * install key that could revert could undo the very write it was given for.
  */

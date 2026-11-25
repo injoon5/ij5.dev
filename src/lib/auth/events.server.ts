@@ -1,7 +1,7 @@
 import { afterResponse } from '$lib/server/bindings';
 
 /**
- * The sign-in log and alerts (§4).
+ * The sign-in log and alerts.
  *
  * Every sign-in, failure and lockout is a row in `auth_events`, shown on the
  * security page. Sign-ins that did not use a passkey or the token — the doors

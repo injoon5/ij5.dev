@@ -14,7 +14,7 @@ import { KEY_ERROR, MAX_KEY_ATTEMPTS } from '$lib/apps/installKeys.server';
 import { MAX_APP_BYTES, SOURCE_TOO_BIG } from '$lib/apps/app';
 
 /**
- * The apps API and install keys end to end (Shelf plan §1.5, §9.5): the real
+ * The apps API and install keys end to end: the real
  * handlers, called the way the adapter calls them, over real SQLite with
  * every migration applied.
  */

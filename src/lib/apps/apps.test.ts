@@ -5,7 +5,7 @@ import { sqlite, testEnv } from '$lib/server/testing/d1';
 import { MAX_APP_BYTES } from '$lib/apps/app';
 
 /**
- * Shelf plan §1.5: the content hash, the limits, and the list query — plus
+ * The content hash, the limits, and the list query — plus
  * the history that Revert stands on, run against real SQLite with every
  * migration applied.
  */

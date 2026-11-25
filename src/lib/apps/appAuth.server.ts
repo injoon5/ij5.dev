@@ -7,7 +7,7 @@ export type AppAuth =
 	| { ok: false; status: number; error: string };
 
 /**
- * The single door for the two routes an install key may use (Shelf plan §9.5):
+ * The single door for the two routes an install key may use:
  * `PUT /api/apps/{slug}` (`write`) and `GET /api/apps/{slug}/source`
  * (`read-source`). Every other route calls plain `authorize`, which turns a key
  * away — so widening what a key can do means changing this function, and

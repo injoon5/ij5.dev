@@ -1,7 +1,7 @@
 import { eq, randomToken, sha256 } from '$lib/server/crypto';
 
 /**
- * One-time install keys (Shelf plan §9.5).
+ * One-time install keys.
  *
  * Every prompt Shelf copies carries one, so an agent that can run commands
  * installs the app itself. A prompt pasted into a chat service lives in that

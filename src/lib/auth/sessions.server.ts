@@ -1,7 +1,7 @@
 import { randomToken, sha256url } from '$lib/server/crypto';
 
 /**
- * Server-side sessions (§4). The cookie carries a random 256-bit token; D1
+ * Server-side sessions. The cookie carries a random 256-bit token; D1
  * keeps only its SHA-256, so every session can be listed and revoked one at a
  * time, and a copy of the table is not a pile of cookies.
  *

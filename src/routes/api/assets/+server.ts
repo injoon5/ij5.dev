@@ -4,7 +4,7 @@ import { bindings } from '$lib/server/bindings';
 import { IMAGE_FORMATS, type ImageMime } from '$lib/home/assetKeys';
 
 /**
- * Binary upload (§5). The one place a `+server.ts` endpoint beats a form
+ * Binary upload. The one place a `+server.ts` endpoint beats a form
  * action, because the body is binary rather than form-encoded.
  *
  * Small files, admin-only, low volume: no presigning, no multipart, no

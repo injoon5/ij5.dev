@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generates the secrets for signing in (§4). Prints values; stores nothing.
+ * Generates the secrets for signing in. Prints values; stores nothing.
  *
  *   node scripts/auth.mjs password      PASSWORD_HASH (+ PASSWORD_PEPPER if not given)
  *   node scripts/auth.mjs puzzle [path] PUZZLE_PATH — checks yours, or deals a random one

@@ -1,4 +1,4 @@
--- ij5.dev — WebAuthn passkeys for the admin sign-in (§4).
+-- ij5.dev — WebAuthn passkeys for the admin sign-in.
 -- A passkey is a public-key credential: the private key lives in the user's
 -- authenticator and never leaves it; D1 keeps only the public half plus the
 -- signature counter that detects a cloned authenticator. Challenges are

@@ -1,7 +1,7 @@
 import { b64url, enc, eq, fromB64, hmac } from '$lib/server/crypto';
 
 /**
- * The puzzle (§4): the second half of signing in from a borrowed computer.
+ * The puzzle: the second half of signing in from a borrowed computer.
  *
  * The page shows a 4×4 grid of random digits. The secret, `PUZZLE_PATH`, is a
  * route through the grid — say `A1 B2 C3 C4` (column letter, row number) —

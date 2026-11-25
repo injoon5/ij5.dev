@@ -2,7 +2,7 @@ import { argon2id } from '@noble/hashes/argon2.js';
 import { b64, enc, eq, fromB64 } from '$lib/server/crypto';
 
 /**
- * The password (§4) — the one human-chosen secret, so the one that gets a slow
+ * The password — the one human-chosen secret, so the one that gets a slow
  * hash. Argon2id at OWASP's first recommended setting (19 MiB, 2 passes, 1
  * lane) costs about 120 ms of CPU, which the paid Workers plan allows.
  *

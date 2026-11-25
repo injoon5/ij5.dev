@@ -11,7 +11,7 @@
 	import { MAX_DATA_APP_BYTES, MAX_DATA_KEYS } from '$lib/apps/app';
 
 	/**
-	 * An app's data (plan §8.2): its keys with their size and when each
+	 * An app's data: its keys with their size and when each
 	 * changed, one value open at a time as formatted JSON that can be edited
 	 * in place, and delete. Saved values are stored compact, exactly as the
 	 * API stores them; the indentation here is for reading only.

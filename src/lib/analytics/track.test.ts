@@ -4,7 +4,7 @@ import { classify, deviceClass } from './userAgent';
 import { OTHER_PATH as OTHER } from './visit';
 
 /**
- * §6's bucketing, which is the whole defence against the `hits` table growing
+ * The 404 bucketing, which is the whole defence against the `hits` table growing
  * a dimension it cannot afford. Cardinality is decided here, before the write.
  */
 
