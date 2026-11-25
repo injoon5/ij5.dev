@@ -2,12 +2,11 @@
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import type { SubmitFunction } from '@sveltejs/kit';
 	import Trash from 'lucide-svelte/icons/trash-2';
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import { fmtBytes, fmtDate } from '$lib/format';
-	import { pending } from '$lib/ui/pending.svelte';
+	import { pending, pendingRows } from '$lib/ui/pending.svelte';
 	import { cardFlush, fieldClass, iconButton, notice } from '$lib/ui/styles';
 	import { MAX_DATA_APP_BYTES, MAX_DATA_KEYS } from '$lib/apps/app';
 
@@ -62,33 +61,20 @@
 
 	let total = $derived(entries.reduce((n, e) => n + e.bytes, 0));
 
-	let saved = $state(false);
-	let savedTimer: ReturnType<typeof setTimeout> | undefined;
 	const saving = pending({
+		flash: () => Boolean(value),
 		onSuccess: (data) => {
 			const key = String(data?.dataSaved ?? '');
-			if (!value && key) {
-				goto(`${base}&k=${encodeURIComponent(key)}`, { noScroll: true });
-				return;
-			}
-			saved = true;
-			clearTimeout(savedTimer);
-			savedTimer = setTimeout(() => (saved = false), 1600);
+			if (!value && key) goto(`${base}&k=${encodeURIComponent(key)}`, { noScroll: true });
 		}
 	});
 
-	const confirmDelete =
-		(key: string): SubmitFunction =>
-		(input) => {
-			if (!confirm(`Delete “${key}”? The app's other devices drop it on their next sync.`)) {
-				input.cancel();
-				return;
-			}
-			return async ({ update }) => {
-				await update();
-				if (value?.key === key) goto(base, { noScroll: true });
-			};
-		};
+	const removing = pendingRows({
+		confirm: (key) => `Delete “${key}”? The app's other devices drop it on their next sync.`,
+		onSuccess: (key) => {
+			if (value?.key === key) goto(base, { noScroll: true });
+		}
+	});
 </script>
 
 <div class="flex flex-col gap-4">
@@ -115,7 +101,7 @@
 						<span class="shrink-0 text-xs text-text-muted tabular-nums">{fmtBytes(entry.bytes)}</span>
 						<span class="hidden shrink-0 text-xs text-text-subtle sm:block">{fmtDate(entry.updated_at)}</span>
 					</a>
-					<form method="POST" action="?/deleteData" use:enhance={confirmDelete(entry.key)}>
+					<form method="POST" action="?/deleteData" use:enhance={removing.submit(entry.key)}>
 						<input type="hidden" name="slug" value={slug} />
 						<input type="hidden" name="key" value={entry.key} />
 						<button type="submit" class="{iconButton} hover:text-danger" aria-label="Delete {entry.key}" title="Delete">
@@ -186,7 +172,7 @@
 
 		<div class="flex md:justify-end">
 			<Button type="submit" variant="primary" size="form" busy={saving.busy} busyLabel="Saving…">
-				{value ? (saved ? 'Saved' : 'Save value') : 'Add key'}
+				{value ? (saving.saved ? 'Saved' : 'Save value') : 'Add key'}
 			</Button>
 		</div>
 	</form>

@@ -74,7 +74,7 @@ export const actions: Actions = {
 	},
 
 	delete: async ({ request, platform, locals, url }) => {
-		const denied = requireFull(locals);
+		const denied = requireFull(locals, 'delete');
 		if (denied) return denied;
 
 		const slug = String((await request.formData()).get('slug') ?? '');

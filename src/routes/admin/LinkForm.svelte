@@ -2,7 +2,6 @@
 	import { dateInput } from '$lib/expiry';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
-	import type { SubmitFunction } from '@sveltejs/kit';
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import { affixClass, affixInput, affixPrefix, fieldClass, notice } from '$lib/ui/styles';
@@ -24,30 +23,19 @@
 	let mode = $derived(row ? 'update' : 'create');
 	let host = $derived(page.url.host);
 
-	// "Saved" holds on the button for a beat after an edit lands, so a save
-	// that changes nothing visible still says it happened.
-	let saved = $state(false);
-	let savedTimer: ReturnType<typeof setTimeout> | undefined;
 
 	const saving = pending({
 		reset: () => mode === 'create',
+		flash: () => mode === 'update',
 		onSuccess: (data) => {
-			if (mode === 'create') return onDone?.(String(data?.created ?? ''));
-			saved = true;
-			clearTimeout(savedTimer);
-			savedTimer = setTimeout(() => (saved = false), 1600);
+			if (mode === 'create') onDone?.(String(data?.created ?? ''));
 		}
 	});
 
-	const deleting = pending({ onSuccess: () => onDone?.() });
-
-	const confirmDelete: SubmitFunction = (input) => {
-		if (!confirm(`Delete ${host}/${row?.slug}? Its analytics are kept.`)) {
-			input.cancel();
-			return;
-		}
-		return deleting.submit(input);
-	};
+	const deleting = pending({
+		confirm: () => `Delete ${host}/${row?.slug}? Its analytics are kept.`,
+		onSuccess: () => onDone?.()
+	});
 
 	// Rejected input is echoed back so a typo never costs the whole form.
 	// svelte-ignore state_referenced_locally
@@ -180,13 +168,13 @@
 		{/if}
 		<span class="hidden flex-1 md:block"></span>
 		<Button type="submit" variant="primary" size="form" busy={saving.busy} busyLabel="Saving…">
-			{row ? (saved ? 'Saved' : 'Save') : 'Create link'}
+			{row ? (saving.saved ? 'Saved' : 'Save') : 'Create link'}
 		</Button>
 	</div>
 </form>
 
 {#if row}
-	<form id="delete-link" method="POST" action="?/delete" use:enhance={confirmDelete} hidden>
+	<form id="delete-link" method="POST" action="?/delete" use:enhance={deleting.submit} hidden>
 		<input type="hidden" name="slug" value={row.slug} />
 	</form>
 {/if}

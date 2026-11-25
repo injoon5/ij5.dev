@@ -4,6 +4,7 @@
 </script>
 
 <script lang="ts">
+	import { fmtUtcDay } from '$lib/format';
 	/**
 	 * A line chart, in the shape of the sparkline on injoon5/web: no gridlines,
 	 * no tooltip box, an axis that is only ever text, and a headline above that
@@ -98,10 +99,7 @@
 	let current = $derived(active !== null ? (data[active] ?? null) : null);
 	let total = $derived(data.reduce((sum, d) => sum + d.hits, 0));
 
-	const fmtDay = (day: string) =>
-		new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short' }).format(
-			new Date(`${day}T00:00:00Z`)
-		);
+	const fmtDay = fmtUtcDay;
 
 	let readout = $derived(
 		current

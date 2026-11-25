@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import CopyButton from '$lib/ui/CopyButton.svelte';
 	import PageHeader from '$lib/ui/PageHeader.svelte';
-	import { card, cardFlush, cardTitle } from '$lib/ui/styles';
+	import { cardFlush, cardTitle } from '$lib/ui/styles';
 
 	/**
 	 * Reference for the shortener and Shelf APIs, written against the routes

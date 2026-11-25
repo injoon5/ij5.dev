@@ -72,26 +72,18 @@
 	let bytes = $derived(utf8Bytes(normalizeSource(form.source)));
 	let over = $derived(bytes > MAX_APP_BYTES);
 
-	let saved = $state(false);
-	let savedTimer: ReturnType<typeof setTimeout> | undefined;
 
 	const saving = pending({
+		flash: () => mode === 'update',
 		onSuccess: (data) => {
-			if (mode === 'create') return onDone?.(String(data?.saved ?? ''));
-			saved = true;
-			clearTimeout(savedTimer);
-			savedTimer = setTimeout(() => (saved = false), 1600);
+			if (mode === 'create') onDone?.(String(data?.saved ?? ''));
 		}
 	});
 
-	const reverting = pending();
-	const confirmRevert: SubmitFunction = (input) => {
-		if (!confirm(`Go back to the previous version of ${app?.name}? The current one is kept, so reverting again undoes this.`)) {
-			input.cancel();
-			return;
-		}
-		return reverting.submit(input);
-	};
+	const reverting = pending({
+		confirm: () =>
+			`Go back to the previous version of ${app?.name}? The current one is kept, so reverting again undoes this.`
+	});
 
 	let dialog = $state<HTMLDialogElement | null>(null);
 	const deleting = pending({ onSuccess: () => onDone?.() });
@@ -274,13 +266,13 @@
 		{/if}
 		<span class="hidden flex-1 md:block"></span>
 		<Button type="submit" variant="primary" size="form" disabled={over} busy={saving.busy} busyLabel="Saving…">
-			{app ? (saved ? 'Saved' : 'Save') : 'Create app'}
+			{app ? (saving.saved ? 'Saved' : 'Save') : 'Create app'}
 		</Button>
 	</div>
 </form>
 
 {#if app}
-	<form id="revert-app" method="POST" action="?/revert" use:enhance={confirmRevert} hidden>
+	<form id="revert-app" method="POST" action="?/revert" use:enhance={reverting.submit} hidden>
 		<input type="hidden" name="slug" value={app.slug} />
 	</form>
 

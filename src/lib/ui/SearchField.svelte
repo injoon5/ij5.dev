@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Search from 'lucide-svelte/icons/search';
-	import { inputClass, kbd } from './styles';
+	import { fieldClass, kbd } from './styles';
 
 	/**
 	 * The filter above a table. Pressing `/` anywhere on the page focuses it
@@ -27,7 +27,7 @@
 		aria-label={label}
 		autocomplete="off"
 		spellcheck="false"
-		class="{inputClass()} ps-9 pe-9 [&::-webkit-search-cancel-button]:hidden"
+		class="{fieldClass()} ps-9 pe-9 [&::-webkit-search-cancel-button]:hidden"
 	/>
 	<kbd
 		class="{kbd} pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 pointer-coarse:hidden"

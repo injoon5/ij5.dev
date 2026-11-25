@@ -11,13 +11,12 @@ const inputBase =
  *  and an invalid field. Both strings are written out in full: Tailwind finds
  *  classes by scanning source text, so a class assembled from a template
  *  literal is never generated — which is how the invalid border went missing. */
-export function inputClass(invalid = false): string {
+export function fieldClass(invalid = false): string {
 	return invalid
 		? `${inputBase} shadow-[inset_0_0_0_1px_var(--danger)]`
 		: `${inputBase} shadow-[inset_0_0_0_1px_var(--border-subtle)] hover:shadow-[inset_0_0_0_1px_var(--border-strong)] focus:shadow-[inset_0_0_0_1px_var(--accent),0_0_0_3px_var(--accent-tint)]`;
 }
 
-export const fieldClass = (invalid = false) => inputClass(invalid);
 
 /** A panel on the white canvas, drawn by a hairline — the same object on a
  *  phone and a desktop. No padding: for lists and strips that run edge to

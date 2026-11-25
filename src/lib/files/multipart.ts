@@ -1,4 +1,4 @@
-import { errorMessage } from '$lib/home/imageUpload';
+import { errorMessage } from '$lib/ui/http';
 
 /**
  * Sends a file to R2 as a multipart upload through `/api/files/uploads`.

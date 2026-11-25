@@ -12,7 +12,10 @@ export const FULL_ONLY =
 
 export const isFull = (locals: App.Locals) => locals.session?.strength === 'full';
 
-/** For form actions: `const denied = requireFull(locals); if (denied) return denied;` */
-export function requireFull(locals: App.Locals) {
-	return isFull(locals) ? null : fail(403, { error: FULL_ONLY });
+/**
+ * For form actions: `const denied = requireFull(locals, 'delete'); if (denied) return denied;`
+ * `intent` is the one the page shows the action's errors under.
+ */
+export function requireFull(locals: App.Locals, intent?: string) {
+	return isFull(locals) ? null : fail(403, { intent, error: FULL_ONLY });
 }

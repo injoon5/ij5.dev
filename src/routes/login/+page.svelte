@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fmtTime } from '$lib/format';
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import type { SubmitFunction } from '@sveltejs/kit';
@@ -26,9 +27,6 @@
 	const errorFor = (d: Door) => (form?.door === d ? form.error : undefined);
 	const COLS = ['A', 'B', 'C', 'D'];
 
-	/** "3:42 PM" — when a locked door opens again. */
-	const fmtTime = (ms: number) =>
-		new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(ms);
 
 	/**
 	 * The OIDC flow continues at `/oauth/authorize`, which answers with a

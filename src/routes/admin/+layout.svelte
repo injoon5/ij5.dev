@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fmtTime } from '$lib/format';
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { afterNavigate } from '$app/navigation';
@@ -18,8 +19,6 @@
 
 	let { children, data }: { children: Snippet; data: LayoutData } = $props();
 
-	const fmtTime = (ms: number) =>
-		new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(ms);
 
 	type Item = { href: string; label: string; icon: typeof LinkIcon };
 

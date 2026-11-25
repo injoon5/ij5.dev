@@ -1,5 +1,5 @@
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
-import { errorMessage } from '$lib/home/imageUpload';
+import { errorMessage } from '$lib/ui/http';
 import type {
 	AuthenticationResponseJSON,
 	PublicKeyCredentialCreationOptionsJSON,

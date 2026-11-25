@@ -58,6 +58,7 @@
 	const saving = pending();
 	const clearing = pending({ onSuccess: () => menu?.removeAttribute('open') });
 	const reverting = pending({
+		confirm: 'Put the previously published version back live? The current one is kept, so this can be undone.',
 		onSuccess: () => {
 			// The revert rewrote the draft; the buffer follows it.
 			content = data.draft.markdown ?? '';
@@ -66,14 +67,6 @@
 		}
 	});
 	const publishing = pending({ onSuccess: () => (profileDirty = false) });
-
-	const confirmRevert: SubmitFunction = (input) => {
-		if (!confirm('Put the previously published version back live? The current one is kept, so this can be undone.')) {
-			input.cancel();
-			return;
-		}
-		return reverting.submit(input);
-	};
 
 	/**
 	 * Publish ships what is on screen. The page text rides along in this
@@ -187,7 +180,7 @@
 			<div
 				class="absolute top-full right-0 z-20 mt-1.5 w-60 origin-top-right rounded-[var(--radius-ui)] bg-surface p-1 shadow-[var(--shadow-pop)] starting:scale-95 starting:opacity-0 transition-[opacity,scale] duration-150 ease-out"
 			>
-				<form method="POST" action="?/revert" use:enhance={confirmRevert}>
+				<form method="POST" action="?/revert" use:enhance={reverting.submit}>
 					<button type="submit" class={menuItem} disabled={!data.canRevert || reverting.busy}>
 						{reverting.busy ? 'Reverting…' : 'Revert to previous version'}
 					</button>

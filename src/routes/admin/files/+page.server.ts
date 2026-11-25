@@ -72,7 +72,7 @@ export const actions: Actions = {
 	},
 
 	delete: async ({ request, platform, locals }) => {
-		const denied = requireFull(locals);
+		const denied = requireFull(locals, 'delete');
 		if (denied) return denied;
 		const env = bindings(platform);
 

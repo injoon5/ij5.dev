@@ -2,7 +2,6 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import type { SubmitFunction } from '@sveltejs/kit';
 	import ArrowUpRight from 'lucide-svelte/icons/arrow-up-right';
 	import Plus from 'lucide-svelte/icons/plus';
 	import Button from '$lib/ui/Button.svelte';
@@ -17,7 +16,6 @@
 	import { listShortcuts } from '$lib/ui/shortcuts';
 	import {
 		badge,
-		card,
 		cardFlush,
 		iconButton,
 		kbd,
@@ -39,17 +37,12 @@
 	let creating = $derived(page.url.searchParams.get('s') === 'new');
 	let open = $derived(creating || Boolean(data.selected));
 
-	const deleting = pending({ onSuccess: () => goto('/admin/files', { noScroll: true }) });
+	const deleting = pending({
+		confirm: () => `Delete “${data.selected?.name}”? This can’t be undone.`,
+		onSuccess: () => goto('/admin/files', { noScroll: true })
+	});
 
 	// The bytes go for good, so it asks first.
-	const confirmDelete: SubmitFunction = (input) => {
-		if (!confirm(`Delete “${data.selected?.name}”? This can’t be undone.`)) {
-			input.cancel();
-			return;
-		}
-		return deleting.submit(input);
-	};
-
 	let deleteError = $derived(
 		form?.intent === 'delete' ? (form as { error?: string }).error : undefined
 	);
@@ -210,7 +203,7 @@
 					method="POST"
 					action="?/delete"
 					class="flex md:border-t md:border-border-subtle md:pt-4"
-					use:enhance={confirmDelete}
+					use:enhance={deleting.submit}
 				>
 					<input type="hidden" name="slug" value={file.slug} />
 					<Button

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import type { SubmitFunction } from '@sveltejs/kit';
 	import Fingerprint from 'lucide-svelte/icons/fingerprint';
 	import KeyRound from 'lucide-svelte/icons/key-round';
 	import Hourglass from 'lucide-svelte/icons/hourglass';
@@ -11,9 +10,9 @@
 	import Button from '$lib/ui/Button.svelte';
 	import PageHeader from '$lib/ui/PageHeader.svelte';
 	import { registerPasskey } from '$lib/auth/passkey';
-	import { fmtDate } from '$lib/format';
+	import { fmtDate, fmtTime, fmtWhen } from '$lib/format';
 	import { badge, card, cardFlush, cardTitle, fieldClass, iconButton, notice } from '$lib/ui/styles';
-	import { pending } from '$lib/ui/pending.svelte';
+	import { pending, pendingRows } from '$lib/ui/pending.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -21,7 +20,6 @@
 	let name = $state('');
 	let error = $state('');
 	let busy = $state(false);
-	let removing = $state<string | null>(null);
 
 	async function addPasskey(event: SubmitEvent) {
 		event.preventDefault();
@@ -41,47 +39,18 @@
 		}
 	}
 
-	let revoking = $state<string | null>(null);
 
-	/** "3:42 PM" — keys live thirty minutes, so the day never matters. */
-	const fmtTime = (ms: number) =>
-		new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' }).format(ms);
 
-	const confirmRevoke =
-		(key: { id: string }): SubmitFunction =>
-		(input) => {
-			if (!confirm('Revoke this install key? An agent still holding it will get a 401.')) {
-				input.cancel();
-				return;
-			}
-			revoking = key.id;
-			return async ({ update }) => {
-				await update();
-				revoking = null;
-			};
-		};
+	const revoking = pendingRows({ confirm: () => 'Revoke this install key? An agent still holding it will get a 401.' });
 
-	const confirmDelete =
-		(key: { id: string; name: string }): SubmitFunction =>
-		(input) => {
-			const last = data.passkeys.length === 1;
-			const message = last
-				? `Remove “${key.name}”? It is your last passkey; you will need the token or a recovery code.`
-				: `Remove “${key.name}”? It will no longer sign you in.`;
-			if (!confirm(message)) {
-				input.cancel();
-				return;
-			}
-			removing = key.id;
-			return async ({ update }) => {
-				await update();
-				removing = null;
-			};
-		};
-
-	/** "Nov 25, 3:42 PM" — sessions and sign-ins happen within days. */
-	const fmtWhen = (ms: number) =>
-		new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(ms);
+	const removing = pendingRows({
+		confirm: (id) => {
+			const name = data.passkeys.find((p) => p.id === id)?.name;
+			return data.passkeys.length === 1
+				? `Remove “${name}”? It is your last passkey; you will need the token or a recovery code.`
+				: `Remove “${name}”? It will no longer sign you in.`;
+		}
+	});
 
 	const METHOD: Record<string, string> = {
 		passkey: 'Passkey',
@@ -97,31 +66,14 @@
 		'sign-out-all': 'Signed out everywhere else'
 	};
 
-	let ending = $state<string | null>(null);
-	const confirmEnd =
-		(session: { id: string; current: boolean }): SubmitFunction =>
-		(input) => {
-			if (session.current && !confirm('End this session? You will be signed out here.')) {
-				input.cancel();
-				return;
-			}
-			ending = session.id;
-			return async ({ update }) => {
-				await update();
-				ending = null;
-			};
-		};
+	const ending = pendingRows({
+		confirm: (id) => (id === data.sessions.find((x) => x.current)?.id ? 'End this session? You will be signed out here.' : null)
+	});
 
 	const signingOutOthers = pending();
-	const printing = pending();
-
-	const confirmNewCodes: SubmitFunction = (input) => {
-		if (data.recovery.total && !confirm('Make a new sheet? Every code on the old one stops working.')) {
-			input.cancel();
-			return;
-		}
-		return printing.submit(input);
-	};
+	const printing = pending({
+		confirm: () => (data.recovery.total ? 'Make a new sheet? Every code on the old one stops working.' : null)
+	});
 </script>
 
 <svelte:head><title>Security</title></svelte:head>
@@ -140,8 +92,7 @@
 			<ul class="divide-y divide-border-subtle">
 				{#each data.passkeys as key (key.id)}
 					<li
-						class="flex items-center gap-3 py-3 ps-4 pe-2 transition-opacity duration-150 ease-out md:ps-5 {removing ===
-						key.id
+						class="flex items-center gap-3 py-3 ps-4 pe-2 transition-opacity duration-150 ease-out md:ps-5 {removing.busy(key.id)
 							? 'opacity-50'
 							: ''}"
 					>
@@ -160,14 +111,14 @@
 							</p>
 						</div>
 
-						<form method="POST" action="?/delete" use:enhance={confirmDelete(key)}>
+						<form method="POST" action="?/delete" use:enhance={removing.submit(key.id)}>
 							<input type="hidden" name="id" value={key.id} />
 							<button
 								type="submit"
 								class="{iconButton} hover:text-danger"
 								aria-label="Remove {key.name}"
 								title="Remove"
-								disabled={removing === key.id}
+								disabled={removing.busy(key.id)}
 							>
 								<Trash size={15} aria-hidden="true" />
 							</button>
@@ -214,7 +165,7 @@
 		<ul class="divide-y divide-border-subtle">
 			{#each data.sessions as s (s.id)}
 				<li
-					class="flex items-center gap-3 py-3 ps-4 pe-2 transition-opacity duration-150 ease-out md:ps-5 {ending === s.id
+					class="flex items-center gap-3 py-3 ps-4 pe-2 transition-opacity duration-150 ease-out md:ps-5 {ending.busy(s.id)
 						? 'opacity-50'
 						: ''}"
 				>
@@ -234,14 +185,14 @@
 							{METHOD[s.method] ?? s.method} · Signed in {fmtWhen(s.created_at)} · Ends {fmtWhen(s.expires_at)}
 						</p>
 					</div>
-					<form method="POST" action="?/revokeSession" use:enhance={confirmEnd(s)}>
+					<form method="POST" action="?/revokeSession" use:enhance={ending.submit(s.id)}>
 						<input type="hidden" name="id" value={s.id} />
 						<button
 							type="submit"
 							class="{iconButton} hover:text-danger"
 							aria-label={s.current ? 'End this session' : `End session on ${s.where}`}
 							title="End session"
-							disabled={ending === s.id}
+							disabled={ending.busy(s.id)}
 						>
 							<LogOut size={15} aria-hidden="true" />
 						</button>
@@ -296,7 +247,7 @@
 				{/if}
 			</p>
 		{/if}
-		<form method="POST" action="?/recoveryCodes" class="mt-4" use:enhance={confirmNewCodes}>
+		<form method="POST" action="?/recoveryCodes" class="mt-4" use:enhance={printing.submit}>
 			<Button type="submit" variant="secondary" size="form" busy={printing.busy} busyLabel="Making codes…">
 				{data.recovery.total ? 'Make a new sheet' : 'Make recovery codes'}
 			</Button>
@@ -341,8 +292,7 @@
 			<ul class="divide-y divide-border-subtle">
 				{#each data.installKeys as key (key.id)}
 					<li
-						class="flex items-center gap-3 py-3 ps-4 pe-2 transition-opacity duration-150 ease-out md:ps-5 {revoking ===
-						key.id
+						class="flex items-center gap-3 py-3 ps-4 pe-2 transition-opacity duration-150 ease-out md:ps-5 {revoking.busy(key.id)
 							? 'opacity-50'
 							: ''}"
 					>
@@ -363,14 +313,14 @@
 							</p>
 						</div>
 
-						<form method="POST" action="?/revokeKey" use:enhance={confirmRevoke(key)}>
+						<form method="POST" action="?/revokeKey" use:enhance={revoking.submit(key.id)}>
 							<input type="hidden" name="id" value={key.id} />
 							<button
 								type="submit"
 								class="{iconButton} hover:text-danger"
 								aria-label="Revoke key {key.id}"
 								title="Revoke"
-								disabled={revoking === key.id}
+								disabled={revoking.busy(key.id)}
 							>
 								<Trash size={15} aria-hidden="true" />
 							</button>
