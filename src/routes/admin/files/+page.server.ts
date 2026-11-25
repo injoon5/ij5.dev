@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { requireFull } from '$lib/server/guard';
 import {
 	cleanName,
 	createFile,
@@ -99,7 +100,9 @@ export const actions: Actions = {
 		return { created: slug };
 	},
 
-	delete: async ({ request, platform }) => {
+	delete: async ({ request, platform, locals }) => {
+		const denied = requireFull(locals);
+		if (denied) return denied;
 		const env = platform?.env;
 		if (!env) return fail(500, { error: 'No platform bindings.' });
 

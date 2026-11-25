@@ -1,26 +1,42 @@
 /**
- * Single-user auth (§4). Stateless: verify a 256-bit token once, hand back a
- * signed cookie, verify an HMAC thereafter.
+ * Small crypto primitives shared by every sign-in door (§4). The doors
+ * themselves live in `sessions.ts`, `password.ts`, `puzzle.ts`,
+ * `recovery.ts` and `webauthn.ts`.
  *
- * The credential is a random 256-bit token rather than a memorable password.
+ * The admin token is a random 256-bit value rather than a memorable password.
  * Expensive KDFs exist to slow brute-force against low-entropy secrets; 256
- * bits is not brute-forceable at any KDF cost, so one SHA-256 replaces 210k
- * PBKDF2 rounds and fits the 10ms CPU budget.
- *
- * This is safe *because* it is single-user — no registration, enumeration,
- * reset, or account linking. Do not reuse it anywhere multi-tenant.
+ * bits is not brute-forceable at any KDF cost, so one SHA-256 is enough for it
+ * (and for session tokens, recovery codes and OIDC codes, which are random
+ * too). The one human-chosen secret, the password, goes through Argon2id in
+ * `password.ts`.
  */
 
-const enc = (s: string) => new TextEncoder().encode(s);
+export const enc = (s: string) => new TextEncoder().encode(s);
 
-const b64 = (b: ArrayBuffer) => {
-	const bytes = new Uint8Array(b);
+export const b64 = (b: ArrayBuffer | Uint8Array) => {
+	const bytes = b instanceof Uint8Array ? b : new Uint8Array(b);
 	let out = '';
 	for (let i = 0; i < bytes.length; i++) out += String.fromCharCode(bytes[i]);
 	return btoa(out);
 };
 
+export const b64url = (b: ArrayBuffer | Uint8Array) =>
+	b64(b).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+export function fromB64(s: string): Uint8Array {
+	const std = s.replace(/-/g, '+').replace(/_/g, '/');
+	const bin = atob(std + '='.repeat((4 - (std.length % 4)) % 4));
+	const out = new Uint8Array(bin.length);
+	for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+	return out;
+}
+
+/** base64 — the encoding `AUTH_HASH` is stored in. */
 export const sha256 = async (s: string) => b64(await crypto.subtle.digest('SHA-256', enc(s)));
+
+/** base64url — for values that end up in URLs or as table keys. */
+export const sha256url = async (s: string) =>
+	b64url(await crypto.subtle.digest('SHA-256', enc(s)));
 
 /** Constant-time compare. Never use `===` on a secret. */
 export function eq(a: string, b: string) {
@@ -30,7 +46,7 @@ export function eq(a: string, b: string) {
 	return d === 0;
 }
 
-async function hmac(msg: string, secret: string) {
+export async function hmac(msg: string, secret: string) {
 	const k = await crypto.subtle.importKey(
 		'raw',
 		enc(secret),
@@ -38,30 +54,42 @@ async function hmac(msg: string, secret: string) {
 		false,
 		['sign']
 	);
-	return b64(await crypto.subtle.sign('HMAC', k, enc(msg)));
+	return b64url(await crypto.subtle.sign('HMAC', k, enc(msg)));
 }
 
-const THIRTY_DAYS_MS = 30 * 864e5;
+/** `bytes` of CSPRNG output, base64url. 32 bytes is a 256-bit token. */
+export const randomToken = (bytes = 32) => b64url(crypto.getRandomValues(new Uint8Array(bytes)));
 
-export async function issue(secret: string) {
-	const exp = Date.now() + THIRTY_DAYS_MS;
-	return `${exp}.${await hmac(String(exp), secret)}`;
+/**
+ * Who is asking, as far as rate limiting is concerned. An IPv6 client owns a
+ * whole /64, so it is counted as one: limiting single v6 addresses would hand
+ * every attacker 2^64 fresh tries.
+ */
+export function clientIp(request: Request): string {
+	const ip = request.headers.get('cf-connecting-ip') ?? '';
+	if (!ip.includes(':')) return ip || 'unknown';
+	const groups = expandV6(ip);
+	return groups ? `${groups.slice(0, 4).join(':')}::/64` : ip;
 }
 
-export async function valid(token: string | undefined, secret: string | undefined) {
-	if (!token || !secret) return false;
-	const [exp, sig] = token.split('.');
-	if (!exp || !sig) return false;
-	if (!eq(sig, await hmac(exp, secret))) return false;
-	return Number(exp) > Date.now();
+function expandV6(ip: string): string[] | null {
+	const [head, tail] = ip.split('::');
+	const a = head ? head.split(':') : [];
+	const b = tail !== undefined && tail ? tail.split(':') : [];
+	if (ip.includes('::')) {
+		const fill = 8 - a.length - b.length;
+		if (fill < 0) return null;
+		return [...a, ...Array(fill).fill('0'), ...b].map((g) => g.toLowerCase().replace(/^0+(?=.)/, ''));
+	}
+	return a.length === 8 ? a.map((g) => g.toLowerCase().replace(/^0+(?=.)/, '')) : null;
 }
 
-export const SESSION_COOKIE = 'sid';
-
-export const cookieOptions = {
-	path: '/',
-	httpOnly: true,
-	secure: true,
-	sameSite: 'lax',
-	maxAge: 30 * 86400
-} as const;
+/** Where a request came from, for the sign-in log and alerts. */
+export function requestMeta(request: Request) {
+	const cf = (request as Request & { cf?: { country?: string; city?: string } }).cf;
+	return {
+		ip: request.headers.get('cf-connecting-ip'),
+		country: cf?.country ?? request.headers.get('cf-ipcountry'),
+		userAgent: (request.headers.get('user-agent') ?? '').slice(0, 300) || null
+	};
+}

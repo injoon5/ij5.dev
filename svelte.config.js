@@ -24,7 +24,10 @@ const config = {
 			mode: 'hash',
 			directives: {
 				'default-src': ['self'],
-				'script-src': ['self'],
+				// Turnstile (`$lib/server/turnstile`), loaded on the login page
+				// only, and only when it is configured.
+				'script-src': ['self', 'https://challenges.cloudflare.com'],
+				'frame-src': ['https://challenges.cloudflare.com'],
 				// SvelteKit inlines critical CSS, so styles need it. Scripts do not.
 				'style-src': ['self', 'unsafe-inline'],
 				// `https:` because the Markdown renderer accepts absolute external
@@ -36,6 +39,15 @@ const config = {
 				'form-action': ['self'],
 				'object-src': ['none']
 			}
+		},
+
+		// SvelteKit's own cross-site form check runs before any hook, and it
+		// refuses a form POST with no Origin header — which is exactly what
+		// Cloudflare Access sends, server to server, to `/oauth/token`. So the
+		// same check lives in `hooks.server.ts` instead, with that one endpoint
+		// (which authenticates its caller with a client secret) exempt.
+		csrf: {
+			trustedOrigins: ['*']
 		},
 
 		version: {

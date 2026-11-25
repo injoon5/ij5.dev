@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
+import { requireFull } from '$lib/server/guard';
 import { RESERVED, SLUG_PATTERN } from '$lib/reserved';
 import { getFile } from '$lib/server/files';
 import { getPaste } from '$lib/server/pastes';
@@ -173,7 +174,9 @@ export const actions: Actions = {
 		return { updated: parsed.row.slug };
 	},
 
-	delete: async ({ request, platform }) => {
+	delete: async ({ request, platform, locals }) => {
+		const denied = requireFull(locals);
+		if (denied) return denied;
 		const env = platform?.env;
 		if (!env) return fail(500, { error: 'No platform bindings.' });
 

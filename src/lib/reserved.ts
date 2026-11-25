@@ -18,6 +18,8 @@ export const RESERVED = new Set([
 	'p',
 	// The file namespace: `/d/{slug}` is a real route, same rule.
 	'd',
+	// The OpenID Connect provider for Cloudflare Access lives under `/oauth/*`.
+	'oauth',
 	'_app',
 	'.well-known'
 ]);

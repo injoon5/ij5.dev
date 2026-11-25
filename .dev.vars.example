@@ -11,10 +11,26 @@
 
 # base64(SHA-256(token)). The token itself is never stored anywhere.
 AUTH_HASH=
-# Rotate this to revoke every session at once. There is no session table.
+# Signs puzzle grids. Sessions live in D1 — revoke them on /admin/security.
 SESSION_SECRET=
 # Visitor hashing. Rotating it resets today's unique counts and nothing else.
 SALT=
+
+# Signing in without a device (docs/deploying.md#signing-in). All three, or the
+# password door stays closed. `node scripts/auth.mjs password` / `puzzle`.
+# Escape every $ in PASSWORD_HASH as \$ — wrangler expands $NAME in this file.
+# PASSWORD_PEPPER=
+# PASSWORD_HASH=
+# PUZZLE_PATH=A1 B2 C3 C4
+# ALERT_URL=
+# TURNSTILE_SECRET=
+
+# OpenID Connect for Cloudflare Access. All of these, or every /oauth route 404s.
+# OIDC_CLIENT_ID=
+# OIDC_REDIRECT_URI=https://<team>.cloudflareaccess.com/cdn-cgi/access/callback
+# OIDC_CLIENT_SECRET_HASH=
+# OIDC_PRIVATE_JWK=
+# OIDC_EMAIL=
 
 # Live widgets. Every one is optional and the site runs with none of them set:
 # a widget whose credential is missing is *disabled*, not broken. Nothing is

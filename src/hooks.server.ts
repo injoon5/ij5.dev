@@ -1,6 +1,7 @@
 import type { Handle } from '@sveltejs/kit';
 import { isSlugCandidate } from '$lib/reserved';
-import { valid, SESSION_COOKIE } from '$lib/server/auth';
+import { readSession, SESSION_COOKIE } from '$lib/server/sessions';
+import { crossSiteForm } from '$lib/server/csrf';
 import { track } from '$lib/server/track';
 import type { HomeDoc, SlugRecord } from '$lib/types';
 
@@ -54,6 +55,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const env = platform?.env;
 	const cache = platform?.caches?.default;
 	const path = event.url.pathname;
+
+	if (!DEV && crossSiteForm(event.request, event.url)) {
+		const message = `Cross-site ${event.request.method} form submissions are forbidden`;
+		return event.request.headers.get('accept') === 'application/json'
+			? Response.json({ message }, { status: 403 })
+			: new Response(message, { status: 403 });
+	}
 	// A slug typed with a trailing slash is the same link: `/gh/` redirects like
 	// `/gh` instead of falling through to the 404 page. Multi-segment paths keep
 	// their slashes, so `/a/b/` still never reaches KV.
@@ -190,7 +198,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	// ------------------------------------------------------------------- auth
-	event.locals.authed = await valid(event.cookies.get(SESSION_COOKIE), env?.SESSION_SECRET);
+	// Only a request that carries the cookie pays the D1 read.
+	const cookie = event.cookies.get(SESSION_COOKIE);
+	event.locals.session =
+		env && cookie
+			? await readSession(env, cookie, (p) => platform?.context?.waitUntil?.(p)).catch(() => null)
+			: null;
+	event.locals.authed = event.locals.session !== null;
 
 	/**
 	 * `/api` has no `+layout.server.ts`, so it guards here — but only the

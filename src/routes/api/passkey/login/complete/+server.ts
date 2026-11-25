@@ -1,16 +1,16 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/browser';
-import { SESSION_COOKIE, cookieOptions, issue } from '$lib/server/auth';
+import { startSession } from '$lib/server/signIn';
 import { finishAuthentication } from '$lib/server/webauthn';
 
 /**
  * Step two of passkey sign-in: verify the assertion the authenticator produced
- * and hand back a normal session cookie — the same one the token form issues,
- * so a passkey login and a token login are indistinguishable from there.
+ * and open a `full` session — the strongest door, so the strongest session.
  */
 
-export const POST: RequestHandler = async ({ request, platform, cookies }) => {
+export const POST: RequestHandler = async (event) => {
+	const { request, platform } = event;
 	const env = platform?.env;
 	if (!env) error(503, 'No platform bindings.');
 
@@ -28,7 +28,6 @@ export const POST: RequestHandler = async ({ request, platform, cookies }) => {
 		error(401, e instanceof Error ? e.message : 'That passkey did not work.');
 	}
 
-	if (!env.SESSION_SECRET) error(500, 'Auth is not configured on this deployment.');
-	cookies.set(SESSION_COOKIE, await issue(env.SESSION_SECRET), cookieOptions);
+	await startSession(event, 'full', 'passkey');
 	return json({ ok: true });
 };

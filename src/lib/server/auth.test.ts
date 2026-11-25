@@ -1,53 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eq, issue, sha256, valid } from './auth';
-
-/**
- * §13, test 2 — a session cookie verifies, and a tampered signature fails.
- *
- * There is no session table to fall back on: the signature *is* the session,
- * so every one of these is the whole of the auth story for one case.
- */
-
-const SECRET = 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=';
-
-describe('session tokens', () => {
-	it('issues a token that verifies against the same secret', async () => {
-		expect(await valid(await issue(SECRET), SECRET)).toBe(true);
-	});
-
-	it('rejects a tampered signature', async () => {
-		const [exp, sig] = (await issue(SECRET)).split('.');
-		const flipped = (sig[0] === 'A' ? 'B' : 'A') + sig.slice(1);
-		expect(await valid(`${exp}.${flipped}`, SECRET)).toBe(false);
-	});
-
-	it('rejects a tampered expiry — the signature covers it', async () => {
-		const [exp, sig] = (await issue(SECRET)).split('.');
-		expect(await valid(`${Number(exp) + 864e5}.${sig}`, SECRET)).toBe(false);
-	});
-
-	it('rejects a token signed with a different secret, which is how rotation revokes', async () => {
-		expect(await valid(await issue(SECRET), 'c29tZS1vdGhlci1zZWNyZXQ=')).toBe(false);
-	});
-
-	it('rejects an expired token whose signature is genuine', async () => {
-		// Signed the same way `issue` signs, but dated to last week.
-		const past = Date.now() - 7 * 864e5;
-		const [, sig] = (await issue(SECRET)).split('.');
-		expect(sig).toBeTruthy();
-		expect(await valid(`${past}.${await signLike(String(past))}`, SECRET)).toBe(false);
-	});
-
-	it('rejects malformed and missing tokens without throwing', async () => {
-		for (const token of [undefined, '', '.', 'nodot', '123.', '.sig']) {
-			expect(await valid(token, SECRET)).toBe(false);
-		}
-	});
-
-	it('rejects any token when the deployment has no secret configured', async () => {
-		expect(await valid(await issue(SECRET), undefined)).toBe(false);
-	});
-});
+import { b64url, clientIp, eq, fromB64, sha256 } from './auth';
 
 describe('eq', () => {
 	it('compares equal strings as equal', () => {
@@ -70,16 +22,29 @@ describe('sha256', () => {
 	});
 });
 
-/** Mirrors `issue`'s signing so an expiry can be backdated in the test. */
-async function signLike(msg: string) {
-	const enc = new TextEncoder();
-	const key = await crypto.subtle.importKey(
-		'raw',
-		enc.encode(SECRET),
-		{ name: 'HMAC', hash: 'SHA-256' },
-		false,
-		['sign']
-	);
-	const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(msg)));
-	return btoa(String.fromCharCode(...sig));
-}
+describe('base64', () => {
+	it('round-trips base64url and standard base64 alike', () => {
+		const bytes = new Uint8Array([251, 255, 191, 0, 1, 2, 3]);
+		expect([...fromB64(b64url(bytes))]).toEqual([...bytes]);
+		expect([...fromB64(btoa(String.fromCharCode(...bytes)))]).toEqual([...bytes]);
+	});
+});
+
+describe('clientIp', () => {
+	const req = (ip?: string) => new Request('https://ij5.dev/', { headers: ip ? { 'cf-connecting-ip': ip } : {} });
+
+	it('keeps an IPv4 address whole', () => {
+		expect(clientIp(req('203.0.113.7'))).toBe('203.0.113.7');
+	});
+
+	it('folds an IPv6 address to its /64, however it is written', () => {
+		const a = clientIp(req('2001:db8:0:1::5'));
+		const b = clientIp(req('2001:0db8:0000:0001:ffff:ffff:ffff:ffff'));
+		expect(a).toBe('2001:db8:0:1::/64');
+		expect(b).toBe(a);
+	});
+
+	it('has a stable bucket when the header is missing', () => {
+		expect(clientIp(req())).toBe('unknown');
+	});
+});

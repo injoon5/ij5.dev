@@ -1,7 +1,13 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = ({ locals }) => {
-	if (!locals.authed) redirect(303, '/login');
-	return {};
+export const load: LayoutServerLoad = ({ locals, url }) => {
+	if (!locals.session) redirect(303, `/login?next=${encodeURIComponent(url.pathname + url.search)}`);
+	return {
+		session: {
+			strength: locals.session.strength,
+			method: locals.session.method,
+			expiresAt: locals.session.expires_at
+		}
+	};
 };

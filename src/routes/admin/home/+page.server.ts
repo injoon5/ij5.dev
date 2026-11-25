@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
+import { requireFull } from '$lib/server/guard';
 import {
 	clearCache,
 	hasPrevious,
@@ -167,7 +168,9 @@ export const actions: Actions = {
 		return { reverted: doc.v };
 	},
 
-	clear: async ({ platform }) => {
+	clear: async ({ platform, locals }) => {
+		const denied = requireFull(locals);
+		if (denied) return denied;
 		const env = platform?.env;
 		if (!env) return noEnv();
 		const doc = await clearCache(env);
@@ -177,7 +180,9 @@ export const actions: Actions = {
 		return { cleared: doc.v };
 	},
 
-	deleteFile: async ({ request, platform }) => {
+	deleteFile: async ({ request, platform, locals }) => {
+		const denied = requireFull(locals);
+		if (denied) return denied;
 		const env = platform?.env;
 		if (!env) return noEnv();
 

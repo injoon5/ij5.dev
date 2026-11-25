@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { requireFull } from '$lib/server/guard';
 import { SLUG_PATTERN } from '$lib/reserved';
 import {
 	appContent,
@@ -103,7 +104,9 @@ export const actions: Actions = {
 		return { reverted: slug };
 	},
 
-	delete: async ({ request, platform }) => {
+	delete: async ({ request, platform, locals }) => {
+		const denied = requireFull(locals);
+		if (denied) return denied;
 		const env = platform?.env;
 		if (!env) return fail(500, { intent: 'delete', error: 'No platform bindings.' });
 
@@ -140,7 +143,9 @@ export const actions: Actions = {
 		return { dataSaved: key };
 	},
 
-	deleteData: async ({ request, platform }) => {
+	deleteData: async ({ request, platform, locals }) => {
+		const denied = requireFull(locals);
+		if (denied) return denied;
 		const env = platform?.env;
 		if (!env) return fail(500, { intent: 'data', error: 'No platform bindings.' });
 
