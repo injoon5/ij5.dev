@@ -3,7 +3,7 @@ import { DEVICE_UPSERT, HITS_UPSERT, MIGRATE_VISITOR, PURGE_VISITOR, VISITORS_IN
 import { dashboard } from './stats.server';
 import { utcDay } from './ranges';
 import { HOME_SLUG, OTHER_PATH } from './visit';
-import { d1, migratedDb, sqlite } from '$lib/server/testing/d1';
+import { d1, migratedDb } from '$lib/server/testing/d1';
 
 /**
  * The analytics write statements and the dashboard's read queries, run
@@ -11,9 +11,8 @@ import { d1, migratedDb, sqlite } from '$lib/server/testing/d1';
  * is the SQL that passes.
  */
 
-const withSqlite = sqlite ? describe : describe.skip;
 
-withSqlite('hits', () => {
+describe('hits', () => {
 	let db: import('node:sqlite').DatabaseSync;
 
 	const HIT = ['2026-01-01', 'gh', 'redirect', 'KR', 'direct', 'mobile'] as const;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { lockFor, lockedUntil, recordFailure, recordSuccess } from './throttle.server';
-import { migratedDb, sqlite, testEnv } from '$lib/server/testing/d1';
+import { migratedDb, testEnv } from '$lib/server/testing/d1';
 
 describe('lockFor', () => {
 	const p = { free: 5, baseMs: 60e3, capMs: 3600e3 };
@@ -12,7 +12,7 @@ describe('lockFor', () => {
 	});
 });
 
-(sqlite ? describe : describe.skip)('throttle', () => {
+describe('throttle', () => {
 	const now = 1_800_000_000_000;
 
 	it('locks one address after five failures and leaves others alone', async () => {

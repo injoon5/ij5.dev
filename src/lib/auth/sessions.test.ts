@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createSession, deleteOtherSessions, deleteSession, listSessions, readSession } from './sessions.server';
-import { migratedDb, sqlite, testEnv } from '$lib/server/testing/d1';
+import { migratedDb, testEnv } from '$lib/server/testing/d1';
 
 const meta = { ip: '203.0.113.7', country: 'KR', userAgent: 'test' };
 
-(sqlite ? describe : describe.skip)('sessions', () => {
+describe('sessions', () => {
 	it('stores only a hash of the cookie token', async () => {
 		const { env, db } = await testEnv(migratedDb());
 		const { token, row } = await createSession(env, 'full', 'passkey', meta);

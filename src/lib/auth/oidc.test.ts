@@ -3,7 +3,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, jwtVerify } from 'jose';
 import { b64url, sha256 } from '$lib/server/crypto';
 import { discovery, issueCode, jwks, parseAuthorize } from './oidc.server';
 import { createSession } from './sessions.server';
-import { migratedDb, sqlite, testEnv } from '$lib/server/testing/d1';
+import { migratedDb, testEnv } from '$lib/server/testing/d1';
 import { POST as token } from '../../routes/oauth/token/+server';
 import { GET as userinfoGet } from '../../routes/oauth/userinfo/+server';
 import { GET as authorize } from '../../routes/oauth/authorize/+server';
@@ -79,7 +79,7 @@ async function thrown(p: unknown): Promise<{ status: number; location?: string; 
 	throw new Error('expected a redirect or error');
 }
 
-(sqlite ? describe : describe.skip)('OIDC provider', () => {
+describe('OIDC provider', () => {
 	it('publishes discovery and an RSA public key, never the private half', async () => {
 		const { env } = await setup();
 		const d = discovery(env);

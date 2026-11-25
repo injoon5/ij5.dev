@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { appContent, appVersion, etagMatches, HISTORY,  listVersions, putApp, revertApp } from './apps.server';
 import { mintKey } from './installKeys.server';
-import { sqlite, testEnv } from '$lib/server/testing/d1';
+import { testEnv } from '$lib/server/testing/d1';
 import { MAX_APP_BYTES } from '$lib/apps/app';
 
 /** The app a successful write returned; fails the test on any other outcome. */
@@ -76,9 +76,8 @@ describe('etagMatches', () => {
 	});
 });
 
-const withSqlite = sqlite ? describe : describe.skip;
 
-withSqlite('history', () => {
+describe('history', () => {
 	let env: App.Platform['env'];
 	beforeEach(async () => {
 		({ env } = await testEnv());

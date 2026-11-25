@@ -9,7 +9,7 @@ import {
 	syncDraft
 } from './home.server';
 import type { HomeDoc, Profile } from '$lib/home/types';
-import { d1, migratedDb, sqlite } from '$lib/server/testing/d1';
+import { d1, migratedDb } from '$lib/server/testing/d1';
 
 /**
  * The publish invariant behind the edge cache: a new document is a new
@@ -167,7 +167,7 @@ describe('clearCache', () => {
 	});
 });
 
-(sqlite ? describe : describe.skip)('syncDraft', () => {
+describe('syncDraft', () => {
 	it('never advances the published version — only publish does that', async () => {
 		const { store, env } = fakeEnv();
 		store.set('home:draft', JSON.stringify(doc(0, 'first', 'a')));

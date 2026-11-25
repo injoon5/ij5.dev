@@ -3,7 +3,7 @@ import { hashPassword } from './password.server';
 import { expectedAnswer, newChallenge, parsePath } from './puzzle.server';
 import { regenerate } from './recovery.server';
 import { passwordAndPuzzle, passwordAndRecoveryCode } from './signIn.server';
-import { migratedDb, sqlite, testEnv } from '$lib/server/testing/d1';
+import { migratedDb, testEnv } from '$lib/server/testing/d1';
 
 const PEPPER = 'pepper-for-tests';
 const SECRET = 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=';
@@ -31,7 +31,7 @@ async function grid() {
 
 const wrongOf = (answer: string) => answer.replace(/^./, (d) => String((Number(d) + 1) % 10));
 
-(sqlite ? describe : describe.skip)('password + puzzle', () => {
+describe('password + puzzle', () => {
 	it('opens a limited session with both halves right', async () => {
 		const { env } = await setup();
 		const { challenge, right } = await grid();
@@ -90,7 +90,7 @@ const wrongOf = (answer: string) => answer.replace(/^./, (d) => String((Number(d
 	});
 });
 
-(sqlite ? describe : describe.skip)('password + recovery code', () => {
+describe('password + recovery code', () => {
 	it('opens a full session and burns the code', async () => {
 		const { env } = await setup();
 		const [code] = await regenerate(env);

@@ -10,23 +10,15 @@ import { sha256 } from '$lib/server/crypto';
  * for atomic writes and for consuming an install key exactly once.
  */
 
-type Sqlite = typeof import('node:sqlite');
-type Value = import('node:sqlite').SQLInputValue;
+import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 
-// `node:sqlite` is unflagged from Node 22.5 onwards. If a runtime does not have
-// it, suites skip rather than fail.
-export let sqlite: Sqlite | null = null;
-try {
-	sqlite = await import('node:sqlite');
-} catch {
-	sqlite = null;
-}
+type Value = SQLInputValue;
 
 const MIGRATIONS_DIR = fileURLToPath(new URL('../../../../migrations/', import.meta.url));
 
 /** Every migration, in order: the schema is their sum. */
-export function migratedDb(): import('node:sqlite').DatabaseSync {
-	const db = new sqlite!.DatabaseSync(':memory:');
+export function migratedDb(): DatabaseSync {
+	const db = new DatabaseSync(':memory:');
 	for (const file of readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).sort()) {
 		db.exec(readFileSync(MIGRATIONS_DIR + file, 'utf8'));
 	}
@@ -36,7 +28,7 @@ export function migratedDb(): import('node:sqlite').DatabaseSync {
 const returnsRows = (sql: string) => /^\s*(SELECT|WITH)\b|\bRETURNING\b/i.test(sql);
 const plain = <T>(row: unknown) => (row ? ({ ...(row as object) } as T) : null);
 
-export function d1(db: import('node:sqlite').DatabaseSync) {
+export function d1(db: DatabaseSync) {
 	const statement = (sql: string) => {
 		let bound: Value[] = [];
 		// D1 binds `?1`/`?2` by position; node:sqlite (Node 22) reads them as

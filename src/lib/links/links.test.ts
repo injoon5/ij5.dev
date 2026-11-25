@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isTargetUrl } from './link';
 import { createLink, deleteLink, getLink, updateLink } from './links.server';
-import { migratedDb, sqlite, testEnv } from '$lib/server/testing/d1';
+import { migratedDb, testEnv } from '$lib/server/testing/d1';
 
 /**
  * The shortener's destination is a `Location:` header, not a page — so
@@ -35,7 +35,7 @@ describe('isTargetUrl', () => {
 	});
 });
 
-(sqlite ? describe : describe.skip)('the links store', () => {
+describe('the links store', () => {
 	/** KV that can be told to fail its next write. */
 	function kv() {
 		const store = new Map<string, string>();

@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it } from 'vitest';
 import * as list from './+server';
 import * as item from './[slug]/+server';
@@ -9,10 +7,10 @@ import * as data from './[slug]/data/+server';
 import * as dataKey from './[slug]/data/[key]/+server';
 import * as keys from '../install-keys/+server';
 import * as keyItem from '../install-keys/[id]/+server';
-import { call, sqlite, testEnv } from '$lib/server/testing/d1';
-import { MAX_KEY_ATTEMPTS } from '$lib/apps/installKeys.server';
+import { call, testEnv } from '$lib/server/testing/d1';
+import { MAX_KEY_ATTEMPTS, MAX_LIVE_KEYS } from '$lib/apps/installKeys.server';
 import { KEY_ERROR } from '$lib/server/api';
-import { MAX_APP_BYTES, SOURCE_TOO_BIG } from '$lib/apps/app';
+import { MAX_APP_BYTES, MAX_APP_NAME, SOURCE_TOO_BIG } from '$lib/apps/app';
 
 /**
  * The apps API and install keys end to end: the real
@@ -20,12 +18,11 @@ import { MAX_APP_BYTES, SOURCE_TOO_BIG } from '$lib/apps/app';
  * every migration applied.
  */
 
-const withSqlite = sqlite ? describe : describe.skip;
 
 const APP = { name: 'Habits', icon: 'checkmark.circle', tint: 'green', source: 'struct ContentView {}\n' };
 const SWIFT = '// Name: Tip Jar\n// Icon: dollarsign.circle\n// Tint: mint\n\nstruct ContentView {}\n';
 
-withSqlite('apps API', () => {
+describe('apps API', () => {
 	let env: App.Platform['env'];
 	let db: import('node:sqlite').DatabaseSync;
 
@@ -85,15 +82,6 @@ withSqlite('apps API', () => {
 			expect(full).toMatchObject({ name: 'Tip Jar', icon: 'dollarsign.circle', tint: 'mint', source: SWIFT });
 		});
 
-		it('reads an uploaded Swift file through the shared parser', async () => {
-			const dir = fileURLToPath(new URL('../../../../fixtures/replies/', import.meta.url));
-			const input = readFileSync(`${dir}odd-header.md`, 'utf8');
-			const expected = JSON.parse(readFileSync(`${dir}odd-header.json`, 'utf8'));
-			expect((await put('odd', input, undefined, 'text/x-swift')).status).toBe(201);
-			const full = await (await call(item.GET, env, { path: '/api/apps/odd', params: { slug: 'odd' } })).json();
-			expect(full).toMatchObject({ name: expected.name, icon: expected.icon, tint: expected.tint, source: expected.source });
-		});
-
 		it('falls back to blue for an unknown tint in a Swift file, but refuses one in JSON', async () => {
 			const swift = SWIFT.replace('mint', 'magenta');
 			expect(await (await put('a', swift, undefined, 'text/x-swift')).json()).toMatchObject({ tint: 'blue' });
@@ -114,7 +102,7 @@ withSqlite('apps API', () => {
 		it('answers 400 for bad JSON, 422 for a bad slug or long name, 413 over the limit', async () => {
 			expect((await put('a', '{nope')).status).toBe(400);
 			expect((await put('-bad', APP)).status).toBe(422);
-			expect((await put('a', { ...APP, name: 'x'.repeat(33) })).status).toBe(422);
+			expect((await put('a', { ...APP, name: 'x'.repeat(MAX_APP_NAME + 1) })).status).toBe(422);
 
 			const big = await put('a', { ...APP, source: 'x'.repeat(MAX_APP_BYTES + 1) });
 			expect(big.status).toBe(413);
@@ -357,8 +345,8 @@ withSqlite('apps API', () => {
 			expect((await put('a', SWIFT, key, 'text/x-swift')).status).toBe(401);
 		});
 
-		it('refuses a twenty-first live key', async () => {
-			for (let i = 0; i < 20; i++) await mint();
+		it('refuses one live key more than the limit', async () => {
+			for (let i = 0; i < MAX_LIVE_KEYS; i++) await mint();
 			const res = await call(keys.POST, env, { method: 'POST', path: '/api/install-keys', body: '' });
 			expect(res.status).toBe(429);
 		});

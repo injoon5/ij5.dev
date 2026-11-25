@@ -1,54 +1,13 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { decodeClientDataJSON } from '@simplewebauthn/server/helpers';
-import { deletePasskey, getPasskey, listPasskeys } from './webauthn.server';
+import { describe, expect, it } from 'vitest';
+import { beginAuthentication, deletePasskey, finishAuthentication, getPasskey, listPasskeys } from './webauthn.server';
+import { migratedDb, testEnv } from '$lib/server/testing/d1';
 
 /**
- * The passkey flow's crypto is exercised end-to-end by a real browser, so the
- * unit surface here is the parts a test can reach without one: the challenge
- * keying (a challenge consumed once cannot be consumed again) and the D1
- * round trip, run against real SQLite with the real migrations — the same
- * trick the `hits` suite uses, so the SQL that ships is the SQL that passes.
+ * The parts of passkey sign-in a test can reach without a browser: the D1
+ * round trip, and the challenge rules — a challenge works once, and only for
+ * what it was issued for. The signature itself is verified by
+ * @simplewebauthn and exercised by a real authenticator.
  */
-
-const MIGRATIONS = ['0001_init.sql', '0003_passkeys.sql'].map(
-	(name) => fileURLToPath(new URL(`../../../migrations/${name}`, import.meta.url))
-);
-
-// `node:sqlite` is unflagged from Node 22.5 onwards. If a runtime does not have
-// it, skip rather than fail — the suite should never go red for that reason.
-let sqlite: typeof import('node:sqlite') | null = null;
-try {
-	sqlite = await import('node:sqlite');
-} catch {
-	sqlite = null;
-}
-
-const withSqlite = sqlite ? describe : describe.skip;
-
-/** The slice of the D1 API `webauthn.ts` uses, backed by a real SQLite db. */
-function d1(db: import('node:sqlite').DatabaseSync) {
-	return {
-		prepare(sql: string) {
-			const bound: import('node:sqlite').SQLInputValue[] = [];
-			const stmt = {
-				bind: (...args: import('node:sqlite').SQLInputValue[]) => {
-					bound.push(...args);
-					return stmt;
-				},
-				all: async () => ({ results: db.prepare(sql).all(...bound) }),
-				first: async () => db.prepare(sql).get(...bound) ?? null,
-				run: async () => db.prepare(sql).run(...bound)
-			};
-			return stmt;
-		}
-	};
-}
-
-function env(db: import('node:sqlite').DatabaseSync) {
-	return { DB: d1(db) } as unknown as App.Platform['env'];
-}
 
 const ROW = {
 	id: 'KtWQ8wMHTNkR9gAqL3bZxQ',
@@ -59,54 +18,80 @@ const ROW = {
 	created_at: 1720000000000
 };
 
-withSqlite('passkey storage', () => {
-	let db: import('node:sqlite').DatabaseSync;
-	let store: App.Platform['env'];
-
-	beforeEach(() => {
-		db = new sqlite!.DatabaseSync(':memory:');
-		for (const file of MIGRATIONS) db.exec(readFileSync(file, 'utf8'));
-		store = env(db);
+async function setup() {
+	const { env, db } = await testEnv(migratedDb());
+	const kv = new Map<string, string>();
+	Object.assign(env, {
+		KV: {
+			get: async (k: string) => kv.get(k) ?? null,
+			put: async (k: string, v: string) => void kv.set(k, v),
+			delete: async (k: string) => void kv.delete(k)
+		}
 	});
+	return { env, db, kv };
+}
 
-	it('applies the schema cleanly — a passkeys table exists', () => {
-		const rows = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`).all() as {
-			name: string;
-		}[];
-		expect(rows.map((r) => r.name)).toContain('passkeys');
-	});
+/** An assertion carrying `challenge`, as a browser would send it (unsigned: it never gets that far). */
+const assertion = (challenge: string) =>
+	({
+		id: ROW.id,
+		rawId: ROW.id,
+		type: 'public-key',
+		clientExtensionResults: {},
+		response: {
+			clientDataJSON: Buffer.from(
+				JSON.stringify({ type: 'webauthn.get', challenge, origin: 'https://ij5.dev' })
+			).toString('base64url'),
+			authenticatorData: '',
+			signature: ''
+		}
+	}) as never;
 
+describe('passkey storage', () => {
 	it('lists, reads and deletes a stored credential', async () => {
-		expect(await listPasskeys(store)).toHaveLength(0);
+		const { env, db } = await setup();
+		expect(await listPasskeys(env)).toHaveLength(0);
 
 		db.prepare(
 			`INSERT INTO passkeys (id, name, public_key, counter, transports, created_at, last_used_at)
 			 VALUES (?, ?, ?, ?, ?, ?, ?)`
 		).run(ROW.id, ROW.name, ROW.public_key, ROW.counter, ROW.transports, ROW.created_at, null);
 
-		const listed = await listPasskeys(store);
-		expect(listed).toHaveLength(1);
-		expect(listed[0]).toMatchObject({ id: ROW.id, name: ROW.name, counter: ROW.counter });
+		expect(await listPasskeys(env)).toMatchObject([{ id: ROW.id, name: ROW.name, counter: ROW.counter }]);
+		expect(await getPasskey(env, ROW.id)).toMatchObject({ id: ROW.id, public_key: ROW.public_key });
+		expect(await getPasskey(env, 'missing')).toBeNull();
 
-		const got = await getPasskey(store, ROW.id);
-		expect(got).toMatchObject({ id: ROW.id, public_key: ROW.public_key });
-
-		expect(await getPasskey(store, 'missing')).toBeNull();
-
-		await deletePasskey(store, ROW.id);
-		expect(await listPasskeys(store)).toHaveLength(0);
+		await deletePasskey(env, ROW.id);
+		expect(await listPasskeys(env)).toHaveLength(0);
 	});
 });
 
-describe('challenge keying', () => {
-	it('derives the storage key from clientDataJSON alone', () => {
-		const challenge = 'abc123';
-		const clientDataJSON = Buffer.from(
-			JSON.stringify({ type: 'webauthn.get', challenge })
-		).toString('base64url');
+describe('challenges', () => {
+	const CHALLENGE_REFUSED = /unknown, expired or reused/;
 
-		const decoded = decodeClientDataJSON(clientDataJSON);
-		expect(decoded.challenge).toBe(challenge);
-		expect(`passkey:challenge:${decoded.challenge}`).toBe(`passkey:challenge:${challenge}`);
+	it('refuses an assertion for a challenge this server never issued', async () => {
+		const { env } = await setup();
+		await expect(finishAuthentication(env, assertion('made-up'), 'ij5.dev', 'https://ij5.dev')).rejects.toThrow(
+			CHALLENGE_REFUSED
+		);
+	});
+
+	it('spends a challenge on first use, so a replayed assertion is refused', async () => {
+		const { env, kv } = await setup();
+		const { challenge } = await beginAuthentication(env, 'ij5.dev');
+		// The first attempt fails its signature check, but it has spent the challenge.
+		await expect(finishAuthentication(env, assertion(challenge), 'ij5.dev', 'https://ij5.dev')).rejects.toThrow();
+		expect([...kv.keys()]).toEqual([]);
+		await expect(finishAuthentication(env, assertion(challenge), 'ij5.dev', 'https://ij5.dev')).rejects.toThrow(
+			CHALLENGE_REFUSED
+		);
+	});
+
+	it('refuses a registration challenge used to sign in', async () => {
+		const { env, kv } = await setup();
+		kv.set('passkey:challenge:reg', 'register');
+		await expect(finishAuthentication(env, assertion('reg'), 'ij5.dev', 'https://ij5.dev')).rejects.toThrow(
+			CHALLENGE_REFUSED
+		);
 	});
 });

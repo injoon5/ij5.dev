@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { COUNT, newCode, normalise, regenerate, remaining, spend } from './recovery.server';
-import { migratedDb, sqlite, testEnv } from '$lib/server/testing/d1';
+import { migratedDb, testEnv } from '$lib/server/testing/d1';
 
 describe('codes', () => {
 	it('look like XXXXX-XXXXX in Crockford base32', () => {
@@ -15,7 +15,7 @@ describe('codes', () => {
 	});
 });
 
-(sqlite ? describe : describe.skip)('recovery codes in D1', () => {
+describe('recovery codes in D1', () => {
 	it('each work once, and a new sheet kills the old one', async () => {
 		const { env } = await testEnv(migratedDb());
 		const codes = await regenerate(env);

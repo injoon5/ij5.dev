@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { answerMatches, expectedAnswer, newChallenge, parsePath, readChallenge, spendChallenge } from './puzzle.server';
-import { migratedDb, sqlite, testEnv } from '$lib/server/testing/d1';
+import { migratedDb, testEnv } from '$lib/server/testing/d1';
 
 const SECRET = 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=';
 
@@ -52,7 +52,7 @@ describe('challenges', () => {
 	});
 });
 
-(sqlite ? describe : describe.skip)('spendChallenge', () => {
+describe('spendChallenge', () => {
 	it('lets a grid be answered once', async () => {
 		const { env } = await testEnv(migratedDb());
 		const { token } = await newChallenge(SECRET);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { chooseSlug, randomSlug, slugProblem } from './slugs.server';
 import { SLUG_PATTERN } from './slugs';
-import { migratedDb, sqlite, testEnv } from '$lib/server/testing/d1';
+import { migratedDb, testEnv } from '$lib/server/testing/d1';
 
 describe('randomSlug', () => {
 	it('is always a valid slug with nothing that reads as something else', () => {
@@ -13,7 +13,7 @@ describe('randomSlug', () => {
 	});
 });
 
-(sqlite ? describe : describe.skip)('the shared namespace', () => {
+describe('the shared namespace', () => {
 	async function seeded() {
 		const { env, db } = await testEnv(migratedDb());
 		db.prepare(`INSERT INTO slugs (slug, target_url, status, created_at) VALUES ('gh', 'https://github.com', 302, 0)`).run();

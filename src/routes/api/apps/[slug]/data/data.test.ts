@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import * as data from './+server';
 import * as item from './[key]/+server';
-import { call, sqlite, testEnv } from '$lib/server/testing/d1';
+import { call, testEnv } from '$lib/server/testing/d1';
 import { MAX_DATA_APP_BYTES, MAX_DATA_KEYS, MAX_DATA_VALUE_BYTES } from '$lib/apps/app';
 
 /**
@@ -9,9 +9,8 @@ import { MAX_DATA_APP_BYTES, MAX_DATA_KEYS, MAX_DATA_VALUE_BYTES } from '$lib/ap
  * the limits, through the real handlers over real SQLite.
  */
 
-const withSqlite = sqlite ? describe : describe.skip;
 
-withSqlite('app data API', () => {
+describe('app data API', () => {
 	let env: App.Platform['env'];
 	let db: import('node:sqlite').DatabaseSync;
 
