@@ -26,7 +26,8 @@ export const RANGE_LABELS: Array<{ key: RangeKey; label: string }> = [
 export const isRange = (v: string | null): v is RangeKey => v !== null && v in RANGES;
 
 const DAY = 864e5;
-const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+/** The UTC day `hits` rows are keyed by. */
+export const utcDay = (ms = Date.now()) => new Date(ms).toISOString().slice(0, 10);
 
 /**
  * One point per day of the range, quiet days included. The table only holds
@@ -40,14 +41,14 @@ export function fillDays(
 	now = Date.now()
 ): Array<{ day: string; hits: number }> {
 	if (!rows.length) return [];
-	const end = Date.parse(iso(now));
+	const end = Date.parse(utcDay(now));
 	const back = /^-(\d+) day$/.exec(offset);
 	const start = back ? end - Number(back[1]) * DAY : Date.parse(rows[0].day);
 
 	const byDay = new Map(rows.map((r) => [r.day, r.hits]));
 	const out: Array<{ day: string; hits: number }> = [];
 	for (let t = start; t <= end; t += DAY) {
-		const day = iso(t);
+		const day = utcDay(t);
 		out.push({ day, hits: byDay.get(day) ?? 0 });
 	}
 	return out;

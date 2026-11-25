@@ -1,4 +1,4 @@
-import { RESERVED, SLUG_PATTERN } from '$lib/slugs/slugs';
+import { isExpired } from '$lib/expiry';
 import type { FileRow } from '$lib/files/file';
 
 /**
@@ -14,28 +14,8 @@ import type { FileRow } from '$lib/files/file';
 
 type Env = App.Platform['env'];
 
-const r2Key = (slug: string) => `dl/${slug}`;
-
-/** No ambiguous characters — a slug someone types from a chat message must
- *  survive being read out loud. */
-const SLUG_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
-
-export function randomFileSlug(length = 8): string {
-	const rand = crypto.getRandomValues(new Uint8Array(length));
-	let out = '';
-	for (let i = 0; i < length; i++) out += SLUG_ALPHABET[rand[i] % SLUG_ALPHABET.length];
-	return out;
-}
-
-/** The three tables share the root-slug namespace; one batch checks them all. */
-export async function slugAvailable(env: Env, slug: string): Promise<boolean> {
-	const results = await env.DB.batch([
-		env.DB.prepare(`SELECT 1 FROM slugs WHERE slug = ?`).bind(slug),
-		env.DB.prepare(`SELECT 1 FROM pastes WHERE slug = ?`).bind(slug),
-		env.DB.prepare(`SELECT 1 FROM files WHERE slug = ?`).bind(slug)
-	]);
-	return results.every((r: { results: unknown[] }) => r.results.length === 0);
-}
+/** The R2 key a shared file's bytes live under. */
+export const fileKey = (slug: string) => `dl/${slug}`;
 
 /** A filename becomes a header value and a title; strip anything that could
  *  break out of either. */
@@ -87,117 +67,64 @@ export function contentDisposition(name: string): string {
 	return `attachment; filename="${asciiName(name)}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 }
 
+const COLUMNS = `slug, key, name, mime, bytes, created_at, expires_at, downloads`;
+
 export async function listFiles(env: Env): Promise<FileRow[]> {
-	const { results } = await env.DB.prepare(
-		`SELECT slug, key, name, mime, bytes, created_at, expires_at, downloads
-		 FROM files ORDER BY created_at DESC`
-	).all<FileRow>();
+	const { results } = await env.DB.prepare(`SELECT ${COLUMNS} FROM files ORDER BY created_at DESC`).all<FileRow>();
 	return results;
 }
 
 export async function getFile(env: Env, slug: string): Promise<FileRow | null> {
-	return await env.DB.prepare(
-		`SELECT slug, key, name, mime, bytes, created_at, expires_at, downloads
-		 FROM files WHERE slug = ?`
-	)
-		.bind(slug)
-		.first<FileRow>();
+	return env.DB.prepare(`SELECT ${COLUMNS} FROM files WHERE slug = ?`).bind(slug).first<FileRow>();
 }
 
-/** The R2 key a shared file's bytes live under. */
-export const fileKey = r2Key;
+/** The file a visitor may download: present and not expired. */
+export async function getLiveFile(env: Env, slug: string): Promise<FileRow | null> {
+	const file = await getFile(env, slug);
+	return file && !isExpired(file.expires_at) ? file : null;
+}
+
+export type FileInput = Omit<FileRow, 'key' | 'created_at' | 'downloads'>;
 
 /**
- * Writes the catalog row for bytes already in R2. If the row cannot be
- * written the object is deleted, so a failed upload never leaves an orphan.
+ * Catalogs bytes already in R2 at `fileKey(slug)`. If the row cannot be
+ * written the object goes too — unless another upload won the same slug, in
+ * which case the object is the winner's.
  */
-export async function insertFileRow(
-	env: Env,
-	row: Omit<FileRow, 'key' | 'created_at' | 'downloads'>
-): Promise<void> {
+export async function recordFile(env: Env, row: FileInput): Promise<void> {
+	const key = fileKey(row.slug);
 	try {
-		await env.DB.prepare(
-			`INSERT INTO files (slug, key, name, mime, bytes, created_at, expires_at, downloads)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, 0)`
-		)
-			.bind(row.slug, r2Key(row.slug), row.name, row.mime, row.bytes, Date.now(), row.expires_at)
+		await env.DB.prepare(`INSERT INTO files (${COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, 0)`)
+			.bind(row.slug, key, row.name, row.mime, row.bytes, Date.now(), row.expires_at)
 			.run();
 	} catch (e) {
-		await env.BUCKET.delete(r2Key(row.slug)).catch(() => {});
-		throw e;
-	}
-}
-
-/** Parses the form's `YYYY-MM-DD` expiry into the end of that day, UTC. */
-export function parseExpiry(raw: string | null | undefined): number | null {
-	const v = (raw ?? '').trim();
-	return v ? Date.parse(`${v}T23:59:59Z`) || null : null;
-}
-
-/**
- * Whether a slug can be used for a new file: valid, not reserved, free.
- * Returns the problem as a sentence, or nothing.
- */
-export async function slugProblem(env: Env, slug: string): Promise<string | undefined> {
-	if (!SLUG_PATTERN.test(slug)) return 'Use letters, numbers, hyphens and underscores.';
-	if (RESERVED.has(slug)) return `"${slug}" is reserved by the site itself.`;
-	if (!(await slugAvailable(env, slug))) return 'That name is taken.';
-}
-
-/** A free random slug, or null after a few unlucky tries. */
-export async function freeRandomSlug(env: Env): Promise<string | null> {
-	for (let i = 0; i < 8; i++) {
-		const candidate = randomFileSlug();
-		if (await slugAvailable(env, candidate)) return candidate;
-	}
-	return null;
-}
-
-/** The no-JS path: a small file posted in one form, buffered and stored. */
-export async function createFile(
-	env: Env,
-	row: Omit<FileRow, 'created_at' | 'downloads'>,
-	body: ArrayBuffer
-): Promise<void> {
-	const created = Date.now();
-	await env.BUCKET.put(r2Key(row.slug), body, { httpMetadata: { contentType: row.mime } });
-
-	try {
-		await env.DB.prepare(
-			`INSERT INTO files (slug, key, name, mime, bytes, created_at, expires_at, downloads)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, 0)`
-		)
-			.bind(row.slug, r2Key(row.slug), row.name, row.mime, row.bytes, created, row.expires_at)
-			.run();
-	} catch (e) {
-		// An orphan object is wasted storage; undo the put and let the caller
-		// retry the whole upload cleanly.
-		await env.BUCKET.delete(r2Key(row.slug)).catch(() => {});
-		throw e;
-	}
-}
-
-export async function deleteFile(env: Env, slug: string): Promise<void> {
-	const prev = await getFile(env, slug);
-	await env.DB.prepare(`DELETE FROM files WHERE slug = ?`).bind(slug).run();
-
-	try {
-		await env.BUCKET.delete(r2Key(slug));
-	} catch (e) {
-		if (prev) {
-			await env.DB.prepare(
-				`INSERT INTO files (slug, key, name, mime, bytes, created_at, expires_at, downloads)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-			)
-				.bind(prev.slug, prev.key, prev.name, prev.mime, prev.bytes, prev.created_at, prev.expires_at, prev.downloads)
-				.run()
-				.catch(() => {});
+		if (!(await getFile(env, row.slug))) {
+			await env.BUCKET.delete(key).catch((d: unknown) => console.error('orphan cleanup failed:', d));
 		}
 		throw e;
 	}
 }
 
-/** Fire-and-forget from the download route; a missed count is not a failure. */
+/** The no-JS path: a small file posted in one form, buffered and stored. */
+export async function createFile(env: Env, row: FileInput, body: ArrayBuffer): Promise<void> {
+	await env.BUCKET.put(fileKey(row.slug), body, { httpMetadata: { contentType: row.mime } });
+	await recordFile(env, row);
+}
+
+/** `current` is the row as the caller read it; it is put back if R2 fails. */
+export async function deleteFile(env: Env, current: FileRow): Promise<void> {
+	await env.DB.prepare(`DELETE FROM files WHERE slug = ?`).bind(current.slug).run();
+	try {
+		await env.BUCKET.delete(current.key);
+	} catch (e) {
+		await env.DB.prepare(`INSERT INTO files (${COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+			.bind(current.slug, current.key, current.name, current.mime, current.bytes, current.created_at, current.expires_at, current.downloads)
+			.run()
+			.catch((r: unknown) => console.error('file rollback failed:', r));
+		throw e;
+	}
+}
+
 export async function bumpDownloads(env: Env, slug: string): Promise<void> {
 	await env.DB.prepare(`UPDATE files SET downloads = downloads + 1 WHERE slug = ?`).bind(slug).run();
 }

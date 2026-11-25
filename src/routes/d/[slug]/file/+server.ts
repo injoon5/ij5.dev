@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { bumpDownloads, contentDisposition, getFile, parseRange } from '$lib/files/files.server';
+import { bumpDownloads, contentDisposition, getLiveFile, parseRange } from '$lib/files/files.server';
 import { bindings, afterResponse } from '$lib/server/bindings';
 
 /**
@@ -21,11 +21,8 @@ export const GET: RequestHandler = async (event) => {
 	const { params, platform } = event;
 	const env = bindings(platform);
 
-	const file = await getFile(env, params.slug);
+	const file = await getLiveFile(env, params.slug);
 	if (!file) return new Response('No file with that slug.', { status: 404 });
-	if (file.expires_at && file.expires_at < Date.now()) {
-		return new Response('That file has expired.', { status: 404 });
-	}
 
 	// Ranges, so a dropped multi-gigabyte download resumes where it stopped
 	// instead of starting over. Parsed here against the stored size, then

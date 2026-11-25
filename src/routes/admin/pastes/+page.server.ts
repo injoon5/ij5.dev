@@ -2,108 +2,41 @@ import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
 import { requireFull } from '$lib/auth/guard.server';
-import { RESERVED, SLUG_PATTERN } from '$lib/slugs/slugs';
-import { getFile } from '$lib/files/files.server';
-import {
-	createPaste,
-	deletePaste,
-	getPaste,
-	listPastes,
-	purgePasteCache,
-	updatePaste
-} from '$lib/pastes/pastes.server';
-import { getSlug } from '$lib/links/links.server';
-import { MAX_PASTE_CHARS, type PasteRow } from '$lib/pastes/paste';
+import { recentHits } from '$lib/analytics/stats.server';
+import { endOfDay, isExpired } from '$lib/expiry';
+import { fieldErrors, linkFields } from '$lib/links/input';
+import { MAX_PASTE_CHARS, type PasteInput } from '$lib/pastes/paste';
+import { createPaste, deletePaste, getPaste, listPastes, updatePaste } from '$lib/pastes/pastes.server';
+import { slugProblem } from '$lib/slugs/slugs.server';
 import { bindings } from '$lib/server/bindings';
 
-/**
- * The admin's pastes screen: a master–detail list like the links screen, with
- * the body edited in a textarea. D1 is the only store — `/p/{slug}` reads it
- * directly — so a write is visible on the next uncached view.
- */
-
 const form = z.object({
-	slug: z
-		.string()
-		.trim()
-		.regex(SLUG_PATTERN, 'Use letters, numbers, hyphens and underscores.'),
+	slug: linkFields.slug,
 	body: z
 		.string()
 		.min(1, 'Write something to share.')
 		.max(MAX_PASTE_CHARS, `Keep it under ${MAX_PASTE_CHARS.toLocaleString('en')} characters.`),
-	note: z
-		.string()
-		.trim()
-		.max(200)
-		.optional()
-		.transform((v) => v || null),
-	expires: z
-		.string()
-		.trim()
-		.optional()
-		.transform((v) => (v ? Date.parse(`${v}T23:59:59Z`) || null : null)),
-	// A checkbox sends "on" or nothing. Default is cached — the flag is the
-	// opt-out, so an unchecked box must mean "cache on", never the reverse.
-	cache: z
-		.enum(['on', ''])
-		.optional()
-		.transform((v) => v === 'on')
+	note: linkFields.note.transform((v) => v || null),
+	expires: z.string().transform(endOfDay),
+	cache: z.string().transform((v) => v === 'on')
 });
 
-type FormError = { error?: string; fields?: Record<string, string>; values?: Record<string, string> };
+const FIELDS = ['slug', 'body', 'note', 'expires', 'cache'] as const;
 
-function parse(data: FormData): { ok: true; row: Omit<PasteRow, 'created_at'> } | ({ ok: false } & FormError) {
-	const values = Object.fromEntries(
-		['slug', 'body', 'note', 'expires', 'cache'].map((k) => [k, String(data.get(k) ?? '')])
-	);
-
+function parse(data: FormData) {
+	const values = Object.fromEntries(FIELDS.map((k) => [k, String(data.get(k) ?? '')]));
 	const result = form.safeParse(values);
-	if (!result.success) {
-		const fields: Record<string, string> = {};
-		for (const issue of result.error.issues) {
-			const key = String(issue.path[0]);
-			if (!fields[key]) fields[key] = issue.message;
-		}
-		return { ok: false, fields, values };
-	}
-
-	return {
-		ok: true,
-		row: {
-			slug: result.data.slug,
-			body: result.data.body,
-			note: result.data.note,
-			expires_at: result.data.expires,
-			cache: result.data.cache
-		}
-	};
+	if (!result.success) return { ok: false as const, fields: fieldErrors(result.error), values };
+	const { expires, ...rest } = result.data;
+	return { ok: true as const, values, row: { ...rest, expires_at: expires } satisfies PasteInput };
 }
 
 export const load: PageServerLoad = async ({ platform, url }) => {
 	const env = bindings(platform);
+	const [rows, recent] = await Promise.all([listPastes(env), recentHits(env, 'paste')]);
 
-	const [rows, stats] = await env.DB.batch([
-		env.DB.prepare(
-			`SELECT slug, body, note, created_at, expires_at, cache
-			 FROM pastes ORDER BY created_at DESC`
-		),
-		env.DB.prepare(
-			`SELECT slug, SUM(n) AS hits FROM hits
-			 WHERE kind = 'paste' AND device != 'bot' AND day >= date('now','-6 day')
-			 GROUP BY slug`
-		)
-	]);
-
-	const recent: Record<string, number> = {};
-	for (const row of stats.results as Array<{ slug: string; hits: number }>) {
-		recent[row.slug] = row.hits;
-	}
-
-	const pastes = (rows.results as PasteRow[]).map((row) => ({
-		...row,
-		// Expiry is judged on the server, never the visitor's clock.
-		expired: row.expires_at !== null && row.expires_at < Date.now()
-	}));
+	// Judged on the server, never the visitor's clock.
+	const pastes = rows.map((row) => ({ ...row, expired: isExpired(row.expires_at) }));
 	const wanted = url.searchParams.get('s');
 
 	return {
@@ -116,52 +49,18 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 export const actions: Actions = {
 	create: async ({ request, platform }) => {
 		const env = bindings(platform);
-
-		const data = await request.formData();
-		const parsed = parse(data);
+		const parsed = parse(await request.formData());
 		if (!parsed.ok) return fail(400, { intent: 'create', ...parsed });
 
-		if (RESERVED.has(parsed.row.slug)) {
-			return fail(400, {
-				intent: 'create',
-				fields: { slug: `"${parsed.row.slug}" is reserved by the site itself.` },
-				values: Object.fromEntries(data) as Record<string, string>
-			});
-		}
-
-		// Links, pastes and files share one namespace of names, so a name means
-		// one thing wherever it is typed.
-		if (await getSlug(env, parsed.row.slug)) {
-			return fail(409, {
-				intent: 'create',
-				fields: { slug: 'That name is taken by a link.' },
-				values: Object.fromEntries(data) as Record<string, string>
-			});
-		}
-
-		if (await getPaste(env, parsed.row.slug)) {
-			return fail(409, {
-				intent: 'create',
-				fields: { slug: 'That slug is taken.' },
-				values: Object.fromEntries(data) as Record<string, string>
-			});
-		}
-
-		if (await getFile(env, parsed.row.slug)) {
-			return fail(409, {
-				intent: 'create',
-				fields: { slug: 'That name is taken by a file.' },
-				values: Object.fromEntries(data) as Record<string, string>
-			});
-		}
+		const problem = await slugProblem(env, parsed.row.slug);
+		if (problem) return fail(409, { intent: 'create', fields: { slug: problem }, values: parsed.values });
 
 		await createPaste(env, parsed.row);
 		return { created: parsed.row.slug };
 	},
 
-	update: async ({ request, platform }) => {
+	update: async ({ request, platform, url }) => {
 		const env = bindings(platform);
-
 		const parsed = parse(await request.formData());
 		if (!parsed.ok) return fail(400, { intent: 'update', ...parsed });
 
@@ -169,21 +68,18 @@ export const actions: Actions = {
 			return fail(404, { intent: 'update', error: 'That paste no longer exists.' });
 		}
 
-		await updatePaste(env, parsed.row);
-		await purgePasteCache(platform, parsed.row.slug, new URL(request.url).origin);
+		await updatePaste(env, parsed.row, url.origin);
 		return { updated: parsed.row.slug };
 	},
 
-	delete: async ({ request, platform, locals }) => {
+	delete: async ({ request, platform, locals, url }) => {
 		const denied = requireFull(locals);
 		if (denied) return denied;
-		const env = bindings(platform);
 
 		const slug = String((await request.formData()).get('slug') ?? '');
 		if (!slug) return fail(400, { intent: 'delete', error: 'No paste given.' });
 
-		await deletePaste(env, slug);
-		await purgePasteCache(platform, slug, new URL(request.url).origin);
+		await deletePaste(bindings(platform), slug, url.origin);
 		return { deleted: slug };
 	}
 };

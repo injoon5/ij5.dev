@@ -2,103 +2,39 @@ import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
 import { requireFull } from '$lib/auth/guard.server';
-import { RESERVED, SLUG_PATTERN } from '$lib/slugs/slugs';
-import { getFile } from '$lib/files/files.server';
-import { getPaste } from '$lib/pastes/pastes.server';
-import {
-	createSlug,
-	deleteSlug,
-	getSlug,
-	isTargetUrl,
-	listSlugs,
-	purgeLocalCache,
-	updateSlug
-} from '$lib/links/links.server';
-import type { SlugRow } from '$lib/links/link';
+import { endOfDay, isExpired } from '$lib/expiry';
+import { fieldErrors, linkFields } from '$lib/links/input';
+import type { LinkInput } from '$lib/links/link';
+import { createLink, deleteLink, getLink, listLinks, updateLink } from '$lib/links/links.server';
+import { recentHits } from '$lib/analytics/stats.server';
+import { slugProblem } from '$lib/slugs/slugs.server';
 import { bindings } from '$lib/server/bindings';
 
 const form = z.object({
-	slug: z
-		.string()
-		.trim()
-		.regex(SLUG_PATTERN, 'Use letters, numbers, hyphens and underscores.'),
-	target_url: z
-		.string()
-		.trim()
-		.refine(isTargetUrl, 'Use a full URL, starting with https://, mailto:, tel: or sms:'),
-	// 301 is browser-cached forever, so it is opt-in per link rather than the
-	// default: you will eventually want to repoint something.
-	status: z.coerce.number().int().refine((v) => v === 301 || v === 302, 'Pick temporary or permanent.'),
-	note: z
-		.string()
-		.trim()
-		.max(200)
-		.optional()
-		.transform((v) => v || null),
-	expires: z
-		.string()
-		.trim()
-		.optional()
-		.transform((v) => (v ? Date.parse(`${v}T23:59:59Z`) || null : null))
+	slug: linkFields.slug,
+	target_url: linkFields.url,
+	status: z.coerce.number().pipe(linkFields.status),
+	note: linkFields.note.transform((v) => v || null),
+	expires: z.string().transform(endOfDay)
 });
 
-type FormError = { error?: string; fields?: Record<string, string>; values?: Record<string, string> };
+const FIELDS = ['slug', 'target_url', 'status', 'note', 'expires'] as const;
 
-function parse(data: FormData): { ok: true; row: Omit<SlugRow, 'created_at'> } | { ok: false } & FormError {
-	const values = Object.fromEntries(
-		['slug', 'target_url', 'status', 'note', 'expires'].map((k) => [k, String(data.get(k) ?? '')])
-	);
-
+function parse(data: FormData) {
+	const values = Object.fromEntries(FIELDS.map((k) => [k, String(data.get(k) ?? '')]));
 	const result = form.safeParse(values);
-	if (!result.success) {
-		const fields: Record<string, string> = {};
-		for (const issue of result.error.issues) {
-			const key = String(issue.path[0]);
-			if (!fields[key]) fields[key] = issue.message;
-		}
-		return { ok: false, fields, values };
-	}
-
-	return {
-		ok: true,
-		row: {
-			slug: result.data.slug,
-			target_url: result.data.target_url,
-			status: result.data.status,
-			note: result.data.note,
-			expires_at: result.data.expires
-		}
-	};
+	if (!result.success) return { ok: false as const, fields: fieldErrors(result.error), values };
+	const { expires, ...rest } = result.data;
+	return { ok: true as const, values, row: { ...rest, expires_at: expires } satisfies LinkInput };
 }
 
 export const load: PageServerLoad = async ({ platform, url }) => {
 	const env = bindings(platform);
 
-	// One round trip, not two. The same rule holds on every admin screen.
-	const [links, stats] = await env.DB.batch([
-		env.DB.prepare(
-			`SELECT slug, target_url, status, note, created_at, expires_at
-			 FROM slugs ORDER BY created_at DESC`
-		),
-		env.DB.prepare(
-			`SELECT slug, SUM(n) AS hits FROM hits
-			 WHERE kind = 'redirect' AND device != 'bot' AND day >= date('now','-6 day')
-			 GROUP BY slug`
-		)
-	]);
+	const [links, recent] = await Promise.all([listLinks(env), recentHits(env, 'redirect')]);
 
-	const recent: Record<string, number> = {};
-	for (const row of stats.results as Array<{ slug: string; hits: number }>) {
-		recent[row.slug] = row.hits;
-	}
-
-	const slugs = (links.results as SlugRow[]).map((row) => ({
-		...row,
-		// Expiry is judged on the server, never the visitor's clock — a client a
-		// few hours behind the UTC boundary would otherwise badge a link expired
-		// early.
-		expired: row.expires_at !== null && row.expires_at < Date.now()
-	}));
+	// Judged on the server, never the visitor's clock.
+	const slugs = links.map((row) => ({ ...row, expired: isExpired(row.expires_at) }));
 	const wanted = url.searchParams.get('s');
 
 	return {
@@ -111,64 +47,25 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 export const actions: Actions = {
 	create: async ({ request, platform }) => {
 		const env = bindings(platform);
-
-		const data = await request.formData();
-		const parsed = parse(data);
+		const parsed = parse(await request.formData());
 		if (!parsed.ok) return fail(400, { intent: 'create', ...parsed });
 
-		// The hook skips reserved names, so a slug that shadowed one would
-		// simply never resolve. Reject it here instead of creating a link that
-		// silently does nothing.
-		if (RESERVED.has(parsed.row.slug)) {
-			return fail(400, {
-				intent: 'create',
-				fields: { slug: `"${parsed.row.slug}" is reserved by the site itself.` },
-				values: Object.fromEntries(data) as Record<string, string>
-			});
-		}
+		const problem = await slugProblem(env, parsed.row.slug);
+		if (problem) return fail(409, { intent: 'create', fields: { slug: problem }, values: parsed.values });
 
-		if (await getSlug(env, parsed.row.slug)) {
-			return fail(409, {
-				intent: 'create',
-				fields: { slug: 'That slug is taken.' },
-				values: Object.fromEntries(data) as Record<string, string>
-			});
-		}
-
-		// Links, pastes and files share one namespace of names, so a name means
-		// one thing wherever it is typed.
-		if (await getPaste(env, parsed.row.slug)) {
-			return fail(409, {
-				intent: 'create',
-				fields: { slug: 'That name is taken by a paste.' },
-				values: Object.fromEntries(data) as Record<string, string>
-			});
-		}
-
-		if (await getFile(env, parsed.row.slug)) {
-			return fail(409, {
-				intent: 'create',
-				fields: { slug: 'That name is taken by a file.' },
-				values: Object.fromEntries(data) as Record<string, string>
-			});
-		}
-
-		await createSlug(env, parsed.row);
+		await createLink(env, parsed.row);
 		return { created: parsed.row.slug };
 	},
 
 	update: async ({ request, platform }) => {
 		const env = bindings(platform);
-
 		const parsed = parse(await request.formData());
 		if (!parsed.ok) return fail(400, { intent: 'update', ...parsed });
 
-		if (!(await getSlug(env, parsed.row.slug))) {
-			return fail(404, { intent: 'update', error: 'That link no longer exists.' });
-		}
+		const current = await getLink(env, parsed.row.slug);
+		if (!current) return fail(404, { intent: 'update', error: 'That link no longer exists.' });
 
-		await updateSlug(env, parsed.row);
-		await purgeLocalCache(platform, parsed.row.slug);
+		await updateLink(env, current, parsed.row);
 		return { updated: parsed.row.slug };
 	},
 
@@ -177,11 +74,10 @@ export const actions: Actions = {
 		if (denied) return denied;
 		const env = bindings(platform);
 
-		const slug = String((await request.formData()).get('slug') ?? '');
-		if (!slug) return fail(400, { intent: 'delete', error: 'No link given.' });
+		const current = await getLink(env, String((await request.formData()).get('slug') ?? ''));
+		if (!current) return fail(404, { intent: 'delete', error: 'That link no longer exists.' });
 
-		await deleteSlug(env, slug);
-		await purgeLocalCache(platform, slug);
-		return { deleted: slug };
+		await deleteLink(env, current);
+		return { deleted: current.slug };
 	}
 };

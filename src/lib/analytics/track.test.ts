@@ -8,7 +8,6 @@ import {
 	parseBeacon,
 	readCookie,
 	referrerHost,
-	today,
 	visitorHash
 } from './track.server';
 
@@ -226,8 +225,3 @@ describe('visitorHash', () => {
 	});
 });
 
-describe('today', () => {
-	it('is the YYYY-MM-DD the `day` column expects', () => {
-		expect(today()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-	});
-});

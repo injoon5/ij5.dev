@@ -1,3 +1,4 @@
+import { utcDay } from '$lib/analytics/ranges';
 import type { RequestHandler } from './$types';
 import {
 	deviceClass,
@@ -6,7 +7,6 @@ import {
 	MIGRATE_VISITOR,
 	parseBeacon,
 	PURGE_VISITOR,
-	today,
 	visitorHash,
 	VISITORS_INSERT
 } from '$lib/analytics/track.server';
@@ -47,7 +47,7 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
 	const sigs = parseBeacon(text);
 	if (!sigs) return new Response(null, { status: 204 });
 
-	const day = today();
+	const day = utcDay();
 	const salt = env.SALT ?? '';
 	const ip = request.headers.get('cf-connecting-ip') ?? '0.0.0.0';
 

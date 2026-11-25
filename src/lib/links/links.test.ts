@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isTargetUrl } from './links.server';
+import { isTargetUrl } from './link';
 
 /**
  * The shortener's destination is a `Location:` header, not a page — so

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dateInput } from '$lib/expiry';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import type { SubmitFunction } from '@sveltejs/kit';
@@ -48,9 +49,6 @@
 		return deleting.submit(input);
 	};
 
-	const iso = (ms: number | null | undefined) =>
-		ms ? new Date(ms).toISOString().slice(0, 10) : '';
-
 	// Rejected input is echoed back so a typo never costs the whole form.
 	// svelte-ignore state_referenced_locally
 	let status = $state(values.status ?? String(row?.status ?? 302));
@@ -58,7 +56,7 @@
 		slug: values.slug ?? row?.slug ?? '',
 		target_url: values.target_url ?? row?.target_url ?? '',
 		note: values.note ?? row?.note ?? '',
-		expires: values.expires ?? iso(row?.expires_at)
+		expires: values.expires ?? dateInput(row?.expires_at)
 	});
 </script>
 

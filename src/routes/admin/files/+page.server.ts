@@ -1,18 +1,11 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requireFull } from '$lib/auth/guard.server';
-import {
-	cleanName,
-	createFile,
-	deleteFile,
-	freeRandomSlug,
-	getFile,
-	listFiles,
-	parseExpiry,
-	slugProblem
-} from '$lib/files/files.server';
+import { cleanName, createFile, deleteFile, getFile, listFiles } from '$lib/files/files.server';
 import { fmtBytes } from '$lib/format';
-import { MAX_FORM_FILE_BYTES, type FileRow } from '$lib/files/file';
+import { endOfDay, isExpired } from '$lib/expiry';
+import { FILE_EMPTY, fileTooBig, MAX_FORM_FILE_BYTES } from '$lib/files/file';
+import { chooseSlug } from '$lib/slugs/slugs.server';
 import { uploadLimits } from '$lib/files/uploads';
 import { bindings } from '$lib/server/bindings';
 
@@ -29,12 +22,8 @@ import { bindings } from '$lib/server/bindings';
 export const load: PageServerLoad = async ({ platform, url }) => {
 	const env = bindings(platform);
 
-	const rows = await listFiles(env);
-	const files = rows.map((row) => ({
-		...row,
-		// Expiry is judged on the server, never the visitor's clock.
-		expired: row.expires_at !== null && row.expires_at < Date.now()
-	}));
+	// Expiry is judged on the server, never the visitor's clock.
+	const files = (await listFiles(env)).map((row) => ({ ...row, expired: isExpired(row.expires_at) }));
 	const wanted = url.searchParams.get('s');
 
 	return {
@@ -60,43 +49,26 @@ export const actions: Actions = {
 		if (!(file instanceof File) || (!file.name && file.size === 0)) {
 			return fail(400, { intent: 'create', fields: { file: 'Choose a file.' }, values });
 		}
-		if (file.size === 0) return fail(400, { intent: 'create', fields: { file: 'That file is empty.' }, values });
+		if (file.size === 0) return fail(400, { intent: 'create', fields: { file: FILE_EMPTY }, values });
 		if (file.size > MAX_FORM_FILE_BYTES) {
-			return fail(400, {
-				intent: 'create',
-				fields: {
-					file: `Without JavaScript, files can be up to ${fmtBytes(MAX_FORM_FILE_BYTES)}.`
-				},
-				values
-			});
+			return fail(400, { intent: 'create', fields: { file: `Without JavaScript, ${fileTooBig(fmtBytes(MAX_FORM_FILE_BYTES)).toLowerCase()}` }, values });
 		}
 
-		// An explicit slug must be valid and free; a blank one gets a random
-		// slug, which is the "I just want to send this" default.
-		let slug = values.slug.trim();
-		const fields: Record<string, string> = {};
+		const chosen = await chooseSlug(env, values.slug);
+		if (!chosen.ok) return fail(400, { intent: 'create', fields: { slug: chosen.problem }, values });
 
-		if (slug) {
-			const problem = await slugProblem(env, slug);
-			if (problem) fields.slug = problem;
-		} else {
-			slug = (await freeRandomSlug(env)) ?? '';
-			if (!slug) fields.slug = 'Could not find a free name. Try again.';
-		}
-
-		if (fields.slug) return fail(400, { intent: 'create', fields, values });
-
-		const row: Omit<FileRow, 'created_at' | 'downloads'> = {
-			slug,
-			key: `dl/${slug}`,
-			name: cleanName(file.name),
-			mime: file.type || 'application/octet-stream',
-			bytes: file.size,
-			expires_at: parseExpiry(values.expires)
-		};
-
-		await createFile(env, row, await file.arrayBuffer());
-		return { created: slug };
+		await createFile(
+			env,
+			{
+				slug: chosen.slug,
+				name: cleanName(file.name),
+				mime: file.type || 'application/octet-stream',
+				bytes: file.size,
+				expires_at: endOfDay(values.expires)
+			},
+			await file.arrayBuffer()
+		);
+		return { created: chosen.slug };
 	},
 
 	delete: async ({ request, platform, locals }) => {
@@ -104,14 +76,10 @@ export const actions: Actions = {
 		if (denied) return denied;
 		const env = bindings(platform);
 
-		const slug = String((await request.formData()).get('slug') ?? '');
-		if (!slug) return fail(400, { intent: 'delete', error: 'No file given.' });
+		const current = await getFile(env, String((await request.formData()).get('slug') ?? ''));
+		if (!current) return fail(404, { intent: 'delete', error: 'That file no longer exists.' });
 
-		if (!(await getFile(env, slug))) {
-			return fail(404, { intent: 'delete', error: 'That file no longer exists.' });
-		}
-
-		await deleteFile(env, slug);
-		return { deleted: slug };
+		await deleteFile(env, current);
+		return { deleted: current.slug };
 	}
 };

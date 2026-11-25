@@ -1,3 +1,4 @@
+import { utcDay } from './ranges';
 import { afterResponse } from '$lib/server/bindings';
 import type { RequestEvent } from '@sveltejs/kit';
 import { SLUG_PATTERN } from '$lib/slugs/slugs';
@@ -79,7 +80,6 @@ export function referrerHost(referer: string | null, selfHost: string): string {
 	}
 }
 
-export const today = () => new Date().toISOString().slice(0, 10);
 
 /**
  * The one bucket that is not a real path. A 404's slug is whatever a stranger
@@ -240,7 +240,7 @@ export function track(event: RequestEvent, e: { slug: string; kind: Kind }) {
 	const { env } = platform;
 	const req = event.request;
 
-	const day = today();
+	const day = utcDay();
 	const ua = req.headers.get('user-agent') ?? '';
 	const device = deviceClass(ua);
 	const referrer = referrerHost(req.headers.get('referer'), event.url.hostname);

@@ -1,6 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { cleanName, fileKey, insertFileRow, parseExpiry, slugAvailable } from '$lib/files/files.server';
+import { cleanName, fileKey, recordFile } from '$lib/files/files.server';
+import { endOfDay } from '$lib/expiry';
+import { slugOwner } from '$lib/slugs/slugs.server';
 import { sameOrigin } from '$lib/server/origin';
 import { MAX_PARTS, uploadLimits } from '$lib/files/uploads';
 import { bindings } from '$lib/server/bindings';
@@ -84,8 +86,8 @@ export const POST: RequestHandler = async ({ request, params, platform }) => {
 
 	// The name is claimed now. If it went to something else while the bytes
 	// were moving, the upload is thrown away rather than shadowing it.
-	if (!(await slugAvailable(env, params.slug))) {
-		await upload.abort().catch(() => {});
+	if (await slugOwner(env, params.slug)) {
+		await upload.abort().catch((e: unknown) => console.error('abort failed:', e));
 		return json({ fields: { slug: 'That name was taken while uploading.' } }, { status: 409 });
 	}
 
@@ -96,12 +98,12 @@ export const POST: RequestHandler = async ({ request, params, platform }) => {
 		return fail(400, e instanceof Error ? e.message : 'The upload could not be completed.');
 	}
 
-	await insertFileRow(env, {
+	await recordFile(env, {
 		slug: params.slug,
 		name: cleanName(typeof body.name === 'string' ? body.name : ''),
 		mime: object.httpMetadata?.contentType || 'application/octet-stream',
 		bytes: object.size,
-		expires_at: parseExpiry(typeof body.expires === 'string' ? body.expires : '')
+		expires_at: endOfDay(typeof body.expires === 'string' ? body.expires : '')
 	});
 
 	return json({ slug: params.slug });
@@ -116,6 +118,6 @@ export const DELETE: RequestHandler = async ({ request, params, platform, url })
 
 	await env.BUCKET.resumeMultipartUpload(fileKey(params.slug), uploadId)
 		.abort()
-		.catch(() => {});
+		.catch((e: unknown) => console.error('abort failed:', e));
 	return new Response(null, { status: 204 });
 };

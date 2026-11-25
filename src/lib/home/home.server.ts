@@ -1,4 +1,4 @@
-import type { HomeDoc, Profile } from '$lib/home/types';
+import { EMPTY_PROFILE, HOME_KEYS, type HomeDoc, type Profile } from '$lib/home/types';
 
 /**
  * The homepage document lives in three KV keys (§11):
@@ -16,18 +16,7 @@ import type { HomeDoc, Profile } from '$lib/home/types';
 
 type Env = App.Platform['env'];
 
-const PUBLISHED = 'home';
-const DRAFT = 'home:draft';
-const PREV = 'home:prev';
-
-const EMPTY_PROFILE: Profile = {
-	name: 'ij5',
-	bio: null,
-	tagline: null,
-	avatar: null,
-	links: [],
-	content: null
-};
+const { published: PUBLISHED, draft: DRAFT, previous: PREV } = HOME_KEYS;
 
 /** Rebuilds the document from the source of truth. One row, one query. */
 export async function loadFromD1(env: Env): Promise<{ profile: Profile; markdown: string }> {

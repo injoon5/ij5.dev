@@ -1,26 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { asciiName, cleanName, contentDisposition, parseRange, randomFileSlug } from './files.server';
-import { SLUG_PATTERN } from '$lib/slugs/slugs';
+import { asciiName, cleanName, contentDisposition, parseRange } from './files.server';
 
 /**
- * The pure parts of file sharing: the random slug must be typeable and valid
- * as a slug, and a filename must survive its trip into a Content-Disposition
+ * The pure parts of file sharing: a filename must survive its trip into a Content-Disposition
  * header and a page title.
  */
-
-describe('randomFileSlug', () => {
-	it('is a valid slug of the requested length', () => {
-		for (let i = 0; i < 50; i++) {
-			const slug = randomFileSlug();
-			expect(slug).toHaveLength(8);
-			expect(SLUG_PATTERN.test(slug)).toBe(true);
-		}
-	});
-
-	it('never uses ambiguous characters', () => {
-		expect(randomFileSlug()).not.toMatch(/[ilo01]/);
-	});
-});
 
 describe('contentDisposition', () => {
 	it('keeps the header ASCII so a non-Latin name cannot fail the download', () => {

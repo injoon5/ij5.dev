@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { FILE_EMPTY, fileTooBig } from '$lib/files/file';
 	import { enhance } from '$app/forms';
 	import { beforeNavigate } from '$app/navigation';
 	import { page } from '$app/state';
@@ -47,8 +48,8 @@
 	 *  the no-JS form post would carry it too. */
 	function pick(file: File | undefined | null, dropped = false) {
 		if (!file) return;
-		const tooBig = file.size > maxFileBytes ? `Files can be up to ${fmtBytes(maxFileBytes)}.` : '';
-		const problem = tooBig || (file.size === 0 ? 'That file is empty.' : '');
+		const tooBig = file.size > maxFileBytes ? fileTooBig(fmtBytes(maxFileBytes)) : '';
+		const problem = tooBig || (file.size === 0 ? FILE_EMPTY : '');
 		if (problem) {
 			chosen = null;
 			fileError = problem;

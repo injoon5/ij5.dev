@@ -1,14 +1,18 @@
+import { readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { RESERVED, SLUG_PATTERN, isSlugCandidate } from './slugs';
 
-/**
- * §13, test 1a — a reserved slug can never be created, and the hook's three
- * guards do the work claimed for them.
- *
- * These guards are load-bearing twice over: the hook skips the KV read for
- * anything they reject, and slug creation refuses the same names. Testing the
- * shared predicate is what keeps those two from drifting apart.
- */
+const ROUTES = fileURLToPath(new URL('../../routes/', import.meta.url));
+
+describe('RESERVED', () => {
+	it('covers every top-level route, so no link can shadow a page', () => {
+		const topLevel = readdirSync(ROUTES, { withFileTypes: true })
+			.filter((d) => d.isDirectory() && !d.name.includes('.'))
+			.map((d) => d.name);
+		expect(topLevel.filter((name) => !RESERVED.has(name))).toEqual([]);
+	});
+});
 
 describe('isSlugCandidate', () => {
 	it('accepts a plain single segment', () => {
@@ -30,12 +34,7 @@ describe('isSlugCandidate', () => {
 		expect(isSlugCandidate('')).toBe(false);
 	});
 
-	it('rejects every reserved name', () => {
-		for (const name of RESERVED) expect(isSlugCandidate(name)).toBe(false);
-	});
-
-	it('reserves login, so a slug cannot shadow the sign-in page', () => {
-		expect(RESERVED.has('login')).toBe(true);
+	it('rejects a reserved name', () => {
 		expect(isSlugCandidate('login')).toBe(false);
 	});
 });

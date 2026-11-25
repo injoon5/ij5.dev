@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { getFile } from '$lib/files/files.server';
+import { getLiveFile } from '$lib/files/files.server';
 import { bindings } from '$lib/server/bindings';
 
 /**
@@ -12,11 +12,8 @@ export const load: PageServerLoad = async (event) => {
 	const { params, platform, url } = event;
 	const env = bindings(platform);
 
-	const file = await getFile(env, params.slug);
-	if (!file) throw error(404, 'No file with that slug.');
-	if (file.expires_at && file.expires_at < Date.now()) {
-		throw error(404, 'That file has expired.');
-	}
+	const file = await getLiveFile(env, params.slug);
+	if (!file) error(404, 'No file with that slug.');
 
 	// The page carries the download count, so it is always served fresh.
 	event.setHeaders({ 'cache-control': 'no-store' });

@@ -1,6 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { fileKey, freeRandomSlug, slugProblem } from '$lib/files/files.server';
+import { fileKey } from '$lib/files/files.server';
+import { FILE_EMPTY, fileTooBig } from '$lib/files/file';
+import { chooseSlug } from '$lib/slugs/slugs.server';
 import { sameOrigin } from '$lib/server/origin';
 import { fmtBytes } from '$lib/format';
 import { partSizeFor, uploadLimits } from '$lib/files/uploads';
@@ -30,26 +32,18 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 
 	const size = Number(body.size);
 	if (!Number.isSafeInteger(size) || size <= 0) {
-		return json({ fields: { file: 'That file is empty.' } }, { status: 400 });
+		return json({ fields: { file: FILE_EMPTY } }, { status: 400 });
 	}
 
 	const limits = uploadLimits(env.UPLOAD_PART_MIB);
 	const partSize = partSizeFor(size, limits);
 	if (!partSize) {
-		return json(
-			{ fields: { file: `Files can be up to ${fmtBytes(limits.maxFileBytes)}.` } },
-			{ status: 413 }
-		);
+		return json({ fields: { file: fileTooBig(fmtBytes(limits.maxFileBytes)) } }, { status: 413 });
 	}
 
-	let slug = typeof body.slug === 'string' ? body.slug.trim() : '';
-	if (slug) {
-		const problem = await slugProblem(env, slug);
-		if (problem) return json({ fields: { slug: problem } }, { status: 400 });
-	} else {
-		slug = (await freeRandomSlug(env)) ?? '';
-		if (!slug) return json({ fields: { slug: 'Could not find a free name. Try again.' } }, { status: 409 });
-	}
+	const chosen = await chooseSlug(env, typeof body.slug === 'string' ? body.slug : '');
+	if (!chosen.ok) return json({ fields: { slug: chosen.problem } }, { status: 400 });
+	const slug = chosen.slug;
 
 	const type = typeof body.type === 'string' && body.type ? body.type : 'application/octet-stream';
 	const upload = await env.BUCKET.createMultipartUpload(fileKey(slug), {

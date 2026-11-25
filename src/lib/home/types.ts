@@ -49,3 +49,20 @@ export type AssetRow = {
 	h: number | null;
 	at: number;
 };
+
+/**
+ * Where the document lives in KV: every editor save rewrites `draft`,
+ * publishing moves `draft` to `published` (bumping `v`) and the old one to
+ * `previous`. D1's `profile` row stays the source of truth for the draft.
+ */
+export const HOME_KEYS = { published: 'home', draft: 'home:draft', previous: 'home:prev' } as const;
+
+/** What the homepage shows before anything is published. */
+export const EMPTY_PROFILE: Profile = {
+	name: 'ij5',
+	bio: null,
+	tagline: null,
+	avatar: null,
+	links: [],
+	content: null
+};

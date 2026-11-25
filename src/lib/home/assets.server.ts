@@ -1,5 +1,5 @@
 import { imageKeysIn } from '$lib/home/markdown';
-import type { HomeDoc } from '$lib/home/types';
+import { HOME_KEYS, type HomeDoc } from '$lib/home/types';
 
 /**
  * Uploaded images are content-addressed and shared, so an R2 object may only
@@ -30,8 +30,8 @@ async function referencedKeys(env: Env): Promise<Set<string>> {
 			content: string | null;
 			avatar: string | null;
 		}>(),
-		env.KV.get<HomeDoc>('home', { type: 'json' }),
-		env.KV.get<HomeDoc>('home:prev', { type: 'json' })
+		env.KV.get<HomeDoc>(HOME_KEYS.published, { type: 'json' }),
+		env.KV.get<HomeDoc>(HOME_KEYS.previous, { type: 'json' })
 	]);
 	return new Set([
 		...imageKeysIn(row?.content),

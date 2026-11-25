@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dateInput } from '$lib/expiry';
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
@@ -47,9 +48,6 @@
 		return deleting.submit(input);
 	};
 
-	const iso = (ms: number | null | undefined) =>
-		ms ? new Date(ms).toISOString().slice(0, 10) : '';
-
 	// Rejected input is echoed back so a typo never costs the whole form. A
 	// checkbox's `values` entry is "on" or ""; `row.cache` is the stored value.
 	const cacheInitial = $derived(
@@ -59,7 +57,7 @@
 	let initial = $derived({
 		slug: values.slug ?? row?.slug ?? '',
 		note: values.note ?? row?.note ?? '',
-		expires: values.expires ?? iso(row?.expires_at)
+		expires: values.expires ?? dateInput(row?.expires_at)
 	});
 
 	// The body is bound so the counter tracks typing. It re-seeds when the

@@ -18,3 +18,7 @@ export type FileRow = {
 	/** Incremented on every served download. */
 	downloads: number;
 };
+
+/** The size messages the upload form, the no-JS action and the upload API share. */
+export const FILE_EMPTY = 'That file is empty.';
+export const fileTooBig = (limit: string) => `Files can be up to ${limit}.`;

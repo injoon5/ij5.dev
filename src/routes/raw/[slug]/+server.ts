@@ -1,37 +1,16 @@
 import type { RequestHandler } from './$types';
-import { getPaste } from '$lib/pastes/pastes.server';
+import { getLivePaste, pasteCacheControl } from '$lib/pastes/pastes.server';
 import { track } from '$lib/analytics/track.server';
 import { bindings } from '$lib/server/bindings';
 
-/**
- * The stable raw URL for a paste: `ij5.dev/raw/{slug}` returns the body as
- * `text/plain`, for piping into a terminal. Two segments, so the hook's
- * single-segment fast path never sees it — this resolves through SvelteKit
- * and the same D1 source of truth the admin edits.
- *
- * The rendered view lives at `/p/{slug}`; this is its one predictable,
- * header-free counterpart, so `curl ij5.dev/raw/{slug}` always just works.
- */
-
-const TTL = 300;
-
+/** A paste as `text/plain`, so `curl ij5.dev/raw/{slug}` just works. */
 export const GET: RequestHandler = async (event) => {
-	const { params, platform } = event;
-	const env = bindings(platform);
-
-	const paste = await getPaste(env, params.slug);
+	const paste = await getLivePaste(bindings(event.platform), event.params.slug);
 	if (!paste) return new Response('No paste with that slug.', { status: 404 });
-	if (paste.expires_at && paste.expires_at < Date.now()) {
-		return new Response('That paste has expired.', { status: 404 });
-	}
 
-	track(event, { slug: params.slug, kind: 'paste' });
+	track(event, { slug: paste.slug, kind: 'paste' });
 
 	return new Response(paste.body, {
-		headers: {
-			'content-type': 'text/plain; charset=utf-8',
-			// A cache-disabled paste is never cached here either.
-			'cache-control': paste.cache ? `public, s-maxage=${TTL}, max-age=0` : 'no-store'
-		}
+		headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': pasteCacheControl(paste) }
 	});
 };
