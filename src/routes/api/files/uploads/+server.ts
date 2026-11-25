@@ -3,7 +3,6 @@ import type { RequestHandler } from './$types';
 import { fileKey } from '$lib/files/files.server';
 import { FILE_EMPTY, fileTooBig } from '$lib/files/file';
 import { chooseSlug } from '$lib/slugs/slugs.server';
-import { sameOrigin } from '$lib/server/origin';
 import { fmtBytes } from '$lib/format';
 import { partSizeFor, uploadLimits } from '$lib/files/uploads';
 import { bindings } from '$lib/server/bindings';
@@ -21,7 +20,6 @@ import { bindings } from '$lib/server/bindings';
 
 export const POST: RequestHandler = async ({ request, platform }) => {
 	const env = bindings(platform);
-	if (!sameOrigin(request)) return json({ message: 'Cross-origin request refused.' }, { status: 403 });
 
 	let body: { name?: unknown; size?: unknown; type?: unknown; slug?: unknown };
 	try {

@@ -2,14 +2,15 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { oidcConfigured, userinfo } from '$lib/auth/oidc.server';
 import { bindings } from '$lib/server/bindings';
+import { bearerToken } from '$lib/server/api';
 
 /** OIDC UserInfo: the same claims as the ID token, for a live access token. */
 const handler: RequestHandler = async ({ request, platform }) => {
 	const env = bindings(platform);
 	if (!oidcConfigured(env)) error(404, 'Not found');
 
-	const [scheme, token] = (request.headers.get('authorization') ?? '').split(' ');
-	const claims = token && scheme?.toLowerCase() === 'bearer' ? await userinfo(env, token) : null;
+	const token = bearerToken(request);
+	const claims = token ? await userinfo(env, token) : null;
 	if (!claims) {
 		return json(
 			{ error: 'invalid_token' },

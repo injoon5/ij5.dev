@@ -1,5 +1,6 @@
 import type { Cookies } from '@sveltejs/kit';
 import { describe as describeAgent } from '$lib/analytics/userAgent';
+import { bindings } from '$lib/server/bindings';
 import { clientIp, requestMeta } from '$lib/server/request';
 import { alert, logEvent } from './events.server';
 import { verifyPassword } from './password.server';
@@ -112,7 +113,7 @@ export async function startSession(
 	strength: Strength,
 	method: Method
 ) {
-	const env = event.platform!.env;
+	const env = bindings(event.platform);
 	const meta = requestMeta(event.request);
 	const { token } = await createSession(env, strength, method, meta);
 	if (event.locals.session) await deleteSession(env, event.locals.session.id);

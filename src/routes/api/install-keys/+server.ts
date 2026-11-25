@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
 import { MAX_LIVE_KEYS, mintKey } from '$lib/apps/installKeys.server';
-import { SLUG_PATTERN } from '$lib/slugs/slugs';
+import { SLUG_MESSAGE, SLUG_PATTERN } from '$lib/slugs/slugs';
 import { bindings } from '$lib/server/bindings';
 
 /**
@@ -34,7 +34,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	const slug = (body as { slug?: unknown } | null)?.slug ?? null;
 	if (slug !== null && (typeof slug !== 'string' || !SLUG_PATTERN.test(slug))) {
 		return apiError(422, 'That key request is not valid.', {
-			fields: { slug: 'Use letters, numbers, hyphens and underscores; 1–64 characters.' }
+			fields: { slug: SLUG_MESSAGE }
 		});
 	}
 

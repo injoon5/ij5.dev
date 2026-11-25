@@ -1,6 +1,6 @@
 import { SignJWT, exportJWK, importJWK, jwtVerify, type CryptoKey, type JWK } from 'jose';
 import { b64url, eq, randomToken, sha256, sha256url } from '$lib/server/crypto';
-import type { SessionRow } from './sessions.server';
+import { isLive, type SessionRow } from './sessions.server';
 
 /**
  * ij5.dev as an OpenID Connect provider — with exactly one client,
@@ -273,10 +273,7 @@ export async function redeemCode(
 
 	// The session that authorised the code must still exist: signing out (or
 	// revoking it) between the redirect and the exchange cancels the login.
-	const live = await env.DB.prepare(`SELECT 1 AS ok FROM sessions WHERE id = ? AND expires_at > ?`)
-		.bind(row.session_id, now)
-		.first();
-	if (!live) return bad('The session behind this code has ended.');
+	if (!(await isLive(env, row.session_id, now))) return bad('The session behind this code has ended.');
 
 	return { ok: true, row };
 }

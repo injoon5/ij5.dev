@@ -114,6 +114,11 @@ export async function readSession(
 	return row;
 }
 
+/** Whether a session still exists and has not expired. */
+export async function isLive(env: Env, id: string, now = Date.now()): Promise<boolean> {
+	return (await env.DB.prepare(`SELECT 1 FROM sessions WHERE id = ? AND expires_at > ?`).bind(id, now).first()) !== null;
+}
+
 export async function listSessions(env: Env, now = Date.now()): Promise<SessionRow[]> {
 	const { results } = await env.DB.prepare(
 		`SELECT ${COLUMNS} FROM sessions WHERE expires_at > ? ORDER BY last_seen_at DESC`

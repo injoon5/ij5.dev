@@ -141,7 +141,8 @@ export function planRefresh(requests: LiveRequest[], live: LiveDoc | null, env: 
 			try {
 				next[req.id] = { at: Date.now(), data: await fetchers[req.kind].run(req.data, env) };
 				changed = true;
-			} catch {
+			} catch (e) {
+				console.error(`live refresh failed for ${req.id}:`, e);
 				// Leave the previous entry in place. A stale value beats an empty
 				// one, and the shortcode's own fallback covers the case where
 				// there has never been a value at all.

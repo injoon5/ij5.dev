@@ -3,31 +3,8 @@ import { currentHome } from '$lib/home/home.server';
 import { planRefresh, readLive } from '$lib/home/live.server';
 import { renderMarkdown, findLiveRequests } from '$lib/home/markdown';
 import { imageKeysIn } from '$lib/home/assetKeys';
+import { assetDims } from '$lib/home/assets.server';
 import { bindings, afterResponse } from '$lib/server/bindings';
-
-/** Intrinsic dimensions, so each `<img>` reserves its box before it loads and
- *  the page holds CLS 0. */
-async function loadDims(
-	env: App.Platform['env'],
-	keys: string[]
-): Promise<Map<string, { w: number; h: number }>> {
-	const dims = new Map<string, { w: number; h: number }>();
-	if (!keys.length) return dims;
-	const placeholders = keys.map(() => '?').join(',');
-	try {
-		const res = await env.DB.prepare(
-			`SELECT key, w, h FROM assets WHERE key IN (${placeholders})`
-		)
-			.bind(...keys)
-			.all();
-		for (const row of res.results as Array<{ key: string; w: number | null; h: number | null }>) {
-			if (row.w && row.h) dims.set(row.key, { w: row.w, h: row.h });
-		}
-	} catch {
-		// Missing dimensions only cost a little layout shift, never the page.
-	}
-	return dims;
-}
 
 export const load: PageServerLoad = async ({ platform, locals, url }) => {
 	const env = bindings(platform);
@@ -36,17 +13,19 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
 	const doc = await currentHome(env, locals.home);
 	const markdown = doc.markdown;
 
-	let live = null;
-	try {
-		live = await readLive(env);
-		const refresh = planRefresh(findLiveRequests(markdown), live, env);
-		if (refresh) afterResponse(platform, refresh());
-	} catch {
-		live = null;
-	}
+	const live = await readLive(env).catch((e: unknown) => {
+		console.error('live data read failed:', e);
+		return null;
+	});
+	const refresh = planRefresh(findLiveRequests(markdown), live, env);
+	if (refresh) afterResponse(platform, refresh());
 
 	const assetsOrigin = env.ASSETS_ORIGIN ?? '';
-	const dims = await loadDims(env, imageKeysIn(markdown));
+	// Missing sizes only cost a little layout shift, never the page.
+	const dims = await assetDims(env, imageKeysIn(markdown)).catch((e: unknown) => {
+		console.error('image sizes failed:', e);
+		return new Map();
+	});
 	const { html, needsScript } = renderMarkdown(markdown, { assetsOrigin, live, dims });
 
 	return {

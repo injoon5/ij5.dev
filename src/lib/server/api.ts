@@ -22,6 +22,11 @@ export const KEY_PREFIX = 'shelf_ik_';
  */
 export const KEY_ERROR = 'This key is used, expired or wrong.';
 
+export const WRONG_TOKEN = 'That token is not right.';
+
+/** Constant-time, and the token is never logged or echoed back. */
+export const isAdminToken = async (token: string, hash: string) => eq(await sha256(token), hash);
+
 export type ApiAuth = { ok: true } | { ok: false; status: number; error: string };
 
 export async function authorize(request: Request, hash: string | undefined): Promise<ApiAuth> {
@@ -38,10 +43,7 @@ export async function authorize(request: Request, hash: string | undefined): Pro
 	// `AUTH_HASH`.
 	if (token.startsWith(KEY_PREFIX)) return { ok: false, status: 401, error: KEY_ERROR };
 
-	// Constant-time, and the token is never logged or echoed back.
-	if (!eq(await sha256(token), hash)) {
-		return { ok: false, status: 401, error: 'That token is not right.' };
-	}
+	if (!(await isAdminToken(token, hash))) return { ok: false, status: 401, error: WRONG_TOKEN };
 
 	return { ok: true };
 }

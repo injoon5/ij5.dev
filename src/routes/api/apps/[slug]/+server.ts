@@ -4,7 +4,7 @@ import { authorizeApp } from '$lib/apps/appAuth.server';
 import { appContent, deleteApp, getApp, getAppMeta, putApp } from '$lib/apps/apps.server';
 import { fieldErrors } from '$lib/forms';
 import { spendAttempt } from '$lib/apps/installKeys.server';
-import { SLUG_PATTERN } from '$lib/slugs/slugs';
+import { SLUG_MESSAGE, SLUG_PATTERN } from '$lib/slugs/slugs';
 import { parseReply } from '$lib/apps/replyParser';
 import { MAX_APP_BYTES, SOURCE_TOO_BIG, utf8Bytes } from '$lib/apps/app';
 import { bindings } from '$lib/server/bindings';
@@ -49,7 +49,7 @@ export const PUT: RequestHandler = async ({ request, params, platform }) => {
 
 	if (!SLUG_PATTERN.test(params.slug)) {
 		return fail(422, 'That app is not valid.', {
-			fields: { slug: 'Use letters, numbers, hyphens and underscores; 1–64 letters, numbers, hyphens and underscores.' }
+			fields: { slug: SLUG_MESSAGE }
 		});
 	}
 

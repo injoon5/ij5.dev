@@ -1,8 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Action, Actions, PageServerLoad } from './$types';
 import type { Env } from '$lib/server/bindings';
-import { clientIp } from '$lib/server/request';
-import { eq, sha256 } from '$lib/server/crypto';
+import { requestMeta } from '$lib/server/request';
 import { safeNext } from '$lib/auth/next';
 import { newChallenge } from '$lib/auth/puzzle.server';
 import {
@@ -14,6 +13,7 @@ import {
 } from '$lib/auth/signIn.server';
 import { turnstileEnabled, turnstileOk } from '$lib/auth/turnstile.server';
 import { bindings } from '$lib/server/bindings';
+import { isAdminToken, WRONG_TOKEN } from '$lib/server/api';
 
 /**
  * Four doors, strongest first:
@@ -55,7 +55,7 @@ function door(name: Door, check: (env: Env, request: Request, field: Field) => P
 		const form = await request.formData();
 		const field: Field = (k) => String(form.get(k) ?? '');
 
-		const human = name === 'token' || (await turnstileOk(env, field('cf-turnstile-response'), clientIp(request)));
+		const human = name === 'token' || (await turnstileOk(env, field('cf-turnstile-response'), requestMeta(request).ip));
 		const outcome = human ? await check(env, request, field) : refusal('The browser check did not pass. Try again.', 400);
 		if (!outcome.ok) return fail(outcome.status, { door: name, error: outcome.error, retryAt: outcome.retryAt });
 
@@ -71,8 +71,7 @@ export const actions: Actions = {
 		if (!env.AUTH_HASH) return refusal('Auth is not configured on this deployment.', 500);
 		const token = field('token');
 		if (!token) return refusal('Enter your token.', 400);
-		// Constant-time, and the token itself is never stored or logged.
-		if (!eq(await sha256(token), env.AUTH_HASH)) return refusal('That token is not right.', 401);
+		if (!(await isAdminToken(token, env.AUTH_HASH))) return refusal(WRONG_TOKEN, 401);
 		return { ok: true, strength: 'full', method: 'token' };
 	}),
 

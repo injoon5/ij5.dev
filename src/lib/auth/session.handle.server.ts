@@ -1,5 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import { afterResponse } from '$lib/server/bindings';
+import { CROSS_ORIGIN, sameOrigin } from '$lib/server/origin';
 import { readSession, SESSION_COOKIE } from './sessions.server';
 
 /**
@@ -21,13 +22,20 @@ export const authenticate: Handle = async ({ event, resolve }) => {
 	const cookie = event.cookies.get(SESSION_COOKIE);
 	event.locals.session =
 		platform && cookie
-			? await readSession(platform.env, cookie, (p) => afterResponse(platform, p)).catch(() => null)
+			? await readSession(platform.env, cookie, (p) => afterResponse(platform, p)).catch((e: unknown) => {
+					console.error('session lookup failed:', e);
+					return null;
+				})
 			: null;
 	event.locals.authed = event.locals.session !== null;
 
 	const path = event.url.pathname;
-	if (under(path, '/api') && !SELF_AUTHENTICATED_APIS.some((p) => under(path, p)) && !event.locals.authed) {
-		return new Response('Unauthorized', { status: 401 });
+	if (under(path, '/api') && !SELF_AUTHENTICATED_APIS.some((p) => under(path, p))) {
+		if (!event.locals.authed) return new Response('Unauthorized', { status: 401 });
+		// The cross-site form check covers form posts only; a JSON or binary
+		// write riding the cookie from another site is refused here.
+		const read = event.request.method === 'GET' || event.request.method === 'HEAD';
+		if (!read && !sameOrigin(event.request)) return Response.json({ message: CROSS_ORIGIN }, { status: 403 });
 	}
 	return resolve(event);
 };

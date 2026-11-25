@@ -1,7 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { FULL_ONLY, isFull } from '$lib/auth/guard.server';
-import { sameOrigin } from '$lib/server/origin';
 import { beginRegistration } from '$lib/auth/webauthn.server';
 import { bindings } from '$lib/server/bindings';
 
@@ -15,7 +14,6 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const env = bindings(platform);
 	// A limited session must not be able to plant its own passkey.
 	if (!isFull(locals)) error(403, FULL_ONLY);
-	if (!sameOrigin(request)) error(403, 'Cross-origin request refused.');
 
 	const url = new URL(request.url);
 	const options = await beginRegistration(env, url.hostname, 'ij5.dev');

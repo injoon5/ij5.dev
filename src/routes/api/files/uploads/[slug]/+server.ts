@@ -3,7 +3,6 @@ import type { RequestHandler } from './$types';
 import { cleanName, fileKey, recordFile } from '$lib/files/files.server';
 import { endOfDay } from '$lib/expiry';
 import { slugOwner } from '$lib/slugs/slugs.server';
-import { sameOrigin } from '$lib/server/origin';
 import { MAX_PARTS, uploadLimits } from '$lib/files/uploads';
 import { bindings } from '$lib/server/bindings';
 
@@ -25,7 +24,6 @@ const fail = (status: number, message: string) => json({ message }, { status });
 
 export const PUT: RequestHandler = async ({ request, params, platform, url }) => {
 	const env = bindings(platform);
-	if (!sameOrigin(request)) return fail(403, 'Cross-origin request refused.');
 
 	const uploadId = url.searchParams.get('uploadId') ?? '';
 	const part = Number(url.searchParams.get('part'));
@@ -58,7 +56,6 @@ export const PUT: RequestHandler = async ({ request, params, platform, url }) =>
 
 export const POST: RequestHandler = async ({ request, params, platform }) => {
 	const env = bindings(platform);
-	if (!sameOrigin(request)) return fail(403, 'Cross-origin request refused.');
 
 	let body: { uploadId?: unknown; parts?: unknown; name?: unknown; expires?: unknown };
 	try {
@@ -106,7 +103,6 @@ export const POST: RequestHandler = async ({ request, params, platform }) => {
 
 export const DELETE: RequestHandler = async ({ request, params, platform, url }) => {
 	const env = bindings(platform);
-	if (!sameOrigin(request)) return fail(403, 'Cross-origin request refused.');
 
 	const uploadId = url.searchParams.get('uploadId') ?? '';
 	if (!uploadId) return fail(400, 'Missing upload.');

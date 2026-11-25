@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { bindings } from '$lib/server/bindings';
 import { IMAGE_FORMATS, type ImageMime } from '$lib/home/assetKeys';
+import { storeAsset } from '$lib/home/assets.server';
 
 /**
  * Image upload: an endpoint rather than a form action, because the body is
@@ -34,21 +35,9 @@ const SIGNATURES: Record<ImageMime, (b: Uint8Array) => boolean> = {
 		b[8] === 0x61 && b[9] === 0x76 && b[10] === 0x69 && (b[11] === 0x66 || b[11] === 0x73)
 };
 
-const hex = (buffer: ArrayBuffer) =>
-	Array.from(new Uint8Array(buffer))
-		.map((b) => b.toString(16).padStart(2, '0'))
-		.join('');
-
 export const POST: RequestHandler = async ({ request, platform }) => {
 	const env = bindings(platform);
 
-	// The hook's cross-site check only covers form-encoded POSTs, so a
-	// binary upload from another origin would otherwise sail through on the
-	// session cookie alone.
-	const origin = request.headers.get('origin');
-	if (!origin || origin !== new URL(request.url).origin) {
-		error(403, 'Cross-origin upload refused.');
-	}
 
 	const declared = Number(request.headers.get('content-length') ?? 0);
 	if (declared > MAX_BYTES) error(413, 'Images are capped at 5 MB.');
@@ -61,31 +50,10 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	const format = IMAGE_FORMATS.find((f) => SIGNATURES[f.mime](head));
 	if (!format) error(415, 'PNG, JPEG, WebP or AVIF only.');
 
-	// Content-addressed: the same image twice dedupes for free, and the key can
-	// never go stale, so caching it is unconditional.
-	const digest = await crypto.subtle.digest('SHA-256', body);
-	const key = `img/${hex(digest).slice(0, 16)}.${format.ext}`;
-
-	const existing = await env.DB.prepare(`SELECT key FROM assets WHERE key = ?`).bind(key).first();
-	if (existing) {
-		return json({ key, url: `${env.ASSETS_ORIGIN}/${key}`, deduped: true });
-	}
-
 	const w = Number(request.headers.get('x-image-width')) || null;
 	const h = Number(request.headers.get('x-image-height')) || null;
-
-	// Setting `cacheControl` at upload time makes serving a pure passthrough:
-	// the bucket's custom domain answers without the Worker ever running.
-	await env.BUCKET.put(key, body, {
-		httpMetadata: {
-			contentType: format.mime,
-			cacheControl: 'public, max-age=31536000, immutable'
-		}
-	});
-
-	await env.DB.prepare(`INSERT INTO assets (key, mime, bytes, w, h, at) VALUES (?, ?, ?, ?, ?, ?)`)
-		.bind(key, format.mime, body.byteLength, w, h, Date.now())
-		.run();
+	const { key, deduped } = await storeAsset(env, body, format, { w, h });
+	if (deduped) return json({ key, url: `${env.ASSETS_ORIGIN}/${key}`, deduped });
 
 	return json({ key, url: `${env.ASSETS_ORIGIN}/${key}`, w, h });
 };

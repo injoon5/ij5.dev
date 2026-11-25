@@ -2,7 +2,7 @@ import type { Handle } from '@sveltejs/kit';
 import { track } from '$lib/analytics/track.server';
 import { HOME_SLUG } from '$lib/analytics/visit';
 import { afterResponse } from '$lib/server/bindings';
-import { HOME_KEYS, type HomeDoc } from './types';
+import { readPublished } from './home.server';
 
 const DEV = import.meta.env.DEV;
 // Replaced at build time (`vite.config.ts`) with the commit being deployed, so
@@ -41,7 +41,7 @@ export const serveHome: Handle = async ({ event, resolve }) => {
 	// Before the cache check: a cache hit is still a visit.
 	track(event, { slug: HOME_SLUG, kind: 'home' });
 
-	const doc = await platform.env.KV.get<HomeDoc>(HOME_KEYS.published, { type: 'json', cacheTtl: 60 }).catch(() => null);
+	const doc = await readPublished(platform.env).catch(() => null);
 	if (!doc) return resolve(event);
 	event.locals.home = doc;
 	// `vite dev` re-renders every time, or template edits would be invisible

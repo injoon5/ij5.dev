@@ -13,10 +13,9 @@ import {
 	revert,
 	syncDraft
 } from '$lib/home/home.server';
-import { docKeys, isReferenced, releaseAssets, removeAsset } from '$lib/home/assets.server';
+import { docKeys, isReferenced, listAssets, releaseAssets, removeAsset } from '$lib/home/assets.server';
 import { imageKeysIn, isAssetKey } from '$lib/home/assetKeys';
 import { parseLines } from '$lib/home/lines';
-import type { AssetRow } from '$lib/home/types';
 import { bindings } from '$lib/server/bindings';
 
 const noEnv = () => fail(500, { error: 'No platform bindings.' });
@@ -36,9 +35,7 @@ export const load: PageServerLoad = async ({ platform }) => {
 		readDraft(env),
 		readPublished(env),
 		hasPrevious(env),
-		env.DB.prepare(
-			`SELECT key, mime, bytes, w, h, at FROM assets ORDER BY at DESC LIMIT 200`
-		).all<AssetRow>()
+		listAssets(env)
 	]);
 
 	return {
@@ -51,7 +48,7 @@ export const load: PageServerLoad = async ({ platform }) => {
 			JSON.stringify(draft.profile) !== JSON.stringify(published?.profile ?? null),
 		canRevert,
 		assetsOrigin: env.ASSETS_ORIGIN ?? '',
-		files: files.results
+		files
 	};
 };
 
