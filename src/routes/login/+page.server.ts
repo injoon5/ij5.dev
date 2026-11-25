@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
-import type { Actions, PageServerLoad } from './$types';
+import type { Action, Actions, PageServerLoad } from './$types';
+import type { Env } from '$lib/server/bindings';
 import { clientIp } from '$lib/server/request';
 import { eq, sha256 } from '$lib/server/crypto';
 import { safeNext } from '$lib/auth/next';
@@ -40,64 +41,46 @@ export const load: PageServerLoad = async ({ locals, url, platform }) => {
 	};
 };
 
-function refuse(o: Extract<Outcome, { ok: false }>, door: string) {
-	return fail(o.status, { door, error: o.error, retryAt: (o.retryAt ?? null) as number | null });
+type Door = 'token' | 'password' | 'recovery';
+type Field = (name: string) => string;
+
+/**
+ * Runs one typed door: the browser check (for the password doors), the
+ * door's own check, then the session and the way back to `next`.
+ */
+function door(name: Door, check: (env: Env, request: Request, field: Field) => Promise<Outcome>): Action {
+	return async (event) => {
+		const { request, platform, url } = event;
+		const env = bindings(platform);
+		const form = await request.formData();
+		const field: Field = (k) => String(form.get(k) ?? '');
+
+		const human = name === 'token' || (await turnstileOk(env, field('cf-turnstile-response'), clientIp(request)));
+		const outcome = human ? await check(env, request, field) : refusal('The browser check did not pass. Try again.', 400);
+		if (!outcome.ok) return fail(outcome.status, { door: name, error: outcome.error, retryAt: outcome.retryAt });
+
+		await startSession(event, outcome.strength, outcome.method);
+		redirect(303, safeNext(url.searchParams.get('next')));
+	};
 }
 
+const refusal = (error: string, status: number): Outcome => ({ ok: false, status, error, retryAt: null });
+
 export const actions: Actions = {
-	token: async (event) => {
-		const { request, platform, url } = event;
-		const env = bindings(platform);
-		if (!env?.AUTH_HASH) return fail(500, { door: 'token', error: 'Auth is not configured on this deployment.', retryAt: null });
-
-		const token = String((await request.formData()).get('token') ?? '');
-		if (!token) return fail(400, { door: 'token', error: 'Enter your token.', retryAt: null });
-
+	token: door('token', async (env, _request, field) => {
+		if (!env.AUTH_HASH) return refusal('Auth is not configured on this deployment.', 500);
+		const token = field('token');
+		if (!token) return refusal('Enter your token.', 400);
 		// Constant-time, and the token itself is never stored or logged.
-		if (!eq(await sha256(token), env.AUTH_HASH)) {
-			return fail(401, { door: 'token', error: 'That token is not right.', retryAt: null });
-		}
+		if (!eq(await sha256(token), env.AUTH_HASH)) return refusal('That token is not right.', 401);
+		return { ok: true, strength: 'full', method: 'token' };
+	}),
 
-		await startSession(event, 'full', 'token');
-		redirect(303, safeNext(url.searchParams.get('next')));
-	},
+	password: door('password', (env, request, field) =>
+		passwordAndPuzzle(env, request, { password: field('password'), answer: field('answer'), challenge: field('challenge') })
+	),
 
-	password: async (event) => {
-		const { request, platform, url } = event;
-		const env = bindings(platform);
-
-		const form = await request.formData();
-		if (!(await turnstileOk(env, String(form.get('cf-turnstile-response') ?? ''), clientIp(request)))) {
-			return fail(400, { door: 'password', error: 'The browser check did not pass. Try again.', retryAt: null });
-		}
-
-		const outcome = await passwordAndPuzzle(env, request, {
-			password: String(form.get('password') ?? ''),
-			answer: String(form.get('answer') ?? ''),
-			challenge: String(form.get('challenge') ?? '')
-		});
-		if (!outcome.ok) return refuse(outcome, 'password');
-
-		await startSession(event, outcome.strength, outcome.method);
-		redirect(303, safeNext(url.searchParams.get('next')));
-	},
-
-	recovery: async (event) => {
-		const { request, platform, url } = event;
-		const env = bindings(platform);
-
-		const form = await request.formData();
-		if (!(await turnstileOk(env, String(form.get('cf-turnstile-response') ?? ''), clientIp(request)))) {
-			return fail(400, { door: 'recovery', error: 'The browser check did not pass. Try again.', retryAt: null });
-		}
-
-		const outcome = await passwordAndRecoveryCode(env, request, {
-			password: String(form.get('password') ?? ''),
-			code: String(form.get('code') ?? '')
-		});
-		if (!outcome.ok) return refuse(outcome, 'recovery');
-
-		await startSession(event, outcome.strength, outcome.method);
-		redirect(303, safeNext(url.searchParams.get('next')));
-	}
+	recovery: door('recovery', (env, request, field) =>
+		passwordAndRecoveryCode(env, request, { password: field('password'), code: field('code') })
+	)
 };
