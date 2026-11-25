@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asciiName, cleanName, contentDisposition, parseRange } from './files.server';
+import { cleanName, contentDisposition, parseRange } from './files.server';
 
 /**
  * The pure parts of file sharing: a filename must survive its trip into a Content-Disposition
@@ -15,7 +15,6 @@ describe('contentDisposition', () => {
 
 	it('carries the real name in the RFC 5987 form', () => {
 		expect(contentDisposition('보고서.pdf')).toContain(`filename*=UTF-8''${encodeURIComponent('보고서.pdf')}`);
-		expect(asciiName('보고서.pdf')).toBe('___.pdf');
 	});
 });
 

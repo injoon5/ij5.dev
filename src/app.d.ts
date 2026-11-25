@@ -12,11 +12,12 @@ declare global {
 		interface Locals {
 			/** The signed-in session, if the cookie names a live one. */
 			session: import('$lib/auth/sessions.server').SessionRow | null;
-			/** `session !== null`, kept for the many places that only ask that. */
+			/** `session !== null`, set alongside it by the session hook. */
 			authed: boolean;
 			/**
-			 * Set by the hook on `/` so the page load does not pay a second KV
-			 * read for the document the hook just read to build the cache key.
+			 * Set by `serveHome` (`$lib/home/cache.server`) on `/` so the page load
+			 * does not pay a second KV read for the document it just read to build
+			 * the cache key.
 			 */
 			home?: import('$lib/types').HomeDoc | null;
 		}
@@ -49,7 +50,7 @@ declare global {
 				TURNSTILE_SITE_KEY?: string;
 				TURNSTILE_SECRET?: string;
 
-				/** OpenID Connect for Cloudflare Access (`$lib/server/oidc`). */
+				/** OpenID Connect for Cloudflare Access (`$lib/auth/oidc.server`). */
 				OIDC_CLIENT_ID?: string;
 				OIDC_REDIRECT_URI?: string;
 				/** base64(SHA-256(client secret)). */
@@ -67,8 +68,9 @@ declare global {
 
 				/**
 				 * Live-widget credentials. Every one is optional, and a widget
-				 * whose credential is absent is *disabled* rather than broken:
-				 * `isLiveAvailable` refuses to schedule it, no request is made,
+				 * whose credential is absent is *disabled* rather than broken: its
+				 * fetcher's `available` check (`$lib/home/live.server`) refuses to
+				 * schedule it, no request is made,
 				 * and the widget renders the fallback it declares. The site runs
 				 * with none of these set.
 				 */
@@ -78,7 +80,7 @@ declare global {
 				GITHUB_TOKEN?: string;
 
 				/** The largest part of a file upload, in MiB — keep it under the
-				 *  zone plan's request-body limit (`$lib/uploads`). Default 90. */
+				 *  zone plan's request-body limit (`$lib/files/uploads`). Default 90. */
 				UPLOAD_PART_MIB?: string;
 
 			};

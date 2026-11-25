@@ -7,12 +7,9 @@ import type { Profile } from '$lib/home/types';
 import { bindings, afterResponse } from '$lib/server/bindings';
 
 /**
- * The Open Graph image for `/`, rendered on demand from the published profile
- * so the card always matches the masthead. Like the homepage hook it is
- * version-keyed — `og/v${v}` in the edge cache — and the page references it as
- * `/og.png?v=${v}`, which is what busts Twitter and Facebook's own image caches
- * on publish. Everything here is importable, so the card is one generation per
- * version per colo, never one per crawler.
+ * Rendered on demand from the published profile so the card always matches the
+ * masthead. Like the homepage it is version-keyed in the edge cache, so the
+ * card is one generation per version per colo, never one per crawler.
  */
 
 const DEV = import.meta.env.DEV;
@@ -21,8 +18,7 @@ const DEV = import.meta.env.DEV;
 // card must not keep serving the old one until the next publish.
 const ogCacheKey = (v: number) => new Request(`https://cache.internal/og/v${v}/b${import.meta.env.VITE_BUILD_ID}`);
 
-/** The version-keyed `/og.png?v=` URL busts platform caches on publish; the
- *  browser and CDN revalidate, so the bare `/og.png` never goes stale. */
+/** The browser and CDN revalidate, so the bare `/og.png` never goes stale. */
 const png = (body: BodyInit | null, v: number) =>
 	new Response(body, {
 		status: 200,

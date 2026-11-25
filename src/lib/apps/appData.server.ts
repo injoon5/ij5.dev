@@ -33,7 +33,6 @@ const bytes = utf8Bytes;
 
 export type DataEntry = { key: string; bytes: number; updated_at: number; rev: number };
 
-/** Live keys with their sizes, for limit checks and the admin's Data tab. */
 export async function listEntries(env: Env, slug: string): Promise<DataEntry[]> {
 	const { results } = await env.DB.prepare(
 		`SELECT key, length(CAST(value AS BLOB)) AS bytes, updated_at, rev FROM app_data
@@ -138,16 +137,12 @@ export async function writeData(
 				   value = excluded.value, rev = excluded.rev, updated_at = excluded.updated_at`
 			).bind(slug, key, json, now)
 		),
-		// Deleting a key that is not there writes nothing — a tombstone for
-		// a key no device ever had would only be noise in `?since=`.
 		...del.map((key) =>
 			env.DB.prepare(
 				`UPDATE app_data SET value = NULL, rev = (SELECT rev FROM app_data_counter WHERE one = 1), updated_at = ?
 				 WHERE slug = ? AND key = ? AND value IS NOT NULL`
 			).bind(now, slug, key)
 		),
-		// After the writes, so the newest tombstone can never be the one
-		// purged out from under a write in the same batch.
 		env.DB.prepare(`DELETE FROM app_data WHERE slug = ? AND value IS NULL AND updated_at < ?`).bind(
 			slug,
 			now - TOMBSTONE_TTL_MS
@@ -157,5 +152,4 @@ export async function writeData(
 	return { ok: true, rev: (results[0].results[0] as { rev: number }).rev };
 }
 
-/** Every entry an app has, as one statement of the app's own delete batch. */
 export const forgetAllData = (env: Env, slug: string) => env.DB.prepare(`DELETE FROM app_data WHERE slug = ?`).bind(slug);

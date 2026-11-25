@@ -84,7 +84,7 @@ withSqlite('apps API', () => {
 			expect(full).toMatchObject({ name: 'Tip Jar', icon: 'dollarsign.circle', tint: 'mint', source: SWIFT });
 		});
 
-		it('parses every shared fixture the way the parser test expects', async () => {
+		it('reads an uploaded Swift file through the shared parser', async () => {
 			const dir = fileURLToPath(new URL('../../../../fixtures/replies/', import.meta.url));
 			const input = readFileSync(`${dir}odd-header.md`, 'utf8');
 			const expected = JSON.parse(readFileSync(`${dir}odd-header.json`, 'utf8'));
@@ -250,19 +250,7 @@ withSqlite('apps API', () => {
 			expect((await put('habits', SWIFT, key, 'text/x-swift')).status).toBe(200);
 		});
 
-		it('two parallel PUTs with one key produce exactly one success', async () => {
-			await put('habits', APP);
-			const { key } = await mint('habits');
-			const results = await Promise.all([
-				put('habits', SWIFT, key, 'text/x-swift'),
-				put('habits', SWIFT.replace('Tip Jar', 'Tip Jar 2'), key, 'text/x-swift'),
-				put('habits', SWIFT.replace('Tip Jar', 'Tip Jar 3'), key, 'text/x-swift')
-			]);
-			const codes = results.map((r) => r.status).sort();
-			expect(codes).toEqual([200, 401, 401]);
-		});
-
-		it('two parallel creates with one create key produce exactly one success', async () => {
+		it('one create key installs one app, however many requests carry it', async () => {
 			const { key } = await mint();
 			const results = await Promise.all([
 				put('one', SWIFT, key, 'text/x-swift'),

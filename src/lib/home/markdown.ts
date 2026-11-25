@@ -35,8 +35,6 @@ export type RenderCtx = {
 
 type RenderEnv = RenderCtx & { needsScript: boolean };
 
-/* ------------------------------------------------------------------ helpers */
-
 function escapeHtml(s: string): string {
 	return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -62,8 +60,6 @@ function parseContribUser(line: string, fallback: string): string {
 
 const contribId = (user: string) => `grass:${user}`;
 
-/* ------------------------------------------------------------- link buttons */
-
 type LinkItem = { icon: string; label: string; href: string; sub: string };
 
 function parseLinkRow(line: string): LinkItem | null {
@@ -82,8 +78,8 @@ const ARROW =
 /**
  * A soft colour for each icon's chip. The marks are single-hue brands, so the
  * chip borrows a muted version of that hue — a row of these reads as a set of
- * stickers rather than a column of grey squares. An unlisted icon lands on the
- * house accent. The palette itself lives in `app.css` (`[data-tint]`).
+ * stickers rather than a column of grey squares. The palette itself lives in
+ * `app.css` (`[data-tint]`).
  */
 const LINK_TINT: Record<string, string> = {
 	github: 'zinc',
@@ -127,8 +123,6 @@ function renderLinks(content: string): string {
 	return `<nav class="link-buttons" aria-label="Links">${buttons}</nav>\n`;
 }
 
-/* --------------------------------------------------------- photo gallery */
-
 type GalleryItem = { src: string; caption: string; dims: string };
 
 function parseGalleryRow(line: string, e: RenderEnv): GalleryItem | null {
@@ -145,8 +139,8 @@ function parseGalleryRow(line: string, e: RenderEnv): GalleryItem | null {
 		return null;
 	}
 
-	// Gallery images are images like any other: they want the lazy loader and
-	// the delegated error handler in w.js.
+	// Gallery images want the delegated error handler in w.js, like any other
+	// image.
 	e.needsScript = true;
 
 	return { src, caption, dims };
@@ -207,8 +201,6 @@ function galleryRule(state: any, startLine: number, endLine: number, silent: boo
 	state.line = closed ? next + 1 : next;
 	return true;
 }
-
-/* ------------------------------------------------- markdown-it rule wiring */
 
 /* markdown-it's block/inline state and tokens are loosely typed here on
    purpose: the deep type paths move between versions, and the public surface of
@@ -336,7 +328,6 @@ const defaultLinkOpen =
 
 md.renderer.rules.link_open = (tokens: any, idx: number, options: any, env: any, self: any) => {
 	const href: string = tokens[idx].attrGet('href') ?? '';
-	// External links open away from the page and never leak the opener.
 	if (/^https?:\/\//i.test(href)) {
 		tokens[idx].attrSet('target', '_blank');
 		tokens[idx].attrSet('rel', 'noopener');
@@ -346,9 +337,6 @@ md.renderer.rules.link_open = (tokens: any, idx: number, options: any, env: any,
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-/* --------------------------------------------------------------- public API */
-
-/** Render Markdown to sanitized HTML plus whether the page needs `/w.js`. */
 export function renderMarkdown(
 	src: string | null | undefined,
 	ctx: RenderCtx
@@ -359,9 +347,8 @@ export function renderMarkdown(
 }
 
 /**
- * The live sources a document needs, discovered from its shortcodes. The server
- * reads/refreshes these before rendering; `renderMarkdown` reads their data back
- * out of `ctx.live` keyed by the same id.
+ * The server refreshes these before rendering; `renderMarkdown` reads their
+ * data back out of `ctx.live` keyed by the same id.
  */
 export function findLiveRequests(src: string | null | undefined): LiveRequest[] {
 	const out = new Map<string, LiveRequest>();

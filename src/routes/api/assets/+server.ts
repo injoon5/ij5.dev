@@ -4,8 +4,8 @@ import { bindings } from '$lib/server/bindings';
 import { IMAGE_FORMATS, type ImageMime } from '$lib/home/assetKeys';
 
 /**
- * Binary upload. The one place a `+server.ts` endpoint beats a form
- * action, because the body is binary rather than form-encoded.
+ * Image upload: an endpoint rather than a form action, because the body is
+ * binary rather than form-encoded.
  *
  * Small files, admin-only, low volume: no presigning, no multipart, no
  * versioning. The session check happens in the hook, which guards everything
@@ -42,7 +42,7 @@ const hex = (buffer: ArrayBuffer) =>
 export const POST: RequestHandler = async ({ request, platform }) => {
 	const env = bindings(platform);
 
-	// SvelteKit's built-in CSRF protection only covers form-encoded POSTs, so a
+	// The hook's cross-site check only covers form-encoded POSTs, so a
 	// binary upload from another origin would otherwise sail through on the
 	// session cookie alone.
 	const origin = request.headers.get('origin');

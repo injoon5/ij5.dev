@@ -36,8 +36,7 @@
 	const SIDEBAR = [[links, pastes, files], [home, apps, analytics], [api, security]];
 
 	// A phone gets a tab bar, and a tab bar holds five: the four screens used
-	// on the go, then "More" for the rest. Eight icons in a row was a bar of
-	// unlabelled glyphs nobody could hit or tell apart.
+	// on the go, then "More" for the rest.
 	const TABS = [links, pastes, files, analytics];
 	const MORE = [home, apps, api, security];
 
@@ -64,8 +63,7 @@
 	const sideLink =
 		'flex h-8 items-center gap-2.5 rounded-[var(--radius-ui-sm)] px-2.5 text-sm font-medium text-text-muted transition-colors duration-150 ease-out hover:bg-row-active hover:text-text aria-[current=page]:bg-surface aria-[current=page]:text-text aria-[current=page]:shadow-[0_0_0_1px_var(--border-subtle),0_1px_2px_oklch(0_0_0/0.04)] pointer-coarse:h-11';
 
-	// Monochrome: the current tab is full-strength ink, the rest recede. The
-	// one accent stays reserved for the primary action and focus.
+	// Monochrome: the accent stays reserved for the primary action and focus.
 	const tab =
 		'flex min-h-12 flex-1 flex-col items-center justify-center gap-1 pt-0.5 text-[0.625rem] font-medium text-text-subtle transition-colors duration-150 ease-out active:text-text-muted aria-[current=page]:text-text';
 
@@ -85,7 +83,6 @@
 		Skip to content
 	</a>
 
-	<!-- The sidebar, from `md`. -->
 	<nav
 		aria-label="Admin"
 		class="sticky top-0 hidden h-dvh flex-col px-3 pt-3.5 pb-3 md:flex"
@@ -135,10 +132,8 @@
 	</nav>
 
 	<!--
-		The canvas. On a phone it is the screen itself, the same white surface
-		the desktop panel is. From `md` it is an inset panel that scrolls on
-		its own, so the sidebar holds still and a sticky header sticks to the
-		panel rather than sliding under the window's edge.
+		From `md` the canvas scrolls on its own, so the sidebar holds still and a
+		sticky header sticks to the panel rather than sliding under the window's edge.
 	-->
 	<main
 		id="content"
@@ -146,7 +141,6 @@
 		class="min-w-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] focus:outline-none md:m-2 md:ms-0 md:h-[calc(100dvh-1rem)] md:overflow-y-auto md:rounded-[var(--radius-ui-lg)] md:border md:border-border-subtle md:bg-surface md:pb-0 md:shadow-[0_1px_3px_oklch(0_0_0/0.03)]"
 	>
 		{#if data.session.strength === 'limited'}
-			<!-- Password + puzzle: say plainly what this session cannot do. -->
 			<p
 				role="status"
 				class="border-b border-border-subtle bg-surface-sunken px-4 py-2 text-xs text-pretty text-text-muted md:px-6"
@@ -158,7 +152,6 @@
 		{@render children()}
 	</main>
 
-	<!-- The tab bar, below `md`. -->
 	<nav
 		aria-label="Admin"
 		class="fixed inset-x-0 bottom-0 z-30 flex border-t border-border-subtle bg-surface px-1 pb-[env(safe-area-inset-bottom)] md:hidden"
@@ -184,10 +177,9 @@
 </div>
 
 <!--
-	"More": a compact menu that grows out of the More tab — origin bottom
-	right, where the finger is — with the rest of the destinations and
-	sign-out under a separator. Same open/close mechanics as the analytics
-	sheet: `transition-discrete` and `starting:`, no JS beyond showing it.
+	"More" grows out of the More tab — origin bottom right, where the finger
+	is. Same open/close mechanics as BarList's sheet: `transition-discrete` and
+	`starting:`, no JS beyond showing it.
 -->
 <dialog
 	bind:this={sheet}

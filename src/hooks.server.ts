@@ -11,7 +11,7 @@ import { securityHeaders } from '$lib/server/headers';
  * Redirects skip the security headers (a cached response's headers are
  * immutable, and a 302 has no document to protect).
  *
- * Everything imported here is evaluated on every request, redirects included,
- * so these modules keep their imports small.
+ * Everything imported here loads before the first redirect can answer, so
+ * these modules keep their imports small.
  */
 export const handle = sequence(rejectCrossSiteForms, serveRedirect, securityHeaders, serveHome, authenticate);

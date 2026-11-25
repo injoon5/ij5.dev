@@ -1,7 +1,7 @@
 /**
  * Cloudflare Turnstile in front of the password doors, when configured.
  *
- * The lockout in `throttle.ts` is what bounds guessing; Turnstile makes each
+ * The lockout in `throttle.server.ts` is what bounds guessing; Turnstile makes each
  * guess cost a real browser, which mostly protects the *global* lock from
  * being tripped by a script to keep you out. Optional: with neither
  * `TURNSTILE_SITE_KEY` nor `TURNSTILE_SECRET` set, the doors work without it.

@@ -1,6 +1,6 @@
 /**
  * Cloudflare Turnstile as a Svelte action, for the login page's password doors
- * (`$lib/server/turnstile`). The widget writes its token into a hidden
+ * (`$lib/auth/turnstile.server`). The widget writes its token into a hidden
  * `cf-turnstile-response` input inside the node, so the form posts it with no
  * extra wiring. A token is single-use: bump `attempt` after every submission
  * and the widget fetches a new one.

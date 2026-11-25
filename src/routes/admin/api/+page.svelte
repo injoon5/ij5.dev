@@ -5,11 +5,10 @@
 	import { cardFlush, cardTitle } from '$lib/ui/styles';
 
 	/**
-	 * Reference for the shortener and Shelf APIs, written against the routes
-	 * rather than generated from them — a handful of endpoints that change
-	 * about once a year do not earn a generator. Every example is copy-pasteable, addresses the
-	 * host you are reading it on (so a preview deployment never hands you
-	 * production curl lines), and none contains a real token.
+	 * Reference for the shortener and Shelf APIs, written by hand against the
+	 * routes. Every example is copy-pasteable, addresses the host you are
+	 * reading it on (so a preview deployment never hands you production curl
+	 * lines), and none contains a real token.
 	 */
 
 	let origin = $derived(page.url.origin);
@@ -173,7 +172,6 @@
 <svelte:head><title>API</title></svelte:head>
 
 {#snippet code(text: string)}
-	<!-- Long lines scroll inside the block rather than widening the page. -->
 	<div class="relative">
 		<pre
 			class="overflow-x-auto rounded-[var(--radius-ui)] bg-surface-sunken py-3 ps-4 pe-12 font-mono text-[12.5px] leading-[1.65] whitespace-pre">{text}</pre>

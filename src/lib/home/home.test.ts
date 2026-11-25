@@ -9,6 +9,7 @@ import {
 	syncDraft
 } from './home.server';
 import type { HomeDoc, Profile } from '$lib/home/types';
+import { d1, migratedDb, sqlite } from '$lib/server/testing/d1';
 
 /**
  * The publish invariant behind the edge cache: a new document is a new
@@ -166,7 +167,7 @@ describe('clearCache', () => {
 	});
 });
 
-describe('syncDraft', () => {
+(sqlite ? describe : describe.skip)('syncDraft', () => {
 	it('never advances the published version — only publish does that', async () => {
 		const { store, env } = fakeEnv();
 		store.set('home:draft', JSON.stringify(doc(0, 'first', 'a')));
@@ -174,20 +175,10 @@ describe('syncDraft', () => {
 
 		const before = (await readPublished(env))!.v;
 
-		// D1 is the source of truth for a sync, so stand one in for this call. The
-		// new loader reads a single profile row (content included) with `.first()`.
-		(env as { DB: unknown }).DB = {
-			prepare: () => ({
-				first: async () => ({
-					name: 'edited',
-					bio: null,
-					tagline: null,
-					avatar: null,
-					links: '[]',
-					content: 'edited body'
-				})
-			})
-		};
+		// D1 is the source of truth for a sync.
+		const db = migratedDb();
+		db.prepare(`UPDATE profile SET name = 'edited', content = 'edited body' WHERE id = 1`).run();
+		(env as { DB: unknown }).DB = d1(db);
 
 		const draft = await syncDraft(env);
 

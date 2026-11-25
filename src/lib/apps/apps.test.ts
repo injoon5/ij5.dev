@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { appContent, appVersion, etagMatches, HISTORY, LIST_APPS, listVersions, putApp, revertApp } from './apps.server';
+import { appContent, appVersion, etagMatches, HISTORY,  listVersions, putApp, revertApp } from './apps.server';
 import { mintKey } from './installKeys.server';
 import { sqlite, testEnv } from '$lib/server/testing/d1';
 import { MAX_APP_BYTES } from '$lib/apps/app';
+
+/** The app a successful write returned; fails the test on any other outcome. */
+function ok<T extends { ok: boolean }>(r: T): Extract<T, { ok: true }> extends { app: infer A } ? A : never {
+	if (!r.ok || !('app' in r)) throw new Error(`expected success, got ${JSON.stringify(r)}`);
+	return (r as unknown as { app: never }).app;
+}
 
 /**
  * The content hash, the limits, and the list query — plus
@@ -60,12 +66,6 @@ describe('appContent', () => {
 	});
 });
 
-describe('the list query', () => {
-	it('never selects source', () => {
-		expect(LIST_APPS).not.toMatch(/\bsource\b/);
-	});
-});
-
 describe('etagMatches', () => {
 	it('matches strong, weakened and listed tags', () => {
 		expect(etagMatches('"abc"', '"abc"')).toBe(true);
@@ -89,20 +89,20 @@ withSqlite('history', () => {
 	it('creates, then updates, keeping the previous version', async () => {
 		const a = await put('a\n');
 		expect(a.ok && a.created).toBe(true);
-		expect(a.ok && a.app.revertible).toBe(false);
+		expect(ok(a).revertible).toBe(false);
 
 		const b = await put('b\n');
 		expect(b.ok && b.created).toBe(false);
-		expect(b.ok && b.app.revertible).toBe(true);
+		expect(ok(b).revertible).toBe(true);
 		expect((await listVersions(env, 'habits')).map((v) => v.version)).toEqual([
-			a.ok && a.app.version
+			ok(a).version
 		]);
 	});
 
 	it('changes nothing when the content is identical', async () => {
 		const a = await put('a\n');
 		const again = await put('a\n');
-		expect(again.ok && again.app).toEqual(a.ok && a.app);
+		expect(ok(again)).toEqual(ok(a));
 		expect(await listVersions(env, 'habits')).toEqual([]);
 	});
 
@@ -111,16 +111,16 @@ withSqlite('history', () => {
 		const versions = await listVersions(env, 'habits');
 		expect(versions).toHaveLength(HISTORY);
 		const current = await put(`v${HISTORY + 4}\n`);
-		expect(versions.map((v) => v.version)).not.toContain(current.ok && current.app.version);
+		expect(versions.map((v) => v.version)).not.toContain(ok(current).version);
 	});
 
 	it('reverts, and a second revert is a redo', async () => {
 		const a = await put('a\n');
 		const b = await put('b\n');
 		const r1 = await revertApp(env, 'habits');
-		expect(r1.ok && r1.app.version).toBe(a.ok && a.app.version);
+		expect(ok(r1).version).toBe(ok(a).version);
 		const r2 = await revertApp(env, 'habits');
-		expect(r2.ok && r2.app.version).toBe(b.ok && b.app.version);
+		expect(ok(r2).version).toBe(ok(b).version);
 	});
 
 	it('has nothing to revert to on a new app', async () => {

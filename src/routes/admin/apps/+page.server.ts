@@ -19,9 +19,9 @@ import { bindings } from '$lib/server/bindings';
 /**
  * Shelf's apps in the admin: a master–detail list, an
  * editor per app with its history and its data, and New App, which fills
- * itself from a pasted chat reply. It writes through the same `apps.ts` and
- * `appData.ts` as the API, so a save here is exactly a `PUT` with the admin
- * token — same version hash, same history row.
+ * itself from a pasted chat reply. It writes through the same
+ * `apps.server.ts` and `appData.server.ts` as the API, so a save here is
+ * exactly a `PUT` with the admin token — same version hash, same history row.
  */
 
 const FIELDS = ['slug', 'name', 'icon', 'tint', 'source'] as const;
@@ -34,8 +34,6 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 	const apps = await listApps(env);
 	const selected = wanted && wanted !== 'new' ? await getApp(env, wanted) : null;
 
-	// Data belongs to a slug, not to an app row, so the tab works for data
-	// whose app was deleted with "keep data" too — but only via an app here.
 	const [versions, entries, value] = selected
 		? await Promise.all([
 				listVersions(env, selected.slug),

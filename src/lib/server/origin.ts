@@ -1,6 +1,6 @@
 /**
- * Whether a request was sent by a page on this same origin. SvelteKit's CSRF
- * protection only covers form-encoded posts; a JSON or binary request riding
+ * Whether a request was sent by a page on this same origin. The cross-site
+ * check in `csrf.ts` only covers form-encoded posts; a JSON or binary request riding
  * the session cookie from another site has to be refused by hand.
  */
 export function sameOrigin(request: Request): boolean {

@@ -5,8 +5,8 @@ import { bindings } from '$lib/server/bindings';
 
 /**
  * The OIDC token endpoint. Called by Cloudflare Access from its servers,
- * so it is the one form POST the hook's cross-site check lets through without
- * an Origin header — the client secret is its authentication instead.
+ * so the hook's cross-site check lets its form POST through without an
+ * Origin header — the client secret is its authentication instead.
  */
 
 const NO_STORE = { 'Cache-Control': 'no-store', Pragma: 'no-cache' };

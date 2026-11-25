@@ -23,7 +23,6 @@ const EXACT = new RegExp(`^${KEY}$`);
 
 export const isAssetKey = (v: unknown): v is string => typeof v === 'string' && EXACT.test(v);
 
-/** Every asset key a document mentions. */
 export function imageKeysIn(src: string | null | undefined): string[] {
 	return [...new Set((src ?? '').match(new RegExp(KEY, 'g')) ?? [])];
 }

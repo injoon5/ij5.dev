@@ -29,13 +29,11 @@
 		true
 	);
 
-	// Contribution graph: fade the side with the hidden columns, so the fade
-	// appears and disappears with the scroll position instead of staying
-	// painted on both edges forever. Geometry, not `scrollLeft`, because RTL
-	// scroll offsets disagree between engines. The mask is written here, not
-	// in CSS, because a per-side alpha wants a single gradient that no
-	// `mask-composite` expression reproduced consistently across engines.
-	// One pass per graph: a page may carry more than one `::contributions`.
+	// Contribution graph: fade only the side with hidden columns. Geometry, not
+	// `scrollLeft`, because RTL scroll offsets disagree between engines. The
+	// mask is written here, not in CSS, because a per-side alpha wants a single
+	// gradient that no `mask-composite` expression reproduced consistently
+	// across engines.
 	var graphs = document.querySelectorAll('.contrib-scroll');
 	for (var i = 0; i < graphs.length; i++) wire(graphs[i]);
 
@@ -53,11 +51,7 @@
 			var s = (grass.getBoundingClientRect().left - grassGrid.getBoundingClientRect().left) / max;
 			if (s < 0) s = 0;
 			else if (s > 1) s = 1;
-			// Edge visibility, 1 = fully visible, 0 = faded out. Binary, so
-			// the fade is always the same full 0.75rem gradient and only its
-			// presence tracks the scroll: a side fades whenever columns are
-			// cut off there, and clears when the pan reaches its end. The
-			// epsilon absorbs sub-pixel geometry noise at the ends.
+			// The epsilon absorbs sub-pixel geometry noise at the ends.
 			var l = s > 0.01 ? 0 : 1;
 			var r = s < 0.99 ? 0 : 1;
 			var mask =
@@ -83,11 +77,9 @@
 				else if (event.deltaMode === 2) d *= window.innerHeight;
 				if (event.deltaX) d += event.deltaX;
 				if (d === 0) return;
-				// Only swallow the wheel while the pan actually moves. At the edge
-				// scrollLeft does not change, so the event is left to scroll the
-				// page instead of trapping it. Comparing before and after
-				// sidesteps the RTL scroll-offset disagreement between engines: it
-				// asks whether the pan moved, not which way the numbers run.
+				// Only swallow the wheel while the pan actually moves, so at the edge
+				// it scrolls the page instead. Comparing before and after sidesteps
+				// the RTL scroll-offset disagreement between engines.
 				var before = grass.scrollLeft;
 				grass.scrollLeft += d;
 				if (grass.scrollLeft !== before) event.preventDefault();

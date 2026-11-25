@@ -5,9 +5,8 @@ import { renderMarkdown, findLiveRequests } from '$lib/home/markdown';
 import { imageKeysIn } from '$lib/home/assetKeys';
 import { bindings, afterResponse } from '$lib/server/bindings';
 
-/** Intrinsic dimensions for the images the document references, so each `<img>`
- *  reserves its box before it loads and the page holds CLS 0. One query, only
- *  when the document actually has images. */
+/** Intrinsic dimensions, so each `<img>` reserves its box before it loads and
+ *  the page holds CLS 0. */
 async function loadDims(
 	env: App.Platform['env'],
 	keys: string[]
@@ -37,8 +36,6 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
 	const doc = await currentHome(env, locals.home);
 	const markdown = doc.markdown;
 
-	// Read live data and, behind the response, refresh whatever the document's
-	// shortcodes need and a TTL has aged out. Nobody waits on a third party.
 	let live = null;
 	try {
 		live = await readLive(env);

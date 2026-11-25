@@ -3,7 +3,7 @@ import { slugFormatProblem } from './slugs';
 type Env = App.Platform['env'];
 type Owner = 'link' | 'paste' | 'file';
 
-/** What already has this name, if anything — one batch over all three tables. */
+/** What already has this name, if anything. */
 export async function slugOwner(env: Env, slug: string): Promise<Owner | null> {
 	const [link, paste, file] = await env.DB.batch([
 		env.DB.prepare(`SELECT 1 FROM slugs WHERE slug = ?`).bind(slug),

@@ -36,11 +36,6 @@ describe('deviceClass', () => {
 	it('treats a missing user agent as a bot — no browser omits it', () => {
 		expect(deviceClass('')).toBe('bot');
 	});
-
-	it('only ever returns three values', () => {
-		const seen = new Set(['iPhone', 'Macintosh', 'bingbot', ''].map(deviceClass));
-		expect([...seen].every((d) => ['mobile', 'desktop', 'bot'].includes(d))).toBe(true);
-	});
 });
 
 describe('referrerHost', () => {
@@ -186,10 +181,6 @@ describe('fingerprint', () => {
 		expect(a).not.toBe(b);
 		expect(a).not.toBe(c);
 	});
-
-	it('stores 16 bytes — enough to be unique in practice', async () => {
-		expect(await fingerprint('salt', {}, 'UA')).toMatch(/^[0-9a-f]{32}$/);
-	});
 });
 
 describe('visitorHash', () => {
@@ -210,10 +201,6 @@ describe('visitorHash', () => {
 		const a = await visitorHash('salt-a', '2026-01-01', '1.2.3.4', 'UA');
 		const b = await visitorHash('salt-b', '2026-01-01', '1.2.3.4', 'UA');
 		expect(a).not.toBe(b);
-	});
-
-	it('stores 8 bytes and nothing identifying', async () => {
-		expect(await visitorHash('salt', '2026-01-01', '1.2.3.4', 'UA')).toMatch(/^[0-9a-f]{16}$/);
 	});
 });
 

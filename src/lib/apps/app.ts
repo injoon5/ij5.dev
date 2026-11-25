@@ -1,6 +1,5 @@
-/** The largest app source, in UTF-8 bytes. Shared by the admin editor's
- * counter and the API's 413, so the two can never disagree. A Kiln app is
- * one file and the prompt asks for ~600 lines; 256 KB is several times that. */
+/** The largest app source, in UTF-8 bytes. A Kiln app is one file and the
+ * prompt asks for ~600 lines; 256 KB is several times that. */
 export const MAX_APP_BYTES = 256 * 1024;
 
 /** The longest app name — the label under an icon on the phone. */
@@ -28,7 +27,6 @@ export const TINTS = [
 ] as const;
 export type Tint = (typeof TINTS)[number];
 
-/** What an app without a tint gets. */
 export const DEFAULT_TINT: Tint = 'blue';
 
 export const utf8Bytes = (s: string) => new TextEncoder().encode(s).length;
@@ -64,5 +62,5 @@ export const MAX_DATA_KEYS = 1000;
 export const MAX_DATA_APP_BYTES = 5 * 1024 * 1024;
 
 /** 1–128 printable characters with no "/", so a key is always one URL path
- * segment. Control characters (C0, DEL, C1) are what "printable" rules out. */
+ * segment. */
 export const DATA_KEY_PATTERN = /^[^\u0000-\u001f\u007f-\u009f/]{1,128}$/u;

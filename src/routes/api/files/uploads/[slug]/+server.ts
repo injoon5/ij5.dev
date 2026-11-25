@@ -17,7 +17,7 @@ import { bindings } from '$lib/server/bindings';
  * A part is never buffered: the request body is handed to R2 as a stream,
  * so a part costs the Worker almost no memory whatever its size — the
  * request-body limit of the zone's plan is the only cap, which is why parts
- * are sized under it (`$lib/uploads`). Uploads nobody finishes are aborted
+ * are sized under it (`$lib/files/uploads`). Uploads nobody finishes are aborted
  * by R2 itself after seven days.
  */
 
@@ -48,12 +48,7 @@ export const PUT: RequestHandler = async ({ request, params, platform, url }) =>
 		const upload = env.BUCKET.resumeMultipartUpload(fileKey(params.slug), uploadId);
 		// A fixed-length stream tells R2 the size without reading the body
 		// into memory, and errors if the bytes that arrive disagree with it.
-		// It is a Workers global; `vite dev` runs this file in Node, where a
-		// (small, local) part is simply read whole instead.
-		const body =
-			typeof FixedLengthStream === 'function'
-				? request.body.pipeThrough(new FixedLengthStream(length))
-				: await request.arrayBuffer();
+		const body = request.body.pipeThrough(new FixedLengthStream(length));
 		const uploaded = await upload.uploadPart(part, body);
 		return json({ partNumber: uploaded.partNumber, etag: uploaded.etag });
 	} catch (e) {

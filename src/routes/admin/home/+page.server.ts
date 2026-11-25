@@ -75,8 +75,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// `Label | https://…` per line — a repeater with add and remove buttons
-		// would need JavaScript, and this form has to work without it.
 		const links = parseLines(String(form.get('links') ?? ''), ['label', 'href', 'icon']).filter(
 			(l) => l.label && l.href
 		);
@@ -87,7 +85,7 @@ export const actions: Actions = {
 
 		const avatar = parsed.data.avatar || null;
 
-		// `bio` is deliberately left untouched: the page no longer renders it, but
+		// `bio` is deliberately left untouched: the page does not render it, but
 		// wiping the column on every save would be a silent data loss.
 		await env.DB.prepare(
 			`UPDATE profile SET name = ?, tagline = ?, avatar = ?, links = ? WHERE id = 1`
@@ -100,8 +98,6 @@ export const actions: Actions = {
 			)
 			.run();
 
-		// The avatar is an asset like any other, so a replaced one is released on
-		// the same terms as a replaced image in the body.
 		if (before?.avatar !== avatar) {
 			await releaseAssets(env, [before?.avatar].filter(isAssetKey));
 		}
@@ -170,9 +166,6 @@ export const actions: Actions = {
 		const key = String((await request.formData()).get('key') ?? '');
 		if (!isAssetKey(key)) return fail(400, { error: 'That image cannot be deleted here.' });
 
-		// Content-addressed keys are shared, so a delete is a live-reference
-		// check first: the draft, the live page, and the version a revert
-		// would restore.
 		if (await isReferenced(env, key)) {
 			return fail(409, {
 				error: 'That image is still in use — on the page, the live site, or the previous version.'
@@ -184,10 +177,6 @@ export const actions: Actions = {
 	}
 };
 
-/**
- * Writes the Markdown body to D1 and releases any image it stopped drawing.
- * Returns a failure to hand straight back to the form, or nothing on success.
- */
 async function saveContent(env: App.Platform['env'], content: string) {
 	if (content.length > MAX_CONTENT) {
 		return fail(400, {
@@ -196,9 +185,6 @@ async function saveContent(env: App.Platform['env'], content: string) {
 		});
 	}
 
-	// Read what the body referenced before overwriting it: content-addressed
-	// keys mean an image dropped from the document would otherwise linger in
-	// R2 forever with nothing left pointing at it.
 	const before = await env.DB.prepare(`SELECT content FROM profile WHERE id = 1`).first<{
 		content: string | null;
 	}>();

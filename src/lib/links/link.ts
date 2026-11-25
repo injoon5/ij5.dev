@@ -1,6 +1,6 @@
 /**
- * Short links: D1 `slugs` is the source of truth, KV `slug:{slug}` is what the
- * redirect path in the hook reads, and the edge cache holds each redirect for
+ * Short links: D1 `slugs` is the source of truth, KV `slug:{slug}` is what
+ * `redirect.server.ts` reads, and the edge cache holds each redirect for
  * `REDIRECT_TTL` seconds. Kept free of heavy imports: the hook loads it on
  * every request.
  */
@@ -9,7 +9,7 @@
 export type SlugRecord = {
 	target: string;
 	status: number;
-	/** Epoch ms; the hook compares it on read. */
+	/** Epoch ms; judged on read. */
 	exp: number | null;
 };
 

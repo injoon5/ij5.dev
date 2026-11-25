@@ -17,14 +17,13 @@ const config = {
 		// instead would defeat the directive entirely.
 		//
 		// `frame-ancestors` and `base-uri` are ignored when a policy is
-		// delivered in a <meta> tag, so `hooks.server.ts` sends them as a
-		// second, deliberately narrow policy header. Two policies are both
-		// enforced, which is exactly what we want here.
+		// delivered in a <meta> tag, so `$lib/server/headers.ts` sends them as a
+		// second, deliberately narrow policy header. Both policies are enforced.
 		csp: {
 			mode: 'hash',
 			directives: {
 				'default-src': ['self'],
-				// Turnstile (`$lib/server/turnstile`), loaded on the login page
+				// Turnstile (`$lib/auth/turnstile.server`), loaded on the login page
 				// only, and only when it is configured.
 				'script-src': ['self', 'https://challenges.cloudflare.com'],
 				'frame-src': ['https://challenges.cloudflare.com'],
@@ -44,8 +43,8 @@ const config = {
 		// SvelteKit's own cross-site form check runs before any hook, and it
 		// refuses a form POST with no Origin header — which is exactly what
 		// Cloudflare Access sends, server to server, to `/oauth/token`. So the
-		// same check lives in `hooks.server.ts` instead, with that one endpoint
-		// (which authenticates its caller with a client secret) exempt.
+		// same check lives in `$lib/server/csrf.ts` instead, with the OIDC token
+		// and userinfo endpoints (which authenticate their own callers) exempt.
 		csrf: {
 			trustedOrigins: ['*']
 		},

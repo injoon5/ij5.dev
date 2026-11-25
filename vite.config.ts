@@ -27,7 +27,7 @@ const shim = (file: string) => fileURLToPath(new URL(`./shims/${file}`, import.m
 
 /**
  * A build-time identifier baked into the bundle and folded into the homepage's
- * cache key and ETag (`hooks.server.ts`). A template or CSS edit does not bump
+ * cache key and ETag (`$lib/home/cache.server.ts`). A template or CSS edit does not bump
  * the published document version, so without this a deploy would sit behind
  * the last-published HTML at every colo with nothing able to purge it. Every
  * deploy instead changes the key — each colo misses at once — and the ETag, so

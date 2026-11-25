@@ -30,8 +30,8 @@
 	let contentDirty = $derived(content !== (data.draft.markdown ?? ''));
 	let unsaved = $derived(contentDirty || profileDirty);
 
-	// One status, most urgent first. "Unsaved" is about this browser tab;
-	// "unpublished" is the saved draft against what visitors see.
+	// "Unsaved" is about this browser tab; "unpublished" is the saved draft
+	// against what visitors see.
 	let status = $derived(
 		unsaved
 			? { label: 'Unsaved changes', dot: 'bg-warning' }
@@ -69,10 +69,9 @@
 	const publishing = pending({ onSuccess: () => (profileDirty = false) });
 
 	/**
-	 * Publish ships what is on screen. The page text rides along in this
-	 * form; unsaved profile edits live in their own form, so they are saved
-	 * first — and if that save is rejected, nothing is published and the
-	 * profile's errors show where they belong.
+	 * Unsaved profile edits live in their own form, so they are saved first —
+	 * and if that save is rejected, nothing is published and the profile's
+	 * errors show where they belong.
 	 */
 	const publish: SubmitFunction = async (input) => {
 		if (profileDirty && profileForm) {
@@ -92,7 +91,6 @@
 		return publishing.submit(input);
 	};
 
-	// ⌘S / Ctrl+S saves the draft, the way every editor does.
 	function onkeydown(event: KeyboardEvent) {
 		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
 			event.preventDefault();
@@ -101,7 +99,6 @@
 		}
 	}
 
-	// Never lose typing to a stray click: leaving with unsaved edits asks.
 	beforeNavigate(({ cancel, type }) => {
 		if (!unsaved || type === 'leave') return;
 		if (!confirm('Leave without saving? Your changes will be lost.')) cancel();
@@ -111,7 +108,6 @@
 		if (unsaved) event.preventDefault();
 	}
 
-	// A click anywhere outside the overflow menu closes it.
 	function onclick(event: MouseEvent) {
 		if (menu?.open && !menu.contains(event.target as Node)) menu.removeAttribute('open');
 	}
@@ -141,10 +137,6 @@
 	}
 
 	function insertGalleryRow(key: string) {
-		// Inside a :::gallery block the key is just another row, so it goes
-		// there; otherwise a fresh block starts at the cursor. `lastIndexOf`
-		// finds the gallery nearest the cursor, and `close > start` confirms
-		// the cursor is actually inside it.
 		const start = textarea?.selectionStart ?? content.length;
 		const open = content.lastIndexOf(':::gallery', start);
 		const close = open >= 0 ? content.indexOf('\n:::', open + 9) : -1;

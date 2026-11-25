@@ -84,7 +84,6 @@
 <PageHeader title="Analytics">
 	{#snippet meta()}
 		{#if title}
-			<!-- The filter, and the way out of it. -->
 			<a
 				href={href({ s: null })}
 				data-sveltekit-noscroll
@@ -117,9 +116,8 @@
 			{/snippet}
 		</Empty>
 	{:else}
-		<!-- The totals and the line they add up to, as one object: figures on
-		     top, three across at every width (stacked, they cost a phone a
-		     screen of scroll), and the chart under a hairline. -->
+		<!-- The figures stay side by side at every width: stacked, they cost a
+		     phone a screen of scroll. -->
 		<section class="{cardFlush}">
 			<h2 class="sr-only">Totals</h2>
 			<dl
@@ -169,8 +167,6 @@
 	{/if}
 
 	{#if data.notFound.length}
-		<!-- Each path opens the new-link form with its name filled in: seeing
-		     one here and creating it is a single click. -->
 		<section class={card}>
 			<h2 class={cardTitle}>Not found</h2>
 			<ul class="mt-3 flex flex-col gap-1">

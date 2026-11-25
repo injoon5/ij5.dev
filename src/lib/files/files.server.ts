@@ -4,17 +4,15 @@ import type { FileRow } from '$lib/files/file';
 /**
  * File sharing, SendAnywhere-style: bytes go to R2 under `dl/{slug}`, D1 keeps
  * the catalog row, and `/d/{slug}` serves a landing page whose download link
- * streams the object. Two segments, so the hook's single-segment fast path
- * never sees it — everything here resolves through SvelteKit.
+ * streams the object.
  *
- * D1 and R2 are kept in lockstep like the KV mirrors elsewhere: an R2 object
- * with no row is an orphan, and a row with no object is a download that 404s,
- * so every write cleans up after itself when the other store fails.
+ * An R2 object with no row is an orphan, and a row with no object is a
+ * download that 404s, so every write cleans up after itself when the other
+ * store fails.
  */
 
 type Env = App.Platform['env'];
 
-/** The R2 key a shared file's bytes live under. */
 export const fileKey = (slug: string) => `dl/${slug}`;
 
 /** A filename becomes a header value and a title; strip anything that could
@@ -58,11 +56,10 @@ export function parseRange(
  * RFC 5987 `filename*` beside it; this is only the fallback for clients that
  * ignore that, so anything outside printable ASCII becomes `_`.
  */
-export function asciiName(name: string): string {
+function asciiName(name: string): string {
 	return name.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
 }
 
-/** Both forms of the filename, for `Content-Disposition: attachment`. */
 export function contentDisposition(name: string): string {
 	return `attachment; filename="${asciiName(name)}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 }

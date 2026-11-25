@@ -42,7 +42,6 @@
 		onSuccess: () => goto('/admin/files', { noScroll: true })
 	});
 
-	// The bytes go for good, so it asks first.
 	let deleteError = $derived(
 		form?.intent === 'delete' ? (form as { error?: string }).error : undefined
 	);

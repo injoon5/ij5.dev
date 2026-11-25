@@ -23,8 +23,6 @@
 		data.profile.tagline ? `${data.profile.name} — ${data.profile.tagline}` : data.profile.name
 	);
 
-	// `<` is the one character that can close the script tag early; everything
-	// else in a serialized JSON object is safe inside a data block.
 	let jsonLd = $derived(
 		{
 			'@context': 'https://schema.org',
@@ -83,8 +81,7 @@
 	{/if}
 
 	<!-- Always, not gated like w.js: the fingerprint is for visitor counting,
-	     not for anything on the page that needs a script. `defer` keeps it off
-	     the render path; the beacon itself is a single keepalive POST. -->
+	     not for anything on the page that needs a script. -->
 	<script src="/a.js" defer></script>
 </svelte:head>
 
@@ -111,10 +108,8 @@
 	</header>
 
 	<!--
-		The document is authored as Markdown and rendered to HTML on the server;
-		there is no untrusted HTML in it (the renderer escapes source markup and
-		builds every element itself), so it is safe to inject here. This is the
-		whole page body — prose, link buttons, images, the contribution graph.
+		There is no untrusted HTML in it (the renderer escapes source markup and
+		builds every element itself), so it is safe to inject here.
 	-->
 	<article class="prose">{@html data.html}</article>
 

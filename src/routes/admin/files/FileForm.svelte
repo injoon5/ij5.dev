@@ -14,7 +14,7 @@
 	import { fmtBytes } from '$lib/format';
 
 	type Props = {
-		/** The largest file this deployment accepts (`$lib/uploads`). */
+		/** The largest file this deployment accepts (`$lib/files/uploads`). */
 		maxFileBytes: number;
 		fields?: Record<string, string>;
 		values?: Record<string, string>;
@@ -32,8 +32,6 @@
 	let chosen = $state<File | null>(null);
 	let fileError = $state('');
 
-	// The upload in flight: its progress, the way to stop it, and what it
-	// came back with when it failed.
 	let uploading = $state(false);
 	let loaded = $state(0);
 	let controller: AbortController | null = null;
@@ -117,7 +115,6 @@
 		}
 	}
 
-	// Leaving mid-upload cancels it, so it asks first.
 	beforeNavigate(({ cancel, type }) => {
 		if (!uploading || type === 'leave') return;
 		if (confirm('Leave and cancel the upload?')) controller?.abort();
@@ -240,7 +237,7 @@
 		{/if}
 	</div>
 
-	<!-- Locked while uploading: the name was claimed when the upload began,
+	<!-- Locked while uploading: the name was chosen when the upload began,
 	     so an edit now would be silently ignored. -->
 	<fieldset disabled={uploading} class="grid gap-4 disabled:opacity-60 sm:grid-cols-2 md:gap-5">
 		<Field id="slug" label="Link" error={allFields.slug}>

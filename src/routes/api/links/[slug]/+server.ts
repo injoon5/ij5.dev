@@ -7,8 +7,6 @@ import { linkJson } from '$lib/links/link';
 import { deleteLink, getLink, updateLink } from '$lib/links/links.server';
 import { bindings } from '$lib/server/bindings';
 
-/** The shortener API's item routes. */
-
 const patch = z
 	.object({
 		url: linkFields.url.optional(),

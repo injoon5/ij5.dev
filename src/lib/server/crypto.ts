@@ -1,14 +1,13 @@
 /**
  * Small crypto primitives shared by every sign-in door. The doors
- * themselves live in `sessions.ts`, `password.ts`, `puzzle.ts`,
- * `recovery.ts` and `webauthn.ts`.
+ * themselves live in `$lib/auth`.
  *
  * The admin token is a random 256-bit value rather than a memorable password.
  * Expensive KDFs exist to slow brute-force against low-entropy secrets; 256
  * bits is not brute-forceable at any KDF cost, so one SHA-256 is enough for it
  * (and for session tokens, recovery codes and OIDC codes, which are random
  * too). The one human-chosen secret, the password, goes through Argon2id in
- * `password.ts`.
+ * `password.server.ts`.
  */
 
 export const enc = (s: string) => new TextEncoder().encode(s);

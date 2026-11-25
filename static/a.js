@@ -1,8 +1,6 @@
 /*
  * The fingerprint beacon — the only network request the home page makes
- * besides its own assets, and only when JS runs at all. One tiny deferred
- * POST, keepalive so it survives a mid-flight navigation, and it blocks
- * nothing: it is `defer` in the page and `keepalive` on the wire.
+ * besides its own assets. `keepalive` so it survives a mid-flight navigation.
  *
  * The signals it collects are stable per device — browser + platform from
  * UA-CH, language, timezone, screen, touch — and are hashed on the server

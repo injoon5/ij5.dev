@@ -39,13 +39,17 @@ const plain = <T>(row: unknown) => (row ? ({ ...(row as object) } as T) : null);
 export function d1(db: import('node:sqlite').DatabaseSync) {
 	const statement = (sql: string) => {
 		let bound: Value[] = [];
+		// D1 binds `?1`/`?2` by position; node:sqlite (Node 22) reads them as
+		// names and refuses a positional spread.
+		const args = (): Value[] | [Record<string, Value>] =>
+			/\?\d/.test(sql) ? [Object.fromEntries(bound.map((v, i) => [`?${i + 1}`, v]))] : bound;
 		const exec = () => {
 			const stmt = db.prepare(sql);
 			if (returnsRows(sql)) {
-				const results = stmt.all(...bound).map((r) => plain<Record<string, unknown>>(r)!);
+				const results = stmt.all(...(args() as Value[])).map((r) => plain<Record<string, unknown>>(r)!);
 				return { success: true, results, meta: { changes: /^\s*(SELECT|WITH)\b/i.test(sql) ? 0 : results.length } };
 			}
-			const r = stmt.run(...bound);
+			const r = stmt.run(...(args() as Value[]));
 			return { success: true, results: [], meta: { changes: Number(r.changes) } };
 		};
 		const self = {
@@ -55,7 +59,7 @@ export function d1(db: import('node:sqlite').DatabaseSync) {
 			},
 			all: async () => exec(),
 			run: async () => exec(),
-			first: async <T>() => plain<T>(db.prepare(sql).get(...bound)),
+			first: async <T>() => plain<T>(db.prepare(sql).get(...(args() as Value[]))),
 			exec
 		};
 		return self;

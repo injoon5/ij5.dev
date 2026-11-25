@@ -4,7 +4,6 @@
 	/**
 	 * Every list has an empty state with a real next action — "no data" is a
 	 * dead end, and empty is the state a new install spends its first day in.
-	 * It sits on the canvas itself rather than in a box of its own.
 	 */
 	let { title, body, action }: { title: string; body?: string; action?: Snippet } = $props();
 </script>

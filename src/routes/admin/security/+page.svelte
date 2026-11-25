@@ -132,7 +132,6 @@
 			</p>
 		{/if}
 
-		<!-- Adding is the last row of the list it adds to. -->
 		<form
 			class="flex flex-col gap-2 border-t border-border-subtle p-4 sm:flex-row md:p-5"
 			onsubmit={addPasskey}

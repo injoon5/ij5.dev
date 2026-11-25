@@ -28,10 +28,6 @@
 
 	let mode = $derived(app ? 'update' : 'create');
 
-	// Every field is bound: New App fills them all from a pasted reply, and
-	// the tile and the byte counter follow typing. They re-seed when the
-	// echoed-back values or the app change, and `untrack` keeps that reseed
-	// from firing on every keystroke.
 	const seed = () => ({
 		slug: values.slug ?? app?.slug ?? '',
 		name: values.name ?? app?.name ?? '',
@@ -48,8 +44,6 @@
 		});
 	});
 
-	// The slug follows the name until someone types in it — after that it is
-	// theirs.
 	let slugTouched = $state(false);
 
 	let reply = $state('');
@@ -97,7 +91,6 @@
 </script>
 
 {#if !app}
-	<!-- New App: paste the model's reply and the form below fills itself. -->
 	<div class="mb-5 flex flex-col gap-1.5 border-b border-border-subtle pb-5">
 		<label for="reply" class="text-sm font-medium">Reply</label>
 		<textarea
@@ -276,9 +269,6 @@
 		<input type="hidden" name="slug" value={app.slug} />
 	</form>
 
-	<!-- Deleting asks one question: whether the data goes too. Keeping it is
-	     the default, so an app can be deleted and made again without losing
-	     what it saved. -->
 	<dialog
 		bind:this={dialog}
 		aria-labelledby="delete-app-title"

@@ -31,8 +31,6 @@
 		return data.apps.filter((a) => a.name.toLowerCase().includes(q) || a.slug.toLowerCase().includes(q));
 	});
 
-	// Icon and name, slug, updated — shared by the header and every row so
-	// the columns can only line up.
 	const cols = 'md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_4.5rem]';
 
 	const segment =
@@ -40,7 +38,6 @@
 
 	const onkeydown = listShortcuts('/admin/apps', () => ({ open, search: searchEl }));
 
-	// A form result belongs to the panel that sent it.
 	let saveForm = $derived(form?.intent === 'save' ? form : undefined);
 	let dataForm = $derived(form?.intent === 'data' ? form : undefined);
 </script>

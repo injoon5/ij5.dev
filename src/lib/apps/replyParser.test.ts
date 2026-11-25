@@ -17,8 +17,9 @@ const cases = readdirSync(DIR)
 	.sort();
 
 describe('parseReply fixtures', () => {
-	it('has the cases the README promises', () => {
-		expect(cases.length).toBeGreaterThanOrEqual(13);
+	it('has exactly the cases the README lists', () => {
+		const listed = [...readFileSync(`${DIR}README.md`, 'utf8').matchAll(/^\| `([\w-]+)` \|/gm)].map((m) => m[1]).sort();
+		expect(cases).toEqual(listed);
 	});
 
 	it.each(cases)('%s', (name) => {

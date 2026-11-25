@@ -16,8 +16,8 @@ import { claimed, claimKey, newClaim, type InstallKeyRow } from './installKeys.s
 
 /**
  * Shelf's apps: one Swift file each, read by the phone through
- * `/api/apps`. D1 is the only store — there is no edge mirror — so a write is
- * visible on the phone's next sync.
+ * `/api/apps`. D1 is the only store, so a write is visible on the phone's next
+ * sync.
  *
  * Every content change keeps the previous version in `app_versions` (the last
  * `HISTORY` per app), so an agent's bad push can be undone with Revert. The
@@ -62,10 +62,9 @@ const META = `slug, name, icon, tint, version, updated_at,
 
 /**
  * The index query. It never names `source`: the list is read on every phone
- * launch, and an app's source can be 256 KB. Exported so a test can hold it to
- * that.
+ * launch, and an app's source can be 256 KB.
  */
-export const LIST_APPS = `SELECT ${META} FROM apps ORDER BY name COLLATE NOCASE, slug`;
+const LIST_APPS = `SELECT ${META} FROM apps ORDER BY name COLLATE NOCASE, slug`;
 
 type MetaRow = Omit<AppMeta, 'revertible'> & { revertible: number };
 const toMeta = ({ revertible, ...row }: MetaRow): AppMeta => ({ ...row, revertible: !!revertible });
@@ -73,20 +72,10 @@ const toMeta = ({ revertible, ...row }: MetaRow): AppMeta => ({ ...row, revertib
 const digest = async (s: string) =>
 	b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
 
-/**
- * A hash of the content, 16 base64url characters (96 bits). The fields are
- * JSON-encoded as an array, so no value can run into the next and two
- * different apps can never hash the same input.
- */
 export async function appVersion(c: AppContent): Promise<string> {
 	return (await digest(JSON.stringify([c.name, c.icon, c.tint, c.source]))).slice(0, 16);
 }
 
-/**
- * A strong ETag over the whole list body — every slug, version and flag — so
- * the phone's launch sync is a single 304 until anything it would show
- * changes.
- */
 export async function appsEtag(apps: AppMeta[]): Promise<string> {
 	return `"${(await digest(JSON.stringify(apps))).slice(0, 16)}"`;
 }
@@ -125,7 +114,6 @@ export async function getSource(env: Env, slug: string): Promise<string | null> 
 	return row?.source ?? null;
 }
 
-/** Earlier versions, newest first — for the admin editor. */
 export async function listVersions(
 	env: Env,
 	slug: string
@@ -177,8 +165,6 @@ export async function putApp(
 
 	if (createOnly && existed) return { ok: false, reason: 'taken' };
 
-	// With a key, every write is gated on this request's claim; without one the
-	// gate is always true.
 	const claim = key ? newClaim() : '';
 	const { sql: gate, args: gateArgs } = key ? claimed(key.id, claim) : { sql: '1', args: [] };
 

@@ -8,8 +8,6 @@ import { createLink, listLinks } from '$lib/links/links.server';
 import { slugProblem } from '$lib/slugs/slugs.server';
 import { bindings } from '$lib/server/bindings';
 
-/** The shortener API's collection routes; `[slug]` has the item routes. */
-
 const create = z.object({
 	slug: linkFields.slug,
 	url: linkFields.url,

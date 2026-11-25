@@ -171,7 +171,7 @@ export async function spendAttempt(env: Env, id: string): Promise<void> {
 /**
  * Marks a live key as used by the request holding `claim`, as one statement of
  * that request's write batch. Of two requests racing with one key only one
- * matches; `claimed(claim)` is the condition every other statement in the
+ * matches; `claimed` is the condition every other statement in the
  * batch adds, so the loser's writes match nothing.
  */
 export const claimKey = (env: Env, keyId: string, claim: string, slug: string, now: number) =>

@@ -12,7 +12,7 @@ import { bindings } from '$lib/server/bindings';
  * Step one of sharing a file: reserve a name and open a multipart upload in
  * R2. The browser then sends the file in parts (`[slug]` PUT) and finishes
  * it (`[slug]` POST). Session-guarded by the hook like everything under
- * `/api`; same-origin checked here, because SvelteKit's own CSRF check only
+ * `/api`; same-origin checked here, because the hook's cross-site check only
  * covers form posts.
  *
  * The name is checked now so a taken slug fails before any bytes move, and

@@ -10,7 +10,7 @@ const inputBase =
 /** The border and focus ring are the only things that change between a valid
  *  and an invalid field. Both strings are written out in full: Tailwind finds
  *  classes by scanning source text, so a class assembled from a template
- *  literal is never generated — which is how the invalid border went missing. */
+ *  literal is never generated. */
 export function fieldClass(invalid = false): string {
 	return invalid
 		? `${inputBase} shadow-[inset_0_0_0_1px_var(--danger)]`

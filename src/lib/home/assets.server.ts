@@ -5,7 +5,7 @@ import { HOME_KEYS, type HomeDoc } from '$lib/home/types';
  * Uploaded images are content-addressed and shared, so an R2 object may only
  * go when nothing can still draw it. "Anything" is wider than the editor:
  * the D1 draft, the published document visitors are looking at right now, and
- * the previous one a revert would bring back. Checking D1 alone deleted a
+ * the previous one a revert would bring back. Checking D1 alone would delete a
  * photo the moment it left the *draft*, breaking the live page until the next
  * publish and leaving a revert pointing at nothing.
  *
@@ -17,7 +17,6 @@ import { HOME_KEYS, type HomeDoc } from '$lib/home/types';
 type Env = App.Platform['env'];
 
 
-/** Every asset key a document draws: its body images and its avatar. */
 export function docKeys(doc: Pick<HomeDoc, 'markdown' | 'profile'> | null | undefined): string[] {
 	if (!doc) return [];
 	return [...imageKeysIn(doc.markdown), doc.profile?.avatar].filter(isAssetKey);

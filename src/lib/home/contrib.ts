@@ -1,7 +1,6 @@
 /**
  * The GitHub contribution graph, drawn as CSS-grid cells rather than an SVG or
- * an image — the same technique the old `Grass` widget used, ported to a plain
- * HTML string so the Markdown renderer can splice it into the prose.
+ * an image, as a plain HTML string the Markdown renderer splices into the prose.
  *
  * The public page ships no framework JavaScript, so this is static markup:
  * one `<i>` per day, each carrying a level, coloured by the `--grass-*` tokens
@@ -18,9 +17,8 @@ export type ContribData = {
 const numberFmt = new Intl.NumberFormat('en');
 
 /**
- * `data` is the stored live payload (may be empty/undefined before the first
- * refresh, in which case an empty lattice renders as a quiet year rather than a
- * hole). `user` labels the fallback and keys the live lookup.
+ * Before the first refresh (or with no GitHub token) `data` is undefined, and
+ * an empty lattice renders as a quiet year rather than a broken widget.
  */
 export function renderContribGraph(
 	data: ContribData | undefined,

@@ -39,7 +39,7 @@ export function fmtWhen(ms: number): string {
 	return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(ms);
 }
 
-/** A stored UTC day, "2026-08-05" → "5 Aug", the same day wherever it is read. */
+/** A stored UTC day, "2026-08-05" → "Aug 5", the same day wherever it is read. */
 export function fmtUtcDay(day: string): string {
 	return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(
 		Date.parse(`${day}T00:00:00Z`)

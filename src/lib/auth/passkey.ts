@@ -9,10 +9,9 @@ import type {
 
 /**
  * Client half of the WebAuthn flows, shared by the login page (authenticate)
- * and the security page (register). Both are the same orchestration: ask the
- * server for options, drive the browser's authenticator, send the credential
- * back. The server owns the crypto; this module owns the two HTTP round trips
- * and the "did the user change their mind?" distinction.
+ * and the security page (register). The server owns the crypto; this module
+ * owns the two HTTP round trips and the "did the user change their mind?"
+ * distinction.
  *
  * `error` is only set on a real failure. A cancelled or declined prompt is
  * the user backing out, so it returns `{ ok: false }` with no message and the

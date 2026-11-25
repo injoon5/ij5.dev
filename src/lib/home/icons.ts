@@ -6,7 +6,6 @@
  * row. These are all solid at the same optical weight, so a stack of them looks
  * like one family. Callers store a name, never markup, and an unknown name is
  * the caller's to handle (fall back to `globe`, or leave the text alone).
- *
  */
 const PATHS: Record<string, string> = {
 	github:
@@ -29,15 +28,11 @@ const PATHS: Record<string, string> = {
 		'M6 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-4.5a1 1 0 1 0-2 0V18a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4.5a1 1 0 1 0 0-2H6Zm7.5 0a1 1 0 1 0 0 2h3.09l-6.3 6.29a1 1 0 0 0 1.42 1.42L18 6.41V9.5a1 1 0 1 0 2 0V4a1 1 0 0 0-1-1h-5.5Z'
 };
 
-/** Whether a name resolves to a mark (so the caller can leave text alone if not). */
 export function hasIcon(name: string): boolean {
 	return Object.prototype.hasOwnProperty.call(PATHS, name);
 }
 
-/**
- * Inline SVG string for a known mark, or `null` for an unknown name. The path
- * data is a trusted constant, so the result is safe to inject with `{@html}`.
- */
+/** The path data is a trusted constant, so the result is safe to inject with `{@html}`. */
 export function iconSvg(name: string, size = 20, cls = ''): string | null {
 	const d = PATHS[name];
 	if (!d) return null;

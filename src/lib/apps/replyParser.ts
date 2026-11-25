@@ -29,16 +29,13 @@ const HEADER = /^\s*\/\/\s*(name|icon|tint)\s*:\s*(.*?)\s*$/i;
 const isBlank = (line: string) => line.trim() === '';
 
 /**
- * Line endings are normalised to "\n" before anything else (CRLF and a lone
- * CR alike), and one leading byte-order mark is dropped. A reply copied out of
- * a Windows tool would otherwise carry a "\r" into every header value and into
- * the stored source, and a BOM would hide the first `// Name:` line.
+ * A reply copied out of a Windows tool would otherwise carry a "\r" into every
+ * header value, and a BOM would hide the first `// Name:` line.
  */
 function normalise(input: string): string {
 	return normalizeSource(input);
 }
 
-/** Every ```swift block, joined with a blank line; null when there are none. */
 function swiftBlocks(lines: string[]): string | null {
 	const blocks: string[][] = [];
 	let current: string[] | null = null;
@@ -48,7 +45,6 @@ function swiftBlocks(lines: string[]): string | null {
 		const trimmed = line.trim();
 		if (trimmed.startsWith(FENCE)) {
 			if (inFence) {
-				// Any fence line closes the open block, swift or not.
 				inFence = false;
 				current = null;
 			} else {
@@ -69,7 +65,6 @@ function swiftBlocks(lines: string[]): string | null {
 	return blocks.length ? blocks.map((b) => b.join('\n')).join('\n\n') : null;
 }
 
-/** Drops leading and trailing blank lines; ends in exactly one "\n". */
 function tidy(text: string): string {
 	const lines = text.split('\n');
 	let start = 0;

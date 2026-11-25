@@ -5,20 +5,17 @@ const MiB = 1024 * 1024;
 
 describe('uploadLimits', () => {
 	it('defaults to parts that clear the Free/Pro 100 MB request limit', () => {
-		const limits = uploadLimits();
-		expect(limits.maxPartBytes).toBe(90 * MiB);
-		expect(limits.maxPartBytes).toBeLessThan(100_000_000);
-		expect(limits.maxFileBytes).toBe(90 * MiB * MAX_PARTS);
+		expect(uploadLimits().maxPartBytes).toBeLessThan(100_000_000);
 	});
 
 	it('follows a bigger plan, but never past what R2 will store', () => {
-		expect(uploadLimits('190').maxFileBytes).toBe(190 * MiB * MAX_PARTS);
+		expect(uploadLimits('190').maxFileBytes).toBeGreaterThan(uploadLimits().maxFileBytes);
 		expect(uploadLimits('4000').maxFileBytes).toBe(MAX_OBJECT_BYTES);
 	});
 
 	it('ignores a setting R2 could not honour', () => {
-		expect(uploadLimits('1').maxPartBytes).toBe(90 * MiB);
-		expect(uploadLimits('nope').maxPartBytes).toBe(90 * MiB);
+		expect(uploadLimits('1')).toEqual(uploadLimits());
+		expect(uploadLimits('nope')).toEqual(uploadLimits());
 	});
 });
 

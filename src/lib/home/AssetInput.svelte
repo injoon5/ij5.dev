@@ -17,7 +17,6 @@
 		assetsOrigin: string;
 		describedBy?: string;
 		invalid?: boolean;
-		/** Fires whenever the value changes by upload or removal. */
 		onchange?: () => void;
 	};
 

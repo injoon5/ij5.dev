@@ -248,16 +248,11 @@
 	--text-base--line-height: 1.55;
 	--text-base--letter-spacing: -0.003em;
 
-	/* 17px, not 16. At 16 this sat one pixel above `base` — a step nobody can
-	   perceive is not a step, and two adjacent sizes doing the same job is how
-	   a scale stops carrying hierarchy. This is the "lead" size: a tagline, a
-	   pull quote, a title over an image. */
+	/* The "lead" size: a tagline, a pull quote, a title over an image. */
 	--text-md: 1.0625rem;
 	--text-md--line-height: 1.5;
 	--text-md--letter-spacing: -0.009em;
 
-	/* 20, not 18: at 18 this sat a single pixel above `md` and the two sizes
-	   carrying most of the headings were indistinguishable. */
 	--text-lg: 1.25rem;
 	--text-lg--line-height: 1.35;
 	--text-lg--letter-spacing: -0.014em;
@@ -459,9 +454,8 @@
 --------------------------------------------------------------------------- */
 
 @layer components {
-	/* The surface: a squircle card with a layered shadow. It began as the
-	   homepage widget and now backs the Markdown link buttons — same physical
-	   object. */
+	/* The surface: a squircle card with a layered shadow, behind the Markdown
+	   link buttons. */
 	.widget {
 		position: relative;
 		display: flex;
@@ -500,7 +494,7 @@
 
 	/* The homepage arrives in reading order: the masthead, then the first
 	   blocks of the body, each a beat after the last. Short and small — a
-	   6px rise over 500ms, 60ms apart, done before the eye has finished the
+	   8px rise over 500ms, 60ms apart, done before the eye has finished the
 	   name — and only the first few blocks, so a long page never waits on its
 	   own entrance. Reduced motion collapses it (see base). */
 	.stagger > * {
@@ -684,13 +678,10 @@
 
 	/* ---------------------------------------------------------------------
 	   Photo gallery — the `:::gallery` shortcode
-	   A simple grid that respects the author's `cols=N` (clamped 1–4). A
-	   two-column grid keeps both columns even on a phone, where a 3:2 photo
-	   still reads; three and four columns drop to one. The renderer stamps
-	   each image's intrinsic width/height, so a cell keeps its natural aspect
-	   ratio — never cropped — and reserves its box for a zero-shift load.
-	   Rows align to the tallest cell; the caption, when present, sits under
-	   the photo.
+	   Two columns hold on a phone, where a 3:2 photo still reads; three and
+	   four drop to one. The renderer stamps each image's intrinsic
+	   width/height, so a cell keeps its natural aspect ratio and reserves its
+	   box for a zero-shift load.
 	--------------------------------------------------------------------- */
 	.gallery {
 		display: grid;
@@ -744,8 +735,7 @@
 	/* ---------------------------------------------------------------------
 	   Link buttons — the hero helper
 	   Big, tappable, obviously-clickable objects reusing the `.widget` surface
-	   (squircle, shadow, press, hover-lift). The row layout overrides the
-	   widget's default column, and a tighter radius suits the shorter height.
+	   (squircle, shadow, press, hover-lift).
 	--------------------------------------------------------------------- */
 	.link-buttons {
 		display: flex;
@@ -872,9 +862,9 @@
 	}
 
 	/* ---------------------------------------------------------------------
-	   Contribution graph shortcode — CSS-grid cells, coloured by --grass-*,
-	   ported from the old `Grass` widget. The grid is decorative (aria-hidden
-	   in the markup); the caption is the accessible version.
+	   Contribution graph shortcode — CSS-grid cells, coloured by --grass-*.
+	   The grid is decorative (aria-hidden in the markup); the caption is the
+	   accessible version.
 	--------------------------------------------------------------------- */
 	.contrib {
 		display: flex;

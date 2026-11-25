@@ -5,16 +5,11 @@ import { bindings, afterResponse } from '$lib/server/bindings';
 /**
  * The bytes. Streamed from R2 with `Content-Disposition: attachment`, so the
  * browser always downloads rather than renders — which is what makes the
- * client-declared MIME safe to pass through. Expiry is judged lazily here
- * too, the same way the landing page judges it.
+ * client-declared MIME safe to pass through.
  *
  * Deliberately `no-store`: a file download must be truthful. Caching the
  * bytes would keep serving a deleted or expired file for the cache TTL, and
  * it would swallow download counts (a cache hit never reaches this handler).
- * R2 serves from the edge anyway, so the only thing caching would buy is a
- * little latency.
- *
- * The body is streamed from R2, never buffered, so size is no concern here.
  */
 
 export const GET: RequestHandler = async (event) => {
@@ -25,8 +20,7 @@ export const GET: RequestHandler = async (event) => {
 	if (!file) return new Response('No file with that slug.', { status: 404 });
 
 	// Ranges, so a dropped multi-gigabyte download resumes where it stopped
-	// instead of starting over. Parsed here against the stored size, then
-	// asked of R2 as an explicit offset and length.
+	// instead of starting over.
 	const span = parseRange(event.request.headers.get('range'), file.bytes);
 	if (span === 'unsatisfiable') {
 		return new Response('That range is not in the file.', {

@@ -16,9 +16,7 @@ import base from './vite.config';
  * points at a build artifact (`.svelte-kit/cloudflare/_worker.js`). Anything
  * that resolves the Vite config therefore fails on a tree that has not been
  * built yet — and `svelte-check` resolves it as `command: 'serve'`, so a
- * command-based gate does not exclude it. That is exactly what a clean CI
- * checkout hit, while a local run passed on a stale artifact left behind by an
- * earlier build.
+ * command-based gate does not exclude it.
  *
  * Splitting the file makes the rule explicit instead of inferred: the dev
  * script asks for this config, and nothing else can pick it up by accident.

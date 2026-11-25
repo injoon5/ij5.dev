@@ -5,7 +5,7 @@ import { errorMessage } from '$lib/ui/http';
  *
  * Parts go up three at a time, each an `XMLHttpRequest` rather than `fetch`
  * because only XHR reports upload progress — and on a multi-gigabyte file a
- * progress bar that moves once per 90 MiB part is a progress bar that looks
+ * progress bar that moves once per part is a progress bar that looks
  * frozen. A failed part is retried with backoff before the whole upload is
  * given up; cancelling aborts what is in flight and tells R2 to discard the
  * rest.

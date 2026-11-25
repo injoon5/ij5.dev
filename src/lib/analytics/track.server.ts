@@ -10,16 +10,16 @@ import { SLUG_PATTERN } from '$lib/slugs/slugs';
  * tables, off the response path. No event stream and no rollup job — the
  * aggregate *is* the storage, so counts are exact and history is permanent.
  *
- * Two tables, because the dimensions that would fit one would choke the other:
- * `hits` stays at six columns, and `hits_device` carries the OS/browser
- * breakdown that six would not fit.
+ * Three tables: `hits` stays at six dimensions, `hits_device` carries the
+ * OS/browser breakdown that would multiply its rows, and `visitors` holds one
+ * row per visitor per path per day for the unique count.
  *
  * Identity is a daily-rotating hash. When the fingerprint cookie (set by the
  * `/analytics/beacon` endpoint from the home page's `/a.js`) is present it
  * replaces the IP+UA guess, so a room full of people behind one NAT counts as
- * a room full of people. Nothing identifying is stored either way: the raw
- * fingerprint lives only in the visitor's browser, and the stored value hashes
- * it with the day and the salt, so it is useless across days.
+ * a room full of people. Nothing identifying is stored either way: the
+ * fingerprint is kept only in an HttpOnly cookie, never in D1, and the stored
+ * value hashes it with the day and the salt, so it is useless across days.
  */
 
 

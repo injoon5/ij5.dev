@@ -44,7 +44,7 @@ export type UploadLimits = {
 	maxFileBytes: number;
 };
 
-export function uploadLimits(partMib: string | number | undefined = DEFAULT_PART_MIB): UploadLimits {
+export function uploadLimits(partMib?: string): UploadLimits {
 	const parsed = Number(partMib);
 	const mib = Number.isFinite(parsed) && parsed >= 5 ? Math.floor(parsed) : DEFAULT_PART_MIB;
 	// R2's own ceiling on one part is 5 GiB.

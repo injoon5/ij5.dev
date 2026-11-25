@@ -42,8 +42,6 @@ export const PUT: RequestHandler = async ({ request, params, platform }) => {
 	const auth = await authorizeApp(request, env, { slug: params.slug, action: 'write' });
 	if (!auth.ok) return apiError(auth.status, auth.error);
 
-	// A failed attempt with a key costs it one try : enough to let an
-	// agent fix its code and retry, not enough to let it guess forever.
 	const fail = async (status: number, error: string, extra?: Record<string, unknown>) => {
 		if (auth.origin === 'key') await spendAttempt(env, auth.key.id);
 		return apiError(status, error, extra);
@@ -60,7 +58,6 @@ export const PUT: RequestHandler = async ({ request, params, platform }) => {
 		.startsWith('text/x-swift');
 	const limit = isSwift ? MAX_APP_BYTES : MAX_JSON_BODY;
 
-	// Refuse an announced oversize body before reading a byte of it.
 	if (Number(request.headers.get('content-length') ?? 0) > limit) return fail(413, SOURCE_TOO_BIG);
 
 	let input: unknown;
@@ -68,8 +65,7 @@ export const PUT: RequestHandler = async ({ request, params, platform }) => {
 		const text = await request.text();
 		if (utf8Bytes(text) > MAX_APP_BYTES) return fail(413, SOURCE_TOO_BIG);
 		const parsed = parseReply(text);
-		// The parser falls back to a default for every field but the name: a
-		// tint it does not know is `blue`, a missing icon is `app`. A nameless
+		// The name is the one field the parser has no fallback for: a nameless
 		// app has nothing to show under its icon.
 		if (!parsed.name) {
 			return fail(422, 'That app is not valid.', {
@@ -121,8 +117,6 @@ export const DELETE: RequestHandler = async ({ request, params, url, platform })
 
 	if (!(await getAppMeta(env, params.slug))) return apiError(404, 'No app with that slug.');
 
-	// The default keeps the data, so an app can be deleted and made again
-	// without losing what it saved; deleting it too has to be asked for.
 	await deleteApp(env, params.slug, url.searchParams.get('data') === 'delete');
 
 	return apiJson({ slug: params.slug, deleted: true });

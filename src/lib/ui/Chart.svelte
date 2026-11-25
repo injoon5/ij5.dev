@@ -9,21 +9,12 @@
 	 * A line chart, in the shape of the sparkline on injoon5/web: no gridlines,
 	 * no tooltip box, an axis that is only ever text, and a headline above that
 	 * carries the exact value for whatever day the pointer is on.
-	 *
-	 * Hand-drawn rather than LayerChart. The reference reaches for a library
-	 * because it draws four of these against a shared domain with a tuning panel
-	 * bound to every dimension; this is one chart with one series. A chart
-	 * library would bring a scale abstraction, a plugin architecture and a theme
-	 * to strip, and would still need the touch handling and tick thinning
-	 * written by hand — which is all that is actually below.
 	 */
 
 	type Point = { day: string; hits: number };
 
 	let { data, label = 'visits' }: { data: Point[]; label?: string } = $props();
 
-	// The wash gradient needs a stable, unique id per instance — a hardcoded id
-	// would collide the day a page renders two charts.
 	const WASH_ID = `chart-wash-${++washSeq}`;
 
 	/**
@@ -31,11 +22,10 @@
 	 * stretched to fit. `preserveAspectRatio="none"` would scale x and y by
 	 * different factors, which distorts everything that is not a path — the axis
 	 * numbers stretch, the stroke thins, a round marker renders as an ellipse.
-	 * Measuring costs one bound property and removes the whole class of problem.
 	 */
 	/** Vertical breathing room, so a peak never touches the top of the box. */
 	const PAD_Y = 10;
-	/** Left gutter the y labels start in, in viewBox units. */
+	/** Left gutter the y labels start in, in pixels. */
 	const GUTTER = 46;
 
 	let active = $state<number | null>(null);
@@ -49,9 +39,6 @@
 	// SSR has no width. The box reserves its height in CSS, so the line simply
 	// appears once hydrated rather than shifting the numbers above it.
 	let W = $derived(Math.max(width, 1));
-	// Both axes, for the same reason: a viewBox height of 200 drawn into a 176px
-	// box is a 0.88 vertical scale, which squashes the axis numbers just as
-	// surely as a stretched width would.
 	let H = $derived(Math.max(height, 1));
 
 	/**
@@ -114,7 +101,6 @@
 
 		// The gutter is part of the box but not part of the plot, so the ratio is
 		// taken against the drawn span — otherwise the marker trails the finger.
-		// Geometry is 1:1 with pixels now, so the gutter needs no conversion.
 		const span = rect.width - GUTTER;
 		if (span <= 0) return null;
 
@@ -215,17 +201,12 @@
 		<svg viewBox="0 0 {W} {H}" class="block size-full">
 			<defs>
 				<linearGradient id={WASH_ID} x1="0" x2="0" y1="0" y2="1">
-					<!-- An ease-out ramp, not a linear one, which held a flat film and
-					     then stopped dead at the baseline. -->
 					<stop offset="0%" stop-color="var(--accent)" stop-opacity="0.20" />
 					<stop offset="42%" stop-color="var(--accent)" stop-opacity="0.09" />
 					<stop offset="100%" stop-color="var(--accent)" stop-opacity="0" />
 				</linearGradient>
 			</defs>
 
-			<!-- Text only: no rule under the labels, no gridlines across the plot,
-			     not even a tick mark. The numbers are there to size the line, and
-			     anything drawn to connect them to it competes with the line. -->
 			{#each ticks as tick (tick)}
 				<text class="fill-text-subtle text-[11px]" x="0" y={y(tick)} dominant-baseline="middle">{compact(tick)}</text>
 			{/each}
@@ -282,12 +263,8 @@
 		</tbody>
 	</table>
 
-	<!--
-		Flush with the panel rather than indented to the plot: the heading, the
-		readout, the axis labels and these dates all start on one column, which
-		reads as alignment. The gap between this date and the first point is a
-		distance nobody measures; two staggered left edges is one anybody sees.
-	-->
+	<!-- Flush with the panel, not indented to the plot, so the readout, the
+	     axis labels and these dates share one left edge. -->
 	<div class="mt-2 flex justify-between text-xs text-text-subtle">
 		<span>{fmtDay(data[0].day)}</span>
 		{#if !single}<span>{fmtDay(data[data.length - 1].day)}</span>{/if}

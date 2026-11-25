@@ -41,7 +41,6 @@ async function dropCachedRedirect(slug: string) {
 	await cache?.delete(redirectCacheKey(slug)).catch((e) => console.error('cache purge failed:', e));
 }
 
-/** Runs `undo` if `write` fails, then rethrows the write's error. */
 async function orUndo(write: () => Promise<unknown>, undo: () => Promise<unknown>) {
 	try {
 		await write();

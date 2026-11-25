@@ -17,8 +17,6 @@ export const GET: RequestHandler = async ({ request, params, platform }) => {
 	const value = await readOne(env, params.slug, params.key);
 	if (value === null) return apiError(404, 'No value with that key.');
 
-	// The stored text is already JSON; parsing and re-encoding it would only
-	// cost CPU.
 	return new Response(value, {
 		headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }
 	});

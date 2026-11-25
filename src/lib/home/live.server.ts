@@ -21,17 +21,14 @@ const HOUR = 60 * 60 * 1000;
 const MINUTE = 60 * 1000;
 
 type Fetcher = {
-	/** How long a fetched value stays fresh. */
 	ttl: number;
 	run: (data: Record<string, unknown>, env: Env) => Promise<unknown>;
 	/**
-	 * Whether this deployment can run the fetcher at all.
-	 *
-	 * A widget whose credential is absent is *disabled*, not broken: nothing is
-	 * scheduled, no request goes out, and the widget renders the fallback it
-	 * declares. Asking up front rather than throwing inside `run` is what keeps
-	 * a missing optional secret from costing a doomed attempt on every render —
-	 * and it is why the whole site runs with no third-party credentials at all.
+	 * A widget whose credential is absent is disabled, not broken: nothing is
+	 * scheduled and it renders its own fallback. Asking up front rather than
+	 * throwing inside `run` keeps a missing optional secret from costing a
+	 * doomed attempt on every render, so the site runs with no third-party
+	 * credentials at all.
 	 */
 	available: (env: Env) => boolean;
 };
@@ -49,11 +46,7 @@ const fetchers: Record<string, Fetcher> = {
 		ttl: 6 * HOUR,
 		/**
 		 * The contribution calendar is GraphQL-only, and GitHub's GraphQL API
-		 * refuses anonymous requests outright — there is no unauthenticated
-		 * version of this data to fall back to. So with no token the widget is
-		 * simply off: nothing is scheduled, nothing is fetched, and the card
-		 * renders its own empty lattice, which reads as a quiet year rather
-		 * than a broken widget.
+		 * refuses anonymous requests outright, so with no token the widget is off.
 		 */
 		available: (env) => Boolean(env.GITHUB_TOKEN),
 
@@ -131,13 +124,7 @@ export const readLive = (env: Env) => env.KV.get<LiveDoc>(KEY, { type: 'json', c
 const isStale = (entry: LiveDoc[string] | undefined, ttl: number) =>
 	!entry || entry.at < Date.now() - ttl;
 
-/**
- * Returns the work to do after this render, or null if there is none. The
- * caller hands the promise to `waitUntil` so nothing blocks the response.
- */
 export function planRefresh(requests: LiveRequest[], live: LiveDoc | null, env: Env) {
-	// A source this deployment cannot fetch for is never scheduled, so a site
-	// with no third-party tokens does no background work at all.
 	const stale = requests.filter((r) => {
 		const fetcher = fetchers[r.kind];
 		return fetcher?.available(env) && isStale(live?.[r.id], fetcher.ttl);

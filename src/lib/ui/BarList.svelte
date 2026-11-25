@@ -14,12 +14,9 @@
 	 * accent: length and order already carry rank.
 	 *
 	 * The card shows the first `LIMIT` rows and folds the rest into a sheet —
-	 * a long list is a wall to scroll past on the way to the next panel. The
-	 * card is as tall as its rows; cards side by side in a grid row stretch to
-	 * the tallest, and a lone card is never padded out to an empty box.
+	 * a long list is a wall to scroll past on the way to the next panel.
 	 */
 
-	/** Rows shown in the card; the rest fold into the sheet. */
 	const LIMIT = 6;
 
 	type Row = { label: string; value: number; href?: string };
@@ -106,9 +103,8 @@
 </section>
 
 <!--
-	A bottom sheet on a phone, a centred card from `sm`. `display`/`overlay`
-	transition with `transition-discrete` so the box holds through the close,
-	and `starting:` seeds the enter — no JS, no keyframes.
+	`display`/`overlay` need `transition-discrete` for the dialog to stay
+	rendered through its close; `starting:` gives the enter its first frame.
 -->
 <dialog
 	bind:this={dialog}

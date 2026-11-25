@@ -2,7 +2,7 @@ import { eq, sha256 } from '$lib/server/crypto';
 import { KEY_ERROR, KEY_PREFIX } from '$lib/apps/installKeys.server';
 
 /**
- * Bearer auth for the shortener API (the admin token, used as a bearer credential).
+ * Bearer auth for the JSON API (the admin token, used as a bearer credential).
  *
  * The session cookie is deliberately not accepted here. A cookie is attached by
  * the browser to any request the browser is talked into making, which is what

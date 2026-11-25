@@ -10,15 +10,13 @@ import { EMPTY_PROFILE, HOME_KEYS, type HomeDoc, type Profile } from '$lib/home/
  * D1 stays the source of truth and every write mirrors into `home:draft`.
  * Publishing swaps the whole document at once, so no visitor ever sees a
  * half-updated page, and `home:prev` makes a bad edit a scare rather than an
- * incident. (The KV keys keep the `home:` prefix — the page changed shape, the
- * storage contract did not.)
+ * incident.
  */
 
 type Env = App.Platform['env'];
 
 const { published: PUBLISHED, draft: DRAFT, previous: PREV } = HOME_KEYS;
 
-/** Rebuilds the document from the source of truth. One row, one query. */
 export async function loadFromD1(env: Env): Promise<{ profile: Profile; markdown: string }> {
 	const row = (await env.DB.prepare(
 		`SELECT name, bio, tagline, avatar, links, content FROM profile WHERE id = 1`
@@ -51,11 +49,6 @@ export async function readPublished(env: Env): Promise<HomeDoc | null> {
 	return await env.KV.get<HomeDoc>(PUBLISHED, { type: 'json', cacheTtl: 60 });
 }
 
-/**
- * What the public homepage shows: the published document (`known` when the
- * hook already read it), or — before the first publish, or while KV is
- * failing — the document rebuilt from D1 at version 0.
- */
 export async function currentHome(env: Env, known?: HomeDoc | null): Promise<HomeDoc> {
 	const published = known ?? (await readPublished(env).catch(() => null));
 	if (published) return published;
@@ -67,7 +60,6 @@ export async function readDraft(env: Env): Promise<HomeDoc> {
 	const draft = await env.KV.get<HomeDoc>(DRAFT, { type: 'json' });
 	if (draft) return draft;
 
-	// No draft yet: derive one from D1 so the editor always opens on something.
 	const { profile, markdown } = await loadFromD1(env);
 	return { v: 0, profile, markdown };
 }
@@ -81,11 +73,6 @@ export async function syncDraft(env: Env): Promise<HomeDoc> {
 	return draft;
 }
 
-/**
- * Draft becomes published, version increments, previous published is kept.
- * The version bump is what invalidates every colo's edge cache at once —
- * `cache.delete()` would only reach the colo it ran in.
- */
 export async function publish(env: Env): Promise<HomeDoc> {
 	const [draft, current] = await Promise.all([readDraft(env), readPublished(env)]);
 	const next: HomeDoc = {
@@ -100,7 +87,6 @@ export async function publish(env: Env): Promise<HomeDoc> {
 	return next;
 }
 
-/** Two KV writes, and the difference between a bad edit and an incident. */
 export async function revert(env: Env): Promise<HomeDoc | null> {
 	const [prev, current] = await Promise.all([
 		env.KV.get<HomeDoc>(PREV, { type: 'json' }),
@@ -116,15 +102,10 @@ export async function revert(env: Env): Promise<HomeDoc | null> {
 }
 
 /**
- * Bump the published version without changing the content — the "clear cache"
- * escape hatch for the homepage.
- *
- * The edge cache is version-keyed (`home/v${v}` in the hook) precisely because
- * `cache.delete()` only reaches the colo it runs in: a bump swaps the
- * key everywhere at once, so the next visitor to `/` misses, re-renders from
- * scratch (live widgets included), and repopulates the cache. Content is
- * untouched, and so is the draft — unsaved edits in the editor are not
- * publishable and must not be disturbed.
+ * The "clear cache" escape hatch. `cache.delete()` only reaches the colo it
+ * runs in, so instead the version-keyed edge cache is invalidated everywhere
+ * by bumping `v` with the content unchanged. The draft is left alone so
+ * edits in progress are not disturbed.
  */
 export async function clearCache(env: Env): Promise<HomeDoc | null> {
 	const current = await readPublished(env);

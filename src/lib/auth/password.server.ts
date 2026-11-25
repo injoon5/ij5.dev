@@ -12,7 +12,7 @@ import { b64, enc, eq, fromB64 } from '$lib/server/crypto';
  * The hash lives in the `PASSWORD_HASH` secret, never in D1, and is keyed with
  * `PASSWORD_PEPPER` through Argon2's own secret input. Without both, the hash
  * is not even crackable offline; with neither, the only attack left is
- * guessing online, which `throttle.ts` limits.
+ * guessing online, which `throttle.server.ts` limits.
  *
  * Format is the standard PHC string, so the cost can be raised later by
  * re-hashing with `scripts/auth.mjs password` — old parameters keep verifying

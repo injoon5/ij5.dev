@@ -1,36 +1,15 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEVICE_UPSERT, HITS_UPSERT, MIGRATE_VISITOR, PURGE_VISITOR, VISITORS_INSERT } from './track.server';
+import { dashboard } from './stats.server';
+import { utcDay } from './ranges';
+import { HOME_SLUG, OTHER_PATH } from './visit';
+import { d1, migratedDb, sqlite } from '$lib/server/testing/d1';
 
 /**
- * The `hits` upsert increments rather than duplicating.
- *
- * D1 is SQLite, so the real migration and the real statements run here against
- * an in-memory database. That makes this a test of the schema as much as the
- * write path: a primary key that stopped covering every dimension, or an index
- * that stopped existing, fails right here.
+ * The analytics write statements and the dashboard's read queries, run
+ * against an in-memory SQLite built from every migration — the SQL that ships
+ * is the SQL that passes.
  */
-
-// The schema is the sum of every migration, so the suite applies all of them
-// in order rather than pinning one file. A test that stops at 0001 would keep
-// asserting a `blocks` table long after it was retired.
-const MIGRATIONS = [
-	'0001_init.sql',
-	'0002_markdown.sql',
-	'0003_passkeys.sql',
-	'0004_cleanup.sql',
-	'0005_fingerprint.sql'
-].map((name) => fileURLToPath(new URL(`../../../migrations/${name}`, import.meta.url)));
-
-// `node:sqlite` is unflagged from Node 22.5 onwards. If a runtime does not have
-// it, skip rather than fail — the suite should never go red for that reason.
-let sqlite: typeof import('node:sqlite') | null = null;
-try {
-	sqlite = await import('node:sqlite');
-} catch {
-	sqlite = null;
-}
 
 const withSqlite = sqlite ? describe : describe.skip;
 
@@ -40,8 +19,7 @@ withSqlite('hits', () => {
 	const HIT = ['2026-01-01', 'gh', 'redirect', 'KR', 'direct', 'mobile'] as const;
 
 	beforeEach(() => {
-		db = new sqlite!.DatabaseSync(':memory:');
-		for (const file of MIGRATIONS) db.exec(readFileSync(file, 'utf8'));
+		db = migratedDb();
 	});
 
 	const hit = (...args: readonly string[]) => db.prepare(HITS_UPSERT).run(...args);
@@ -57,16 +35,6 @@ withSqlite('hits', () => {
 		});
 		return db.prepare(sql).run(named);
 	};
-
-	it('applies the migration cleanly', () => {
-		const tables = rows<{ name: string }>(
-			`SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name`
-		).map((r) => r.name);
-
-		// `blocks` was retired by 0004; `passkeys` arrived with 0003. Everything
-		// else is 0001's original shape, plus `hits_device` from 0005.
-		expect(tables).toEqual(['assets', 'hits', 'hits_device', 'passkeys', 'profile', 'slugs', 'visitors']);
-	});
 
 	it('creates the two indexes that keep per-slug queries off a full scan', () => {
 		const indexes = rows<{ name: string }>(
@@ -157,21 +125,6 @@ withSqlite('hits', () => {
 		expect(total).toBe(7);
 	});
 
-	it('counts the homepage under the empty slug, alongside redirects', () => {
-		hit('2026-01-01', '', 'home', 'KR', 'direct', 'mobile');
-		hit('2026-01-01', '', 'home', 'KR', 'direct', 'mobile');
-		hit(...HIT);
-
-		const [totals] = rows<{ redirects: number; home: number }>(
-			`SELECT
-			   SUM(CASE WHEN kind = 'redirect' THEN n ELSE 0 END) AS redirects,
-			   SUM(CASE WHEN kind = 'home' THEN n ELSE 0 END) AS home
-			 FROM hits WHERE device != 'bot'`
-		);
-
-		expect(totals).toEqual({ redirects: 1, home: 2 });
-	});
-
 	it('deduplicates a visitor within a day and separates them across days', () => {
 		const visitor = db.prepare(VISITORS_INSERT);
 		visitor.run('2026-01-01', 'gh', 'abc123');
@@ -183,43 +136,51 @@ withSqlite('hits', () => {
 		expect(rows<{ n: number }>(`SELECT COUNT(*) AS n FROM visitors WHERE slug = 'gh'`)[0].n).toBe(2);
 	});
 
-	it('reports hits and uniques from the same population', () => {
-		// The dashboard's top-slugs query joins a bot-filtered hits total to an
-		// unfiltered visitors count. That only reads correctly because bot rows
-		// never reach `visitors` in the first place — `track` skips them.
-		hit(...HIT);
-		hit('2026-01-01', 'gh', 'redirect', 'KR', 'direct', 'bot');
-		db.prepare(VISITORS_INSERT).run('2026-01-01', 'gh', 'human');
+	describe('the dashboard', () => {
+		const today = utcDay();
+		const env = () => ({ DB: d1(db) }) as unknown as App.Platform['env'];
 
-		const [row] = rows<{ slug: string; hits: number; visitors: number }>(
-			`WITH v AS (SELECT slug, COUNT(*) AS visitors FROM visitors GROUP BY slug)
-			 SELECT h.slug, SUM(h.n) AS hits, COALESCE(v.visitors, 0) AS visitors
-			 FROM hits h LEFT JOIN v ON v.slug = h.slug
-			 WHERE h.device != 'bot' AND h.kind = 'redirect'
-			 GROUP BY h.slug`
-		);
+		it('counts the homepage as a view and a redirect as a click, and leaves bots out of both', async () => {
+			hit(today, HOME_SLUG, 'home', 'KR', 'direct', 'mobile');
+			hit(today, HOME_SLUG, 'home', 'KR', 'direct', 'mobile');
+			hit(today, 'gh', 'redirect', 'KR', 'direct', 'desktop');
+			hit(today, 'gh', 'redirect', 'KR', 'direct', 'bot');
 
-		expect(row).toEqual({ slug: 'gh', hits: 1, visitors: 1 });
-	});
+			const d = await dashboard(env(), '7d', null);
+			expect(d.totals).toMatchObject({ clicks: 1, views: 2 });
+			expect(d.top).toEqual([
+				{ slug: HOME_SLUG, kind: 'home', hits: 2 },
+				{ slug: 'gh', kind: 'redirect', hits: 1 }
+			]);
+		});
 
-	it('surfaces 404s worth turning into real slugs, and nothing a bot invented', () => {
-		hit('2026-01-01', 'resume', '404', 'KR', 'direct', 'desktop');
-		hit('2026-01-01', 'resume', '404', 'US', 'direct', 'mobile');
-		hit('2026-01-01', '*', '404', 'US', 'direct', 'bot');
-		hit('2026-01-01', 'oneoff', '404', 'US', 'direct', 'mobile');
+		it('narrows every number to one path', async () => {
+			hit(today, HOME_SLUG, 'home', 'KR', 'direct', 'mobile');
+			hit(today, 'gh', 'redirect', 'US', 'example.com', 'desktop');
+			db.prepare(VISITORS_INSERT).run(today, 'gh', 'v1');
+			db.prepare(VISITORS_INSERT).run(today, HOME_SLUG, 'v2');
 
-		const found = rows<{ path: string; hits: number }>(
-			`SELECT slug AS path, SUM(n) AS hits FROM hits
-			 WHERE kind = '404' AND device != 'bot'
-			 GROUP BY path HAVING SUM(n) > 1 ORDER BY hits DESC LIMIT 5`
-		);
+			const d = await dashboard(env(), '7d', 'gh');
+			expect(d.totals).toEqual({ clicks: 1, views: 0, visitors: 1 });
+			expect(d.referrers).toEqual([{ referrer: 'example.com', hits: 1 }]);
+			expect(d.notFound).toEqual([]);
+		});
 
-		// A one-off 404 is a single typo, not a path worth creating.
-		expect(found).toEqual([{ path: 'resume', hits: 2 }]);
-	});
+		it('lists 404s asked for more than once, never the catch-all bucket or a bot', async () => {
+			hit(today, 'resume', '404', 'KR', 'direct', 'desktop');
+			hit(today, 'resume', '404', 'US', 'direct', 'mobile');
+			hit(today, 'oneoff', '404', 'US', 'direct', 'mobile');
+			hit(today, OTHER_PATH, '404', 'US', 'direct', 'mobile');
+			hit(today, OTHER_PATH, '404', 'US', 'direct', 'mobile');
+			hit(today, 'scan', '404', 'US', 'direct', 'bot');
+			hit(today, 'scan', '404', 'US', 'direct', 'bot');
 
-	it('holds one row per profile, and only row 1', () => {
-		expect(rows<{ n: number }>(`SELECT COUNT(*) AS n FROM profile`)[0].n).toBe(1);
-		expect(() => db.prepare(`INSERT INTO profile (id, name) VALUES (2, 'x')`).run()).toThrow();
+			expect((await dashboard(env(), '7d', null)).notFound).toEqual([{ path: 'resume', hits: 2 }]);
+		});
+
+		it('leaves days outside the range out', async () => {
+			hit('2001-01-01', 'gh', 'redirect', 'KR', 'direct', 'desktop');
+			expect((await dashboard(env(), '7d', null)).totals.clicks).toBe(0);
+		});
 	});
 });

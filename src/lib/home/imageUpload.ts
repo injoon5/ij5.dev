@@ -31,7 +31,6 @@ export async function shrink(file: File): Promise<{ blob: Blob; w: number; h: nu
 	return { blob, w, h };
 }
 
-/** Uploads an image and returns the content-addressed key R2 stored it under. */
 export async function uploadImage(
 	file: File
 ): Promise<{ key: string; w: number; h: number; mime: string; bytes: number }> {
@@ -41,7 +40,7 @@ export async function uploadImage(
 		method: 'POST',
 		headers: {
 			// Without this SvelteKit answers a thrown `error()` with its HTML
-			// error page, and the whole document became the message on screen.
+			// error page, which would then be shown as the message.
 			accept: 'application/json',
 			'content-type': blob.type,
 			'x-image-width': String(w),
