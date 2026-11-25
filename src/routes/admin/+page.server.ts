@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Actions, PageServerLoad } from './$types';
 import { requireFull } from '$lib/auth/guard.server';
 import { endOfDay, isExpired } from '$lib/expiry';
-import { fieldErrors } from '$lib/forms';
+import { parseForm } from '$lib/forms';
 import { linkFields } from '$lib/links/input';
 import type { LinkInput } from '$lib/links/link';
 import { createLink, deleteLink, getLink, listLinks, updateLink } from '$lib/links/links.server';
@@ -22,11 +22,10 @@ const form = z.object({
 const FIELDS = ['slug', 'target_url', 'status', 'note', 'expires'] as const;
 
 function parse(data: FormData) {
-	const values = Object.fromEntries(FIELDS.map((k) => [k, String(data.get(k) ?? '')]));
-	const result = form.safeParse(values);
-	if (!result.success) return { ok: false as const, fields: fieldErrors(result.error), values };
-	const { expires, ...rest } = result.data;
-	return { ok: true as const, values, row: { ...rest, expires_at: expires } satisfies LinkInput };
+	const parsed = parseForm(form, data, FIELDS);
+	if (!parsed.ok) return parsed;
+	const { expires, ...rest } = parsed.data;
+	return { ok: true as const, values: parsed.values, row: { ...rest, expires_at: expires } satisfies LinkInput };
 }
 
 export const load: PageServerLoad = async ({ platform, url }) => {

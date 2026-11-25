@@ -4,7 +4,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { requireFull } from '$lib/auth/guard.server';
 import { recentHits } from '$lib/analytics/stats.server';
 import { endOfDay, isExpired } from '$lib/expiry';
-import { fieldErrors } from '$lib/forms';
+import { parseForm } from '$lib/forms';
 import { linkFields } from '$lib/links/input';
 import { MAX_PASTE_CHARS, type PasteInput } from '$lib/pastes/paste';
 import { createPaste, deletePaste, getPaste, listPastes, updatePaste } from '$lib/pastes/pastes.server';
@@ -25,11 +25,10 @@ const form = z.object({
 const FIELDS = ['slug', 'body', 'note', 'expires', 'cache'] as const;
 
 function parse(data: FormData) {
-	const values = Object.fromEntries(FIELDS.map((k) => [k, String(data.get(k) ?? '')]));
-	const result = form.safeParse(values);
-	if (!result.success) return { ok: false as const, fields: fieldErrors(result.error), values };
-	const { expires, ...rest } = result.data;
-	return { ok: true as const, values, row: { ...rest, expires_at: expires } satisfies PasteInput };
+	const parsed = parseForm(form, data, FIELDS);
+	if (!parsed.ok) return parsed;
+	const { expires, ...rest } = parsed.data;
+	return { ok: true as const, values: parsed.values, row: { ...rest, expires_at: expires } satisfies PasteInput };
 }
 
 export const load: PageServerLoad = async ({ platform, url }) => {
