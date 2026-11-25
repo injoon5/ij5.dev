@@ -13,9 +13,9 @@ import {
 	revert,
 	syncDraft
 } from '$lib/home/home.server';
-import { docKeys, isAssetKey, isReferenced, releaseAssets, removeAsset } from '$lib/home/assets.server';
+import { docKeys, isReferenced, releaseAssets, removeAsset } from '$lib/home/assets.server';
+import { imageKeysIn, isAssetKey } from '$lib/home/assetKeys';
 import { parseLines } from '$lib/home/lines';
-import { imageKeysIn } from '$lib/home/markdown';
 import type { AssetRow } from '$lib/home/types';
 import { bindings } from '$lib/server/bindings';
 

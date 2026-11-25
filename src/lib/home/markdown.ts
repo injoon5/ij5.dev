@@ -1,7 +1,8 @@
 import MarkdownIt from 'markdown-it';
 import { hasIcon, iconSvg } from '$lib/home/icons';
 import { renderContribGraph, type ContribData } from '$lib/home/contrib';
-import type { LiveDoc, LiveRequest } from '$lib/home/types';
+import { GRASS, type LiveDoc, type LiveRequest } from '$lib/home/types';
+import { isAssetKey } from './assetKeys';
 
 /**
  * The homepage is one Markdown document rendered to HTML on the server and
@@ -30,11 +31,9 @@ export type RenderCtx = {
 	live?: LiveDoc | null;
 	/** Intrinsic dimensions for `img/…` keys, so images reserve space (CLS 0). */
 	dims?: Map<string, { w: number; h: number }>;
-	/** Default GitHub login for a `::contributions` with no explicit `user=`. */
-	contribUser?: string;
 };
 
-type RenderEnv = RenderCtx & { needsScript: boolean; contribUser: string };
+type RenderEnv = RenderCtx & { needsScript: boolean };
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -138,7 +137,7 @@ function parseGalleryRow(line: string, e: RenderEnv): GalleryItem | null {
 
 	let src = rawSrc;
 	let dims = '';
-	if (/^img\/[\w.-]+$/.test(rawSrc)) {
+	if (isAssetKey(rawSrc)) {
 		src = joinUrl(e.assetsOrigin, rawSrc);
 		const d = e.dims?.get(rawSrc);
 		if (d) dims = ` width="${d.w}" height="${d.h}"`;
@@ -222,8 +221,7 @@ function contribRule(state: any, startLine: number, _endLine: number, silent: bo
 	if (!/^::contributions\b/.test(line)) return false;
 	if (silent) return true;
 
-	const fallback = state.env?.contribUser || DEFAULT_CONTRIB_USER;
-	const user = parseContribUser(line, fallback);
+	const user = parseContribUser(line, DEFAULT_CONTRIB_USER);
 	const token = state.push('contrib_block', '', 0);
 	token.map = [startLine, startLine + 1];
 	token.meta = { user, id: contribId(user) };
@@ -293,7 +291,7 @@ md.renderer.rules.contrib_block = (tokens: any, idx: number, _o: any, env: any) 
 	e.needsScript = true;
 	// The site owner's graph goes through the `/gh` short link, so the click is
 	// counted like any other; anyone else's goes straight to their profile.
-	const href = meta.user === e.contribUser ? '/gh' : undefined;
+	const href = meta.user === DEFAULT_CONTRIB_USER ? '/gh' : undefined;
 	return renderContribGraph(data, meta.user, href) + '\n';
 };
 
@@ -307,7 +305,7 @@ md.renderer.rules.image = (tokens: any, idx: number, options: any, env: any, sel
 
 	let src = rawSrc;
 	let key: string | null = null;
-	if (/^img\/[\w.-]+$/.test(rawSrc)) {
+	if (isAssetKey(rawSrc)) {
 		key = rawSrc;
 		src = joinUrl(e.assetsOrigin, rawSrc);
 	}
@@ -355,11 +353,7 @@ export function renderMarkdown(
 	src: string | null | undefined,
 	ctx: RenderCtx
 ): { html: string; needsScript: boolean } {
-	const env: RenderEnv = {
-		...ctx,
-		needsScript: false,
-		contribUser: ctx.contribUser || DEFAULT_CONTRIB_USER
-	};
+	const env: RenderEnv = { ...ctx, needsScript: false };
 	const html = md.render(src ?? '', env);
 	return { html, needsScript: env.needsScript };
 }
@@ -369,29 +363,12 @@ export function renderMarkdown(
  * reads/refreshes these before rendering; `renderMarkdown` reads their data back
  * out of `ctx.live` keyed by the same id.
  */
-export function findLiveRequests(
-	src: string | null | undefined,
-	defaultUser = DEFAULT_CONTRIB_USER
-): LiveRequest[] {
+export function findLiveRequests(src: string | null | undefined): LiveRequest[] {
 	const out = new Map<string, LiveRequest>();
-	for (const raw of (src ?? '').split('\n')) {
-		const line = raw.trim();
-		if (!/^::contributions\b/.test(line)) continue;
-		const user = parseContribUser(line, defaultUser);
-		const id = contribId(user);
-		out.set(id, { id, kind: 'grass', data: { user } });
+	for (const t of md.parse(src ?? '', { needsScript: false })) {
+		if (t.type !== 'contrib_block') continue;
+		const { id, user } = t.meta as { id: string; user: string };
+		out.set(id, { id, kind: GRASS, data: { user } });
 	}
 	return [...out.values()];
-}
-
-/** Every `img/…` asset key referenced by the document (for dims + GC). The base
- *  name matches the `[\w.-]` the image renderer accepts, not just the hex of a
- *  freshly minted key, so a manually-written key is never GC'd out from under a
- *  document that still draws it. */
-export function imageKeysIn(src: string | null | undefined): string[] {
-	const keys = new Set<string>();
-	const re = /img\/[\w-]+\.(?:webp|png|jpe?g|avif)/g;
-	let m: RegExpExecArray | null;
-	while ((m = re.exec(src ?? ''))) keys.add(m[0]);
-	return [...keys];
 }

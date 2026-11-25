@@ -1,15 +1,9 @@
 import type { PageServerLoad } from './$types';
-import { loadFromD1, readPublished } from '$lib/home/home.server';
+import { currentHome } from '$lib/home/home.server';
 import { planRefresh, readLive } from '$lib/home/live.server';
-import { renderMarkdown, findLiveRequests, imageKeysIn } from '$lib/home/markdown';
-import type { HomeDoc } from '$lib/home/types';
+import { renderMarkdown, findLiveRequests } from '$lib/home/markdown';
+import { imageKeysIn } from '$lib/home/assetKeys';
 import { bindings, afterResponse } from '$lib/server/bindings';
-
-const EMPTY: HomeDoc = {
-	v: 0,
-	profile: { name: 'ij5', bio: null, tagline: null, avatar: null, links: [], content: null },
-	markdown: ''
-};
 
 /** Intrinsic dimensions for the images the document references, so each `<img>`
  *  reserves its box before it loads and the page holds CLS 0. One query, only
@@ -39,29 +33,9 @@ async function loadDims(
 export const load: PageServerLoad = async ({ platform, locals, url }) => {
 	const env = bindings(platform);
 
-	let doc: HomeDoc | null = null;
-	try {
-		// The hook already read this to build the cache key; reuse it rather than
-		// paying a second KV read on the page that matters most.
-		doc = locals.home ?? (await readPublished(env));
-	} catch {
-		doc = null;
-	}
-
-	if (!doc?.markdown) {
-		// KV is unavailable, nothing has been published yet, or the published
-		// document predates the Markdown format (the old one carried `blocks`,
-		// not a body). All three are the same thing from here: fall back to the
-		// source of truth rather than serving an error or a blank page.
-		try {
-			const { profile, markdown } = await loadFromD1(env);
-			doc = { v: 0, profile, markdown };
-		} catch {
-			doc = EMPTY;
-		}
-	}
-
-	const markdown = doc.markdown ?? '';
+	// The hook already read the published document to build the cache key.
+	const doc = await currentHome(env, locals.home);
+	const markdown = doc.markdown;
 
 	// Read live data and, behind the response, refresh whatever the document's
 	// shortcodes need and a TTL has aged out. Nobody waits on a third party.

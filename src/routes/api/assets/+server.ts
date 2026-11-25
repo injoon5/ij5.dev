@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { bindings } from '$lib/server/bindings';
+import { IMAGE_FORMATS, type ImageMime } from '$lib/home/assetKeys';
 
 /**
  * Binary upload (§5). The one place a `+server.ts` endpoint beats a form
@@ -20,45 +21,18 @@ const MAX_BYTES = 5 * 1024 * 1024;
  * No SVG: it can carry scripts, and the bucket domain has no CSP of its own.
  * Not worth the exception.
  */
-const SIGNATURES: Array<{ mime: string; ext: string; test: (b: Uint8Array) => boolean }> = [
-	{
-		mime: 'image/png',
-		ext: 'png',
-		test: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47
-	},
-	{
-		mime: 'image/jpeg',
-		ext: 'jpg',
-		test: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff
-	},
-	{
-		mime: 'image/webp',
-		ext: 'webp',
-		test: (b) =>
-			b[0] === 0x52 &&
-			b[1] === 0x49 &&
-			b[2] === 0x46 &&
-			b[3] === 0x46 &&
-			b[8] === 0x57 &&
-			b[9] === 0x45 &&
-			b[10] === 0x42 &&
-			b[11] === 0x50
-	},
-	{
-		mime: 'image/avif',
-		ext: 'avif',
-		// 'ftyp' at offset 4, with an 'avif'/'avis' brand following it.
-		test: (b) =>
-			b[4] === 0x66 &&
-			b[5] === 0x74 &&
-			b[6] === 0x79 &&
-			b[7] === 0x70 &&
-			b[8] === 0x61 &&
-			b[9] === 0x76 &&
-			b[10] === 0x69 &&
-			(b[11] === 0x66 || b[11] === 0x73)
-	}
-];
+const SIGNATURES: Record<ImageMime, (b: Uint8Array) => boolean> = {
+	'image/png': (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47,
+	'image/jpeg': (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+	// 'RIFF' … 'WEBP'
+	'image/webp': (b) =>
+		b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+		b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50,
+	// 'ftyp' at offset 4, then an 'avif' or 'avis' brand.
+	'image/avif': (b) =>
+		b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70 &&
+		b[8] === 0x61 && b[9] === 0x76 && b[10] === 0x69 && (b[11] === 0x66 || b[11] === 0x73)
+};
 
 const hex = (buffer: ArrayBuffer) =>
 	Array.from(new Uint8Array(buffer))
@@ -84,7 +58,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	if (body.byteLength > MAX_BYTES) error(413, 'Images are capped at 5 MB.');
 
 	const head = new Uint8Array(body.slice(0, 16));
-	const format = SIGNATURES.find((s) => s.test(head));
+	const format = IMAGE_FORMATS.find((f) => SIGNATURES[f.mime](head));
 	if (!format) error(415, 'PNG, JPEG, WebP or AVIF only.');
 
 	// Content-addressed: the same image twice dedupes for free, and the key can

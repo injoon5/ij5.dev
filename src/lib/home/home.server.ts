@@ -51,6 +51,18 @@ export async function readPublished(env: Env): Promise<HomeDoc | null> {
 	return await env.KV.get<HomeDoc>(PUBLISHED, { type: 'json', cacheTtl: 60 });
 }
 
+/**
+ * What the public homepage shows: the published document (`known` when the
+ * hook already read it), or — before the first publish, or while KV is
+ * failing — the document rebuilt from D1 at version 0.
+ */
+export async function currentHome(env: Env, known?: HomeDoc | null): Promise<HomeDoc> {
+	const published = known ?? (await readPublished(env).catch(() => null));
+	if (published) return published;
+	const { profile, markdown } = await loadFromD1(env);
+	return { v: 0, profile, markdown };
+}
+
 export async function readDraft(env: Env): Promise<HomeDoc> {
 	const draft = await env.KV.get<HomeDoc>(DRAFT, { type: 'json' });
 	if (draft) return draft;

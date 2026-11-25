@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { IMAGE_ACCEPT } from './assetKeys';
 	import ImageIcon from 'lucide-svelte/icons/image';
 	import Button from '$lib/ui/Button.svelte';
 	import { uploadImage } from './imageUpload';
@@ -97,7 +98,7 @@
 			bind:this={fileEl}
 			{id}
 			type="file"
-			accept="image/png,image/jpeg,image/webp,image/avif"
+			accept={IMAGE_ACCEPT}
 			class="sr-only"
 			aria-describedby={described}
 			onchange={(e) => {

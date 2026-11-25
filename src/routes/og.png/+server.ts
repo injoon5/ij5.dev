@@ -2,7 +2,7 @@ import { ImageResponse } from '@ethercorps/sveltekit-og';
 import { GoogleFont, resolveFonts } from '@ethercorps/sveltekit-og/fonts';
 import type { RequestHandler } from '@sveltejs/kit';
 import HomeCard from '$lib/home/OgCard.svelte';
-import { loadFromD1, readPublished } from '$lib/home/home.server';
+import { currentHome } from '$lib/home/home.server';
 import type { Profile } from '$lib/home/types';
 import { bindings, afterResponse } from '$lib/server/bindings';
 
@@ -17,7 +17,17 @@ import { bindings, afterResponse } from '$lib/server/bindings';
 
 const DEV = import.meta.env.DEV;
 
-const ogCacheKey = (v: number) => new Request(`https://cache.internal/og/v${v}`);
+// The build is part of the key, like the homepage's: a deploy that changes the
+// card must not keep serving the old one until the next publish.
+const ogCacheKey = (v: number) => new Request(`https://cache.internal/og/v${v}/b${import.meta.env.VITE_BUILD_ID}`);
+
+/** The version-keyed `/og.png?v=` URL busts platform caches on publish; the
+ *  browser and CDN revalidate, so the bare `/og.png` never goes stale. */
+const png = (body: BodyInit | null, v: number) =>
+	new Response(body, {
+		status: 200,
+		headers: { 'Content-Type': 'image/png', ETag: `"og-v${v}"`, 'Cache-Control': 'public, max-age=0, must-revalidate' }
+	});
 
 /** Module-level so the instances' internal font cache survives across requests. */
 const fonts = [
@@ -27,59 +37,22 @@ const fonts = [
 	new GoogleFont('Geist Mono', { weight: 400 })
 ];
 
-const FALLBACK: Profile = {
-	name: 'ij5',
-	bio: null,
-	tagline: null,
-	avatar: null,
-	links: [],
-	content: null
-};
-
 export const GET: RequestHandler = async ({ platform, url }) => {
 	const env = bindings(platform);
 	const cache = platform?.caches?.default;
 
-	let profile: Profile = FALLBACK;
-	let v = 0;
-	if (env) {
-		try {
-			// Published profile when there is one, the D1 source of truth
-			// otherwise — the same order the page load itself uses.
-			const published = await readPublished(env);
-			if (published) {
-				profile = published.profile;
-				v = published.v;
-			} else {
-				const { profile: fromD1 } = await loadFromD1(env);
-				profile = fromD1;
-			}
-		} catch {
-			// Storage down: a card with the last known profile is better than
-			// a broken card. The version is 0, so nothing shares an edge entry.
-		}
-	}
+	const { profile, v } = await currentHome(env);
 
 	const key = ogCacheKey(v);
 	if (!DEV && cache) {
 		const cached = await cache.match(key);
 		if (cached) {
-			// An entry out of the edge cache carries immutable headers, which
-			// the hook's `harden()` would choke on — rebuild into a fresh,
-			// mutable response with the same browser-facing headers a fresh
-			// render would have (the move the homepage hook makes).
-			return new Response(cached.body, {
-				status: 200,
-				headers: {
-					'Content-Type': 'image/png',
-					ETag: `"og-v${v}"`,
-					'Cache-Control': 'public, max-age=0, must-revalidate'
-				}
-			});
+			// A cached response's headers are immutable; serve its body afresh.
+			return png(cached.body, v);
 		}
 	}
 
-	const domain = new URL(env?.PUBLIC_ORIGIN || url.origin).hostname;
+	const domain = new URL(env.PUBLIC_ORIGIN || url.origin).hostname;
 	// No invented fallback: "Name — writing, links and work." under the name
 	// it repeats is the card saying the same thing twice.
 	const tagline = profile.tagline;
@@ -99,17 +72,7 @@ export const GET: RequestHandler = async ({ platform, url }) => {
 			},
 			{ name: profile.name, tagline, links, domain }
 		);
-		res = new Response(await image.arrayBuffer(), {
-			status: 200,
-			headers: {
-				'Content-Type': 'image/png',
-				ETag: `"og-v${v}"`,
-				// The version-keyed URL busts platform caches on publish; the
-				// browser and CDN revalidate so the raw `/og.png` can never go
-				// stale behind a TTL.
-				'Cache-Control': 'public, max-age=0, must-revalidate'
-			}
-		});
+		res = png(await image.arrayBuffer(), v);
 	} catch (err) {
 		console.error('og.png generation failed:', rootCause(err)?.message ?? err);
 		return new Response('Failed to generate the Open Graph image', { status: 500 });

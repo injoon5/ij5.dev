@@ -1,4 +1,4 @@
-import type { LiveDoc, LiveRequest } from '$lib/home/types';
+import { GRASS, type LiveDoc, type LiveRequest } from '$lib/home/types';
 
 /**
  * Live shortcodes without a cron job.
@@ -20,15 +20,9 @@ const KEY = 'live';
 const HOUR = 60 * 60 * 1000;
 const MINUTE = 60 * 1000;
 
-/**
- * Refresh cadence per kind. Kept here beside the fetchers rather than in a
- * widget catalog, so the live path stands on its own.
- */
-const TTL: Record<string, number> = {
-	grass: 6 * HOUR
-};
-
 type Fetcher = {
+	/** How long a fetched value stays fresh. */
+	ttl: number;
 	run: (data: Record<string, unknown>, env: Env) => Promise<unknown>;
 	/**
 	 * Whether this deployment can run the fetcher at all.
@@ -39,7 +33,7 @@ type Fetcher = {
 	 * a missing optional secret from costing a doomed attempt on every render —
 	 * and it is why the whole site runs with no third-party credentials at all.
 	 */
-	available?: (env: Env) => boolean;
+	available: (env: Env) => boolean;
 };
 
 const LEVELS: Record<string, number> = {
@@ -51,7 +45,8 @@ const LEVELS: Record<string, number> = {
 };
 
 const fetchers: Record<string, Fetcher> = {
-	grass: {
+	[GRASS]: {
+		ttl: 6 * HOUR,
 		/**
 		 * The contribution calendar is GraphQL-only, and GitHub's GraphQL API
 		 * refuses anonymous requests outright — there is no unauthenticated
@@ -131,13 +126,6 @@ const fetchers: Record<string, Fetcher> = {
 	}
 };
 
-/** Whether this deployment is configured to run a given live kind. */
-export function isLiveAvailable(kind: string, env: Env): boolean {
-	const fetcher = fetchers[kind];
-	if (!fetcher) return false;
-	return fetcher.available ? fetcher.available(env) : true;
-}
-
 export const readLive = (env: Env) => env.KV.get<LiveDoc>(KEY, { type: 'json', cacheTtl: 60 });
 
 const isStale = (entry: LiveDoc[string] | undefined, ttl: number) =>
@@ -148,13 +136,11 @@ const isStale = (entry: LiveDoc[string] | undefined, ttl: number) =>
  * caller hands the promise to `waitUntil` so nothing blocks the response.
  */
 export function planRefresh(requests: LiveRequest[], live: LiveDoc | null, env: Env) {
+	// A source this deployment cannot fetch for is never scheduled, so a site
+	// with no third-party tokens does no background work at all.
 	const stale = requests.filter((r) => {
-		const ttl = TTL[r.kind];
-		if (ttl === undefined || !fetchers[r.kind]) return false;
-		// A source this deployment cannot fetch for is never scheduled, so a
-		// site with no third-party tokens does no background work at all.
-		if (!isLiveAvailable(r.kind, env)) return false;
-		return isStale(live?.[r.id], ttl);
+		const fetcher = fetchers[r.kind];
+		return fetcher?.available(env) && isStale(live?.[r.id], fetcher.ttl);
 	});
 
 	if (!stale.length) return null;
@@ -165,10 +151,8 @@ export function planRefresh(requests: LiveRequest[], live: LiveDoc | null, env: 
 		let changed = false;
 
 		for (const req of stale) {
-			const fetcher = fetchers[req.kind];
-			if (!fetcher) continue;
 			try {
-				next[req.id] = { at: Date.now(), data: await fetcher.run(req.data, env) };
+				next[req.id] = { at: Date.now(), data: await fetchers[req.kind].run(req.data, env) };
 				changed = true;
 			} catch {
 				// Leave the previous entry in place. A stale value beats an empty

@@ -1,4 +1,4 @@
-import { imageKeysIn } from '$lib/home/markdown';
+import { imageKeysIn, isAssetKey } from './assetKeys';
 import { HOME_KEYS, type HomeDoc } from '$lib/home/types';
 
 /**
@@ -16,7 +16,6 @@ import { HOME_KEYS, type HomeDoc } from '$lib/home/types';
 
 type Env = App.Platform['env'];
 
-export const isAssetKey = (v: unknown): v is string => typeof v === 'string' && v.startsWith('img/');
 
 /** Every asset key a document draws: its body images and its avatar. */
 export function docKeys(doc: Pick<HomeDoc, 'markdown' | 'profile'> | null | undefined): string[] {

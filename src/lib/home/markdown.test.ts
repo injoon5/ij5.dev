@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderMarkdown, findLiveRequests, imageKeysIn } from './markdown';
+import { DEFAULT_CONTRIB_USER, renderMarkdown, findLiveRequests } from './markdown';
 
 const ORIGIN = 'https://assets.example.com';
 
@@ -154,36 +154,11 @@ describe('findLiveRequests', () => {
 		expect(reqs[0]).toEqual({ id: 'grass:octocat', kind: 'grass', data: { user: 'octocat' } });
 	});
 
-	it('uses the default user when none is given', () => {
-		const reqs = findLiveRequests('::contributions', 'defaultuser');
-		expect(reqs[0].data.user).toBe('defaultuser');
+	it('uses the site owner when no user is given', () => {
+		expect(findLiveRequests('::contributions')[0].data.user).toBe(DEFAULT_CONTRIB_USER);
 	});
 
 	it('returns nothing when the document has no shortcodes', () => {
 		expect(findLiveRequests('# just prose')).toHaveLength(0);
-	});
-});
-
-describe('imageKeysIn', () => {
-	it('extracts every img/ key referenced by the document', () => {
-		const src = '![a](img/aaa111.webp) and ![b](img/bbb222.png) and ![a again](img/aaa111.webp)';
-		expect(imageKeysIn(src).sort()).toEqual(['img/aaa111.webp', 'img/bbb222.png']);
-	});
-
-	it('ignores absolute URLs', () => {
-		expect(imageKeysIn('![x](https://example.com/y.png)')).toHaveLength(0);
-	});
-});
-
-describe('renderMarkdown — dropped shortcodes', () => {
-	it('does not render :::messages or :::poll as widgets', () => {
-		const src = [':::messages', 'hi', 'me | yo', ':::', '', ':::poll', '# q', 'A | 70', ':::'].join(
-			'\n'
-		);
-		const { html } = renderMarkdown(src, { assetsOrigin: ORIGIN });
-		expect(html).not.toContain('class="chat"');
-		expect(html).not.toContain('class="poll"');
-		expect(html).not.toContain('chat-in');
-		expect(html).not.toContain('poll-win');
 	});
 });

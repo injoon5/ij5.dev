@@ -41,6 +41,9 @@ export type LiveDoc = Record<string, { at: number; data: unknown }>;
  */
 export type LiveRequest = { id: string; kind: string; data: Record<string, unknown> };
 
+/** The contribution graph's live source. */
+export const GRASS = 'grass';
+
 export type AssetRow = {
 	key: string;
 	mime: string;
