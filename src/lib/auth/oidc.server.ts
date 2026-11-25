@@ -1,5 +1,5 @@
 import { SignJWT, exportJWK, importJWK, jwtVerify, type CryptoKey, type JWK } from 'jose';
-import { b64url, eq, randomToken, sha256, sha256url } from '$lib/server/crypto';
+import { eq, randomToken, sha256, sha256url } from '$lib/server/crypto';
 import { isLive, type SessionRow } from './sessions.server';
 
 /**
@@ -27,8 +27,8 @@ import { isLive, type SessionRow } from './sessions.server';
 
 type Env = App.Platform['env'];
 
-export const CODE_TTL_MS = 60e3;
-export const TOKEN_TTL_S = 300;
+const CODE_TTL_MS = 60e3;
+const TOKEN_TTL_S = 300;
 const ALG = 'RS256';
 const SUBJECT = 'ij5-admin';
 
@@ -268,7 +268,7 @@ export async function redeemCode(
 
 	const verifier = form.get('code_verifier') ?? '';
 	if (!VERIFIER.test(verifier)) return bad('A valid code_verifier is required.');
-	const digest = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+	const digest = await sha256url(verifier);
 	if (!eq(digest, row.code_challenge)) return bad('The code_verifier does not match.');
 
 	// The session that authorised the code must still exist: signing out (or

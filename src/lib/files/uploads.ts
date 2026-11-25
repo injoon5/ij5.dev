@@ -31,7 +31,7 @@ export const MAX_PARTS = 10_000;
 export const MAX_OBJECT_BYTES = 5 * 1024 ** 4 - 5 * 1024 ** 3;
 
 /** The default part ceiling, for a Free or Pro zone. */
-export const DEFAULT_PART_MIB = 90;
+const DEFAULT_PART_MIB = 90;
 
 /** Parts are never smaller than this unless the whole file is: fewer round
  *  trips, and each still small enough to retry cheaply. */

@@ -10,7 +10,7 @@ import {
 	type AppMeta,
 	type Tint
 } from '$lib/apps/app';
-import { b64url } from '$lib/server/crypto';
+import { sha256url } from '$lib/server/crypto';
 import { forgetAllData } from './appData.server';
 import { claimed, claimKey, newClaim, type InstallKeyRow } from './installKeys.server';
 
@@ -69,8 +69,7 @@ const LIST_APPS = `SELECT ${META} FROM apps ORDER BY name COLLATE NOCASE, slug`;
 type MetaRow = Omit<AppMeta, 'revertible'> & { revertible: number };
 const toMeta = ({ revertible, ...row }: MetaRow): AppMeta => ({ ...row, revertible: !!revertible });
 
-const digest = async (s: string) =>
-	b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
+const digest = sha256url;
 
 export async function appVersion(c: AppContent): Promise<string> {
 	return (await digest(JSON.stringify([c.name, c.icon, c.tint, c.source]))).slice(0, 16);

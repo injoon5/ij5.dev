@@ -64,7 +64,8 @@ export function renderContribGraph(
 	);
 }
 
-function escapeHtml(s: string): string {
+/** Text and attribute values alike. */
+export function escapeHtml(s: string): string {
 	return s
 		.replace(/&/g, '&amp;')
 		.replace(/</g, '&lt;')

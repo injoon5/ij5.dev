@@ -6,7 +6,6 @@ export const load: LayoutServerLoad = ({ locals, url }) => {
 	return {
 		session: {
 			strength: locals.session.strength,
-			method: locals.session.method,
 			expiresAt: locals.session.expires_at
 		}
 	};

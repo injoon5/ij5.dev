@@ -34,7 +34,7 @@ export function randomSlug(): string {
 }
 
 /** A free random slug, or null after a few unlucky tries. */
-export async function freeRandomSlug(env: Env): Promise<string | null> {
+async function freeRandomSlug(env: Env): Promise<string | null> {
 	for (let i = 0; i < 8; i++) {
 		const candidate = randomSlug();
 		if (!(await slugOwner(env, candidate))) return candidate;

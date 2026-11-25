@@ -22,8 +22,10 @@ function expandV6(ip: string): string[] | null {
 	return a.length === 8 ? a.map((g) => g.toLowerCase().replace(/^0+(?=.)/, '')) : null;
 }
 
+export type RequestMeta = { ip: string | null; country: string | null; userAgent: string | null };
+
 /** Where a request came from, for the sign-in log and alerts. */
-export function requestMeta(request: Request) {
+export function requestMeta(request: Request): RequestMeta {
 	const cf = (request as Request & { cf?: { country?: string; city?: string } }).cf;
 	return {
 		ip: request.headers.get('cf-connecting-ip'),

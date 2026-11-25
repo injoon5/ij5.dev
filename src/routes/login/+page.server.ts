@@ -36,8 +36,8 @@ export const load: PageServerLoad = async ({ locals, url, platform }) => {
 	return {
 		next,
 		password,
-		puzzle: password ? await newChallenge(env!.SESSION_SECRET) : null,
-		turnstileSiteKey: turnstileEnabled(env) ? env!.TURNSTILE_SITE_KEY! : null
+		puzzle: password ? await newChallenge(env.SESSION_SECRET) : null,
+		turnstileSiteKey: turnstileEnabled(env) ? (env.TURNSTILE_SITE_KEY ?? null) : null
 	};
 };
 

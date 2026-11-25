@@ -1,4 +1,4 @@
-import { OTHER_PATH, UNKNOWN_COUNTRY, type Kind } from './visit';
+import { HOME_SLUG, OTHER_PATH, UNKNOWN_COUNTRY, type Kind } from './visit';
 import { classify, deviceClass } from './userAgent';
 import { utcDay } from './ranges';
 import { afterResponse } from '$lib/server/bindings';
@@ -83,8 +83,22 @@ export const MIGRATE_VISITOR = `UPDATE OR IGNORE visitors SET vh = ?2 WHERE day 
  *  row already existed), so the two identities never double count. */
 export const PURGE_VISITOR = `DELETE FROM visitors WHERE day = ?1 AND vh = ?2`;
 
+/**
+ * Moves today's cookie-less visitor rows (`anonymous`) onto the fingerprint
+ * identity (`vh`) and clears any that could not move, as one batch.
+ */
+export const foldVisitor = (env: App.Platform['env'], day: string, vh: string, anonymous: string) =>
+	env.DB.batch([
+		env.DB.prepare(MIGRATE_VISITOR).bind(day, vh, anonymous),
+		env.DB.prepare(PURGE_VISITOR).bind(day, anonymous)
+	]);
+
+/** Counts the visitor on the homepage under their fingerprint identity. */
+export const recordHomeVisitor = (env: App.Platform['env'], day: string, vh: string) =>
+	env.DB.prepare(VISITORS_INSERT).bind(day, HOME_SLUG, vh).run();
+
 /** First-party fingerprint cookie. HttpOnly: the page never needs to read it. */
-export const FP_COOKIE = 'f';
+const FP_COOKIE = 'f';
 export const fpCookie = (fp: string) =>
 	`${FP_COOKIE}=${fp}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`;
 

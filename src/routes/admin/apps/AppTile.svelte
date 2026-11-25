@@ -1,6 +1,5 @@
 <script lang="ts">
-	import type { Tint } from '$lib/apps/app';
-	import { TINT_HEX } from '$lib/apps/tints';
+	import { tintHex } from '$lib/apps/tints';
 
 	/**
 	 * The app's icon as near as a browser can draw it. SF Symbols only render
@@ -9,10 +8,10 @@
 	 * The corner radius is the Home Screen's proportion, not a fixed radius,
 	 * so the tile reads as an app icon at any size.
 	 */
-	let { name, tint, size = 32 }: { name: string; tint: Tint | string; size?: number } = $props();
+	let { name, tint, size = 32 }: { name: string; tint: string; size?: number } = $props();
 
 	let letter = $derived(Array.from(name.trim())[0]?.toUpperCase() ?? '?');
-	let color = $derived(TINT_HEX[tint as Tint] ?? TINT_HEX.blue);
+	let color = $derived(tintHex(tint));
 </script>
 
 <span

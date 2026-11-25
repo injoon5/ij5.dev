@@ -13,7 +13,7 @@ import {
 	putApp,
 	revertApp
 } from '$lib/apps/apps.server';
-import { DATA_LIMITS, KEY_RULE, isDataKey, listEntries, readOne, writeData } from '$lib/apps/appData.server';
+import { KEY_RULE, isDataKey, listEntries, readOne, writeData } from '$lib/apps/appData.server';
 import { bindings } from '$lib/server/bindings';
 
 /**
@@ -137,7 +137,7 @@ export const actions: Actions = {
 		if (!isDataKey(key)) return fail(400, { intent: 'data', error: KEY_RULE });
 
 		const result = await writeData(env, slug, {}, [key]);
-		if (!result.ok) return fail(500, { intent: 'data', error: DATA_LIMITS.app });
+		if (!result.ok) return fail(500, { intent: 'data', error: result.error });
 		return { dataDeleted: key };
 	}
 };

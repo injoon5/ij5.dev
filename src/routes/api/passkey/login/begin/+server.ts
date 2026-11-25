@@ -1,4 +1,4 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { beginAuthentication } from '$lib/auth/webauthn.server';
 import { bindings } from '$lib/server/bindings';

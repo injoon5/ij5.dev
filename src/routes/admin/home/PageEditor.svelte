@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { IMAGE_ACCEPT } from '$lib/home/assetKeys';
 	import ImagePlus from 'lucide-svelte/icons/image-plus';
 	import Button from '$lib/ui/Button.svelte';
 	import { renderMarkdown } from '$lib/home/markdown';
@@ -113,7 +114,7 @@
 	<input
 		bind:this={uploadEl}
 		type="file"
-		accept="image/png,image/jpeg,image/webp,image/avif"
+		accept={IMAGE_ACCEPT}
 		class="sr-only"
 		tabindex="-1"
 		aria-hidden="true"

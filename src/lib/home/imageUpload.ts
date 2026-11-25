@@ -8,9 +8,9 @@ import { errorMessage } from '$lib/ui/http';
  * the client — where CPU is unmetered — not on a Worker with a tight budget.
  */
 
-export const MAX_EDGE = 1600;
+const MAX_EDGE = 1600;
 
-export async function shrink(file: File): Promise<{ blob: Blob; w: number; h: number }> {
+async function shrink(file: File): Promise<{ blob: Blob; w: number; h: number }> {
 	const bitmap = await createImageBitmap(file);
 	const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
 	const w = Math.round(bitmap.width * scale);

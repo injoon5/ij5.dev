@@ -110,9 +110,7 @@ export const actions: Actions = {
 		const denied = requireFull(locals);
 		if (denied) return denied;
 		const env = bindings(platform);
-		if (!locals.session) return fail(401, { error: 'Sign in again.' });
-
-		const ended = await deleteOtherSessions(env, locals.session.id);
+		const ended = await deleteOtherSessions(env, locals.session!.id);
 		await logEvent(env, 'sign-out-all', null, requestMeta(request));
 		return { endedOthers: ended };
 	},

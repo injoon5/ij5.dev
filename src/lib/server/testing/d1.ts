@@ -81,7 +81,7 @@ export function d1(db: import('node:sqlite').DatabaseSync) {
 	};
 }
 
-export const ADMIN_TOKEN = 'test-admin-token-0123456789abcdef';
+const ADMIN_TOKEN = 'test-admin-token-0123456789abcdef';
 
 export async function testEnv(db = migratedDb()) {
 	return {

@@ -1,3 +1,4 @@
+import type { RequestMeta } from '$lib/server/request';
 import { afterResponse } from '$lib/server/bindings';
 
 /**
@@ -25,7 +26,7 @@ export type EventRow = {
 	user_agent: string | null;
 };
 
-type Meta = { ip: string | null; country: string | null; userAgent: string | null };
+type Meta = RequestMeta;
 
 const KEEP = 200;
 

@@ -1,3 +1,4 @@
+import type { RequestMeta } from '$lib/server/request';
 import { randomToken, sha256url } from '$lib/server/crypto';
 
 /**
@@ -39,7 +40,7 @@ const LIMITED_MS = 60 * 60e3;
 /** `last_seen_at` is a hint for the session list, not worth a write per request. */
 const TOUCH_EVERY_MS = 5 * 60e3;
 
-export const lifetime = (strength: Strength) => (strength === 'full' ? FULL_MS : LIMITED_MS);
+const lifetime = (strength: Strength) => (strength === 'full' ? FULL_MS : LIMITED_MS);
 
 const COLUMNS = `id, strength, method, created_at, last_seen_at, expires_at, ip, country, user_agent`;
 
@@ -59,7 +60,7 @@ export async function createSession(
 	env: Env,
 	strength: Strength,
 	method: Method,
-	meta: { ip: string | null; country: string | null; userAgent: string | null },
+	meta: RequestMeta,
 	now = Date.now()
 ): Promise<{ token: string; row: SessionRow }> {
 	const token = randomToken();

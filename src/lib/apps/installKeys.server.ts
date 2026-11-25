@@ -19,7 +19,7 @@ type Env = App.Platform['env'];
 
 /** Thirty minutes: long enough to paste a prompt into an agent and let it
  * work, short enough that a key found in a chat log later is dead. */
-export const KEY_TTL_MS = 30 * 60 * 1000;
+const KEY_TTL_MS = 30 * 60 * 1000;
 
 /** Failed writes allowed before the key is burned. A failure leaves the key
  * usable so an agent can fix its code and retry, but not forever. */
@@ -58,7 +58,7 @@ export type KeyStatus = 'waiting' | 'used' | 'expired';
 export const newClaim = () => randomToken(16);
 
 /** Splits `shelf_ik_{id}_{secret}`, or null for anything that is not one. */
-export function splitKey(token: string): { id: string; secret: string } | null {
+function splitKey(token: string): { id: string; secret: string } | null {
 	if (!token.startsWith(KEY_PREFIX)) return null;
 	const rest = token.slice(KEY_PREFIX.length);
 	const id = rest.slice(0, ID_LENGTH);

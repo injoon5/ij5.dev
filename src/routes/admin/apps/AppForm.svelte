@@ -10,7 +10,7 @@
 	import { parseReply, slugify } from '$lib/apps/replyParser';
 	import { MAX_APP_BYTES, MAX_APP_NAME, TINTS, type AppFull, DEFAULT_TINT, normalizeSource, utf8Bytes } from '$lib/apps/app';
 	import AppTile from './AppTile.svelte';
-	import { TINT_HEX } from '$lib/apps/tints';
+	import { tintHex } from '$lib/apps/tints';
 
 	type Props = {
 		/** `null` puts the form in New App mode. */
@@ -197,7 +197,7 @@
 		<legend class="mb-1.5 text-sm font-medium">Tint</legend>
 		<div class="flex flex-wrap gap-2">
 			{#each TINTS as tint (tint)}
-				<label class={swatch} style:background-color={TINT_HEX[tint]} title={tint}>
+				<label class={swatch} style:background-color={tintHex(tint)} title={tint}>
 					<input type="radio" name="tint" value={tint} bind:group={form.tint} class="sr-only" />
 					<span class="sr-only">{tint}</span>
 				</label>

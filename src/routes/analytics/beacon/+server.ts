@@ -3,15 +3,13 @@ import type { RequestHandler } from './$types';
 import {
 	anonymousVisitor,
 	fingerprint,
+	foldVisitor,
 	fpCookie,
-	MIGRATE_VISITOR,
 	parseBeacon,
-	PURGE_VISITOR,
-	visitorHash,
-	VISITORS_INSERT
+	recordHomeVisitor,
+	visitorHash
 } from '$lib/analytics/track.server';
 import { deviceClass } from '$lib/analytics/userAgent';
-import { HOME_SLUG } from '$lib/analytics/visit';
 import { afterResponse, bindings } from '$lib/server/bindings';
 
 /**
@@ -61,22 +59,16 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
 	// clears any it could not move; the INSERT OR IGNORE guarantees the home row
 	// exists even if it landed late. Analytics never fail a request, so a
 	// storage hiccup here must not cost the visitor their fingerprint cookie.
-	const stmts = [
-		env.DB.prepare(MIGRATE_VISITOR).bind(day, vh, old),
-		env.DB.prepare(PURGE_VISITOR).bind(day, old),
-		env.DB.prepare(VISITORS_INSERT).bind(day, HOME_SLUG, vh)
-	];
-	await env.DB.batch(stmts).catch((e: unknown) => console.error('visitor migration failed:', e));
+	await Promise.all([foldVisitor(env, day, vh, old), recordHomeVisitor(env, day, vh)]).catch((e: unknown) =>
+		console.error('visitor migration failed:', e)
+	);
 
 	// The page's own track() write is scheduled behind the response it rode in
 	// on; the beacon can land before that batch finishes. One delayed re-run of
 	// the migration folds any straggler in. Cheap insurance, not the happy path.
 	const retry = (async () => {
 		await new Promise((r) => setTimeout(r, 1500));
-		await env.DB.batch([
-			env.DB.prepare(MIGRATE_VISITOR).bind(day, vh, old),
-			env.DB.prepare(PURGE_VISITOR).bind(day, old)
-		]);
+		await foldVisitor(env, day, vh, old);
 	})();
 	afterResponse(platform, retry);
 

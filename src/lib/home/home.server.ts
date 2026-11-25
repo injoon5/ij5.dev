@@ -17,7 +17,7 @@ type Env = App.Platform['env'];
 
 const { published: PUBLISHED, draft: DRAFT, previous: PREV } = HOME_KEYS;
 
-export async function loadFromD1(env: Env): Promise<{ profile: Profile; markdown: string }> {
+async function loadFromD1(env: Env): Promise<{ profile: Profile; markdown: string }> {
 	const row = (await env.DB.prepare(
 		`SELECT name, bio, tagline, avatar, links, content FROM profile WHERE id = 1`
 	).first()) as Record<string, string | null> | null;
@@ -141,4 +141,27 @@ export async function restoreToD1(env: Env, doc: HomeDoc): Promise<void> {
 			doc.markdown || null
 		)
 		.run();
+}
+
+/**
+ * Writes the masthead fields of the one profile row, returning the avatar it
+ * replaced. `bio` is left alone: nothing renders it, but wiping it on every
+ * save would be silent data loss.
+ */
+export async function saveProfile(
+	env: Env,
+	p: Pick<Profile, 'name' | 'tagline' | 'avatar' | 'links'>
+): Promise<{ previousAvatar: string | null }> {
+	const before = await env.DB.prepare(`SELECT avatar FROM profile WHERE id = 1`).first<{ avatar: string | null }>();
+	await env.DB.prepare(`UPDATE profile SET name = ?, tagline = ?, avatar = ?, links = ? WHERE id = 1`)
+		.bind(p.name, p.tagline, p.avatar, JSON.stringify(p.links))
+		.run();
+	return { previousAvatar: before?.avatar ?? null };
+}
+
+/** Writes the page body, returning the body it replaced. */
+export async function saveContent(env: Env, content: string): Promise<{ previous: string | null }> {
+	const before = await env.DB.prepare(`SELECT content FROM profile WHERE id = 1`).first<{ content: string | null }>();
+	await env.DB.prepare(`UPDATE profile SET content = ? WHERE id = 1`).bind(content || null).run();
+	return { previous: before?.content ?? null };
 }

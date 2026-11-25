@@ -25,7 +25,6 @@
 	// Stored lower-case; title-cased so every list reads alike.
 	const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-	const path = (slug: string, kind: string) => visitPath(kind, slug);
 
 	let hasData = $derived(data.traffic.length > 0);
 
@@ -144,7 +143,7 @@
 				<BarList
 					title="Top paths"
 					rows={data.top.map((t) => ({
-						label: path(t.slug, t.kind),
+						label: visitPath(t.kind, t.slug),
 						value: t.hits,
 						href: href({ s: t.slug })
 					}))}

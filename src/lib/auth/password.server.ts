@@ -32,7 +32,7 @@ export function parseHash(phc: string | undefined): ParsedHash | null {
 	return { m: mem, t, p, salt: fromB64(m[4]), hash: fromB64(m[5]) };
 }
 
-export function hashWith(password: string, pepper: string, params: Omit<ParsedHash, 'hash'>, dkLen = 32) {
+function hashWith(password: string, pepper: string, params: Omit<ParsedHash, 'hash'>, dkLen = 32) {
 	return argon2id(enc(password.normalize('NFKC')), params.salt, {
 		m: params.m,
 		t: params.t,

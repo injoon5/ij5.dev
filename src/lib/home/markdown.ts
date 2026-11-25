@@ -1,6 +1,6 @@
 import MarkdownIt from 'markdown-it';
 import { hasIcon, iconSvg } from '$lib/home/icons';
-import { renderContribGraph, type ContribData } from '$lib/home/contrib';
+import { renderContribGraph, type ContribData, escapeHtml } from '$lib/home/contrib';
 import { GRASS, type LiveDoc, type LiveRequest } from '$lib/home/types';
 import { isAssetKey } from './assetKeys';
 
@@ -35,13 +35,6 @@ export type RenderCtx = {
 
 type RenderEnv = RenderCtx & { needsScript: boolean };
 
-function escapeHtml(s: string): string {
-	return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function escapeAttr(s: string): string {
-	return escapeHtml(s).replace(/"/g, '&quot;');
-}
 
 function joinUrl(origin: string, key: string): string {
 	return origin ? `${origin.replace(/\/$/, '')}/${key}` : `/${key}`;
@@ -111,7 +104,7 @@ function renderLinks(content: string): string {
 			const rel = /^https?:\/\//i.test(it.href) ? ' target="_blank" rel="noopener"' : '';
 			const sub = it.sub ? `<span class="lb-sub">${escapeHtml(it.sub)}</span>` : '';
 			return (
-				`<a class="widget link-button" href="${escapeAttr(it.href)}"${rel}>` +
+				`<a class="widget link-button" href="${escapeHtml(it.href)}"${rel}>` +
 				`<span class="lb-icon" data-tint="${tint}" aria-hidden="true">${icon}</span>` +
 				`<span class="lb-body"><span class="lb-label">${escapeHtml(it.label)}</span>${sub}</span>` +
 				ARROW +
@@ -167,7 +160,7 @@ function renderGallery(content: string, cols: number, e: RenderEnv): string {
 			const caption = it.caption ? `<figcaption>${escapeHtml(it.caption)}</figcaption>` : '';
 			return (
 				`<figure class="gallery-item" data-span="img">` +
-				`<img class="gallery-img" src="${escapeAttr(it.src)}" alt=""` +
+				`<img class="gallery-img" src="${escapeHtml(it.src)}" alt=""` +
 				` loading="lazy" decoding="async"${it.dims}>` +
 				caption +
 				`</figure>`
@@ -314,10 +307,10 @@ md.renderer.rules.image = (tokens: any, idx: number, options: any, env: any, sel
 	// Any image means the page wants the delegated <img> error handler in w.js.
 	e.needsScript = true;
 
-	const titleAttr = title ? ` title="${escapeAttr(title)}"` : '';
+	const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
 	return (
-		`<img class="prose-img" data-span="img" src="${escapeAttr(src)}"` +
-		` alt="${escapeAttr(alt)}"${titleAttr} loading="lazy" decoding="async"${dims}>`
+		`<img class="prose-img" data-span="img" src="${escapeHtml(src)}"` +
+		` alt="${escapeHtml(alt)}"${titleAttr} loading="lazy" decoding="async"${dims}>`
 	);
 };
 

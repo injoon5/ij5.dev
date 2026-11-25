@@ -11,14 +11,16 @@ import {
 	readPublished,
 	restoreToD1,
 	revert,
+	saveContent,
+	saveProfile,
 	syncDraft
 } from '$lib/home/home.server';
 import { docKeys, isReferenced, listAssets, releaseAssets, removeAsset } from '$lib/home/assets.server';
 import { imageKeysIn, isAssetKey } from '$lib/home/assetKeys';
 import { parseLines } from '$lib/home/lines';
 import { bindings } from '$lib/server/bindings';
+import { fieldErrors } from '$lib/forms';
 
-const noEnv = () => fail(500, { error: 'No platform bindings.' });
 
 const MAX_CONTENT = 50_000;
 
@@ -66,9 +68,7 @@ export const actions: Actions = {
 		if (!parsed.success) {
 			return fail(400, {
 				intent: 'profile',
-				fields: Object.fromEntries(
-					parsed.error.issues.map((i) => [String(i.path[0]), i.message])
-				) as Record<string, string>
+				fields: fieldErrors(parsed.error)
 			});
 		}
 
@@ -76,28 +76,14 @@ export const actions: Actions = {
 			(l) => l.label && l.href
 		);
 
-		const before = await env.DB.prepare(`SELECT avatar FROM profile WHERE id = 1`).first<{
-			avatar: string | null;
-		}>();
-
 		const avatar = parsed.data.avatar || null;
-
-		// `bio` is deliberately left untouched: the page does not render it, but
-		// wiping the column on every save would be a silent data loss.
-		await env.DB.prepare(
-			`UPDATE profile SET name = ?, tagline = ?, avatar = ?, links = ? WHERE id = 1`
-		)
-			.bind(
-				parsed.data.name,
-				parsed.data.tagline || null,
-				avatar,
-				JSON.stringify(links.map((l) => ({ ...l, icon: l.icon || 'globe' })))
-			)
-			.run();
-
-		if (before?.avatar !== avatar) {
-			await releaseAssets(env, [before?.avatar].filter(isAssetKey));
-		}
+		const { previousAvatar } = await saveProfile(env, {
+			name: parsed.data.name,
+			tagline: parsed.data.tagline || null,
+			avatar,
+			links: links.map((l) => ({ label: l.label, href: l.href, icon: l.icon || 'globe' }))
+		});
+		if (previousAvatar !== avatar) await releaseAssets(env, [previousAvatar].filter(isAssetKey));
 
 		await syncDraft(env);
 		return { saved: 'profile' };
@@ -106,7 +92,7 @@ export const actions: Actions = {
 	save: async ({ request, platform }) => {
 		const env = bindings(platform);
 
-		const result = await saveContent(env, String((await request.formData()).get('content') ?? ''));
+		const result = await saveBody(env, String((await request.formData()).get('content') ?? ''));
 		if (result) return result;
 
 		await syncDraft(env);
@@ -123,7 +109,7 @@ export const actions: Actions = {
 
 		const content = (await request.formData()).get('content');
 		if (typeof content === 'string') {
-			const result = await saveContent(env, content);
+			const result = await saveBody(env, content);
 			if (result) return result;
 			await syncDraft(env);
 		}
@@ -174,7 +160,7 @@ export const actions: Actions = {
 	}
 };
 
-async function saveContent(env: App.Platform['env'], content: string) {
+async function saveBody(env: App.Platform['env'], content: string) {
 	if (content.length > MAX_CONTENT) {
 		return fail(400, {
 			intent: 'content',
@@ -182,16 +168,7 @@ async function saveContent(env: App.Platform['env'], content: string) {
 		});
 	}
 
-	const before = await env.DB.prepare(`SELECT content FROM profile WHERE id = 1`).first<{
-		content: string | null;
-	}>();
-
-	await env.DB.prepare(`UPDATE profile SET content = ? WHERE id = 1`)
-		.bind(content || null)
-		.run();
-
-	if (before) {
-		const kept = new Set(imageKeysIn(content));
-		await releaseAssets(env, imageKeysIn(before.content).filter((key) => !kept.has(key)));
-	}
+	const { previous } = await saveContent(env, content);
+	const kept = new Set(imageKeysIn(content));
+	await releaseAssets(env, imageKeysIn(previous).filter((key) => !kept.has(key)));
 }
