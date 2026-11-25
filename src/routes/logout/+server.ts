@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { bindings } from '$lib/server/bindings';
 import { SESSION_COOKIE, cookieOptions, deleteSession } from '$lib/auth/sessions.server';
 
 /**
@@ -8,7 +9,7 @@ import { SESSION_COOKIE, cookieOptions, deleteSession } from '$lib/auth/sessions
  * The session row goes too, so the cookie is dead even if a copy survives.
  */
 export const POST: RequestHandler = async ({ cookies, locals, platform }) => {
-	if (locals.session && platform?.env) await deleteSession(platform.env, locals.session.id);
+	if (locals.session) await deleteSession(bindings(platform), locals.session.id);
 	cookies.delete(SESSION_COOKIE, cookieOptions('full'));
 	redirect(303, '/login');
 };

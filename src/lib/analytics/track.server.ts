@@ -1,3 +1,4 @@
+import { afterResponse } from '$lib/server/bindings';
 import type { RequestEvent } from '@sveltejs/kit';
 import { SLUG_PATTERN } from '$lib/slugs/slugs';
 
@@ -234,9 +235,9 @@ export function readCookie(header: string | null, name: string): string | null {
  */
 export function track(event: RequestEvent, e: { slug: string; kind: Kind }) {
 	const platform = event.platform;
-	if (!platform?.env?.DB) return;
+	if (!platform) return;
 
-	const { env, context } = platform;
+	const { env } = platform;
 	const req = event.request;
 
 	const day = today();
@@ -250,6 +251,7 @@ export function track(event: RequestEvent, e: { slug: string; kind: Kind }) {
 	const { os, browser } = classify(ua);
 
 	const work = (async () => {
+		let markSeen: (() => Promise<void>) | null = null;
 		const stmts = [
 			env.DB.prepare(HITS_UPSERT).bind(day, slug, e.kind, country, referrer, device)
 		];
@@ -278,17 +280,14 @@ export function track(event: RequestEvent, e: { slug: string; kind: Kind }) {
 
 			if (!seen) {
 				stmts.push(env.DB.prepare(VISITORS_INSERT).bind(day, slug, vh));
-				await cache?.put(
-					marker,
-					new Response(null, { headers: { 'Cache-Control': 'max-age=86400' } })
-				);
+				markSeen = async () =>
+					cache?.put(marker, new Response(null, { headers: { 'Cache-Control': 'max-age=86400' } }));
 			}
 		}
 
 		await env.DB.batch(stmts);
-	})().catch(() => {
-		// Silent by design. A failed analytics write must never surface.
-	});
+		await markSeen?.();
+	})();
 
-	context?.waitUntil?.(work);
+	afterResponse(platform, work);
 }

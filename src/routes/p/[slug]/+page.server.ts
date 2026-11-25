@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getPaste } from '$lib/pastes/pastes.server';
 import { track } from '$lib/analytics/track.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * The paste view, as a real page.
@@ -21,8 +22,7 @@ const TTL = 300;
 
 export const load: PageServerLoad = async (event) => {
 	const { params, platform, url } = event;
-	const env = platform?.env;
-	if (!env) throw error(503, 'Unavailable.');
+	const env = bindings(platform);
 
 	const paste = await getPaste(env, params.slug);
 	if (!paste) throw error(404, 'No paste with that slug.');

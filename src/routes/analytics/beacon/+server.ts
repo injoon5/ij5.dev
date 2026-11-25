@@ -10,6 +10,7 @@ import {
 	visitorHash,
 	VISITORS_INSERT
 } from '$lib/analytics/track.server';
+import { afterResponse, bindings } from '$lib/server/bindings';
 
 /**
  * The fingerprint half of §6's identity (§6). `/a.js` posts the stable signal
@@ -25,8 +26,7 @@ import {
  */
 
 export const POST: RequestHandler = async ({ request, url, platform }) => {
-	const env = platform?.env;
-	if (!env?.DB) return new Response(null, { status: 204 });
+	const env = bindings(platform);
 
 	// Beacons only ever come from real browsers running /a.js, so a bot UA
 	// means a script, not a visitor.
@@ -76,8 +76,8 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
 			env.DB.prepare(MIGRATE_VISITOR).bind(day, vh, old),
 			env.DB.prepare(PURGE_VISITOR).bind(day, old)
 		]);
-	})().catch(() => {});
-	platform?.context?.waitUntil?.(retry);
+	})();
+	afterResponse(platform, retry);
 
 	return new Response(null, {
 		status: 204,

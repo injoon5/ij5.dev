@@ -14,6 +14,7 @@ import {
 import { fmtBytes } from '$lib/format';
 import { MAX_FORM_FILE_BYTES, type FileRow } from '$lib/files/file';
 import { uploadLimits } from '$lib/files/uploads';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * The admin's file screen. Uploading is the only write that matters: a file's
@@ -26,8 +27,7 @@ import { uploadLimits } from '$lib/files/uploads';
  */
 
 export const load: PageServerLoad = async ({ platform, url }) => {
-	const env = platform?.env;
-	if (!env) return { files: [], selected: null, origin: '', maxFileBytes: 0 };
+	const env = bindings(platform);
 
 	const rows = await listFiles(env);
 	const files = rows.map((row) => ({
@@ -47,8 +47,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 
 export const actions: Actions = {
 	create: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return fail(500, { error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const data = await request.formData();
 		const file = data.get('file');
@@ -103,8 +102,7 @@ export const actions: Actions = {
 	delete: async ({ request, platform, locals }) => {
 		const denied = requireFull(locals);
 		if (denied) return denied;
-		const env = platform?.env;
-		if (!env) return fail(500, { error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const slug = String((await request.formData()).get('slug') ?? '');
 		if (!slug) return fail(400, { intent: 'delete', error: 'No file given.' });

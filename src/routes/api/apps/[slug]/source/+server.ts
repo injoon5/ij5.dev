@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types';
 import { apiError } from '$lib/server/api';
 import { authorizeApp } from '$lib/apps/appAuth.server';
 import { getSource } from '$lib/apps/apps.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * The raw file, for `curl -o App.swift` (plan §9.5, Appendix D). With Include
@@ -12,8 +13,7 @@ import { getSource } from '$lib/apps/apps.server';
  */
 
 export const GET: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorizeApp(request, env, { slug: params.slug, action: 'read-source' });
 	if (!auth.ok) return apiError(auth.status, auth.error);

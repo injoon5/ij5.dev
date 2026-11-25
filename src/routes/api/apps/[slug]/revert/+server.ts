@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
 import { revertApp } from '$lib/apps/apps.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * Undo for a bad push (plan §9.5): the current version and the newest one in
@@ -9,8 +10,7 @@ import { revertApp } from '$lib/apps/apps.server';
  */
 
 export const POST: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);

@@ -4,6 +4,7 @@ import { fileKey, freeRandomSlug, slugProblem } from '$lib/files/files.server';
 import { sameOrigin } from '$lib/server/origin';
 import { fmtBytes } from '$lib/format';
 import { partSizeFor, uploadLimits } from '$lib/files/uploads';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * Step one of sharing a file: reserve a name and open a multipart upload in
@@ -17,8 +18,7 @@ import { partSizeFor, uploadLimits } from '$lib/files/uploads';
  */
 
 export const POST: RequestHandler = async ({ request, platform }) => {
-	const env = platform?.env;
-	if (!env) return json({ message: 'No platform bindings.' }, { status: 503 });
+	const env = bindings(platform);
 	if (!sameOrigin(request)) return json({ message: 'Cross-origin request refused.' }, { status: 403 });
 
 	let body: { name?: unknown; size?: unknown; type?: unknown; slug?: unknown };

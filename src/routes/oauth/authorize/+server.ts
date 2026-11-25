@@ -1,6 +1,7 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { errorRedirect, issueCode, issuer, oidcConfigured, parseAuthorize, tooOld } from '$lib/auth/oidc.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * The OIDC authorization endpoint (§4). With a live session it answers at
@@ -11,7 +12,7 @@ import { errorRedirect, issueCode, issuer, oidcConfigured, parseAuthorize, tooOl
  * can only ever receive the code at its one registered redirect URI.
  */
 export const GET: RequestHandler = async ({ url, platform, locals, setHeaders }) => {
-	const env = platform?.env;
+	const env = bindings(platform);
 	if (!oidcConfigured(env)) error(404, 'Not found');
 	setHeaders({ 'Cache-Control': 'no-store' });
 

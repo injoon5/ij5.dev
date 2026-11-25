@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { beginAuthentication } from '$lib/auth/webauthn.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * Step one of passkey sign-in: the server returns the options the browser
@@ -10,8 +11,7 @@ import { beginAuthentication } from '$lib/auth/webauthn.server';
  */
 
 export const POST: RequestHandler = async ({ request, platform }) => {
-	const env = platform?.env;
-	if (!env) error(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const url = new URL(request.url);
 	const options = await beginAuthentication(env, url.hostname);

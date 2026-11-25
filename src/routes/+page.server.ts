@@ -3,6 +3,7 @@ import { loadFromD1, readPublished } from '$lib/home/home.server';
 import { planRefresh, readLive } from '$lib/home/live.server';
 import { renderMarkdown, findLiveRequests, imageKeysIn } from '$lib/home/markdown';
 import type { HomeDoc } from '$lib/home/types';
+import { bindings, afterResponse } from '$lib/server/bindings';
 
 const EMPTY: HomeDoc = {
 	v: 0,
@@ -36,18 +37,7 @@ async function loadDims(
 }
 
 export const load: PageServerLoad = async ({ platform, locals, url }) => {
-	const env = platform?.env;
-	if (!env) {
-		const { html } = renderMarkdown(EMPTY.markdown, { assetsOrigin: '' });
-		return {
-			profile: EMPTY.profile,
-			v: EMPTY.v,
-			html,
-			needsScript: false,
-			assetsOrigin: '',
-			publicOrigin: url.origin
-		};
-	}
+	const env = bindings(platform);
 
 	let doc: HomeDoc | null = null;
 	try {
@@ -79,7 +69,7 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
 	try {
 		live = await readLive(env);
 		const refresh = planRefresh(findLiveRequests(markdown), live, env);
-		if (refresh) platform.context?.waitUntil?.(refresh().catch(() => {}));
+		if (refresh) afterResponse(platform, refresh());
 	} catch {
 		live = null;
 	}

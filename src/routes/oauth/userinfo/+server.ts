@@ -1,10 +1,11 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { oidcConfigured, userinfo } from '$lib/auth/oidc.server';
+import { bindings } from '$lib/server/bindings';
 
 /** OIDC UserInfo (§4): the same claims as the ID token, for a live access token. */
 const handler: RequestHandler = async ({ request, platform }) => {
-	const env = platform?.env;
+	const env = bindings(platform);
 	if (!oidcConfigured(env)) error(404, 'Not found');
 
 	const [scheme, token] = (request.headers.get('authorization') ?? '').split(' ');

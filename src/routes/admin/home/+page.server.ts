@@ -17,6 +17,7 @@ import { docKeys, isAssetKey, isReferenced, releaseAssets, removeAsset } from '$
 import { parseLines } from '$lib/home/lines';
 import { imageKeysIn } from '$lib/home/markdown';
 import type { AssetRow } from '$lib/home/types';
+import { bindings } from '$lib/server/bindings';
 
 const noEnv = () => fail(500, { error: 'No platform bindings.' });
 
@@ -29,21 +30,7 @@ const profileForm = z.object({
 });
 
 export const load: PageServerLoad = async ({ platform }) => {
-	const env = platform?.env;
-	if (!env) {
-		return {
-			draft: {
-				v: 0,
-				profile: { name: '', bio: null, tagline: null, avatar: null, links: [], content: null },
-				markdown: ''
-			},
-			publishedVersion: 0,
-			dirty: false,
-			canRevert: false,
-			assetsOrigin: '',
-			files: []
-		};
-	}
+	const env = bindings(platform);
 
 	const [draft, published, canRevert, files] = await Promise.all([
 		readDraft(env),
@@ -70,8 +57,7 @@ export const load: PageServerLoad = async ({ platform }) => {
 
 export const actions: Actions = {
 	profile: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return noEnv();
+		const env = bindings(platform);
 
 		const form = await request.formData();
 		const parsed = profileForm.safeParse({
@@ -125,8 +111,7 @@ export const actions: Actions = {
 	},
 
 	save: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return noEnv();
+		const env = bindings(platform);
 
 		const result = await saveContent(env, String((await request.formData()).get('content') ?? ''));
 		if (result) return result;
@@ -141,8 +126,7 @@ export const actions: Actions = {
 	 * draft while the new text sits unsaved in the textarea.
 	 */
 	publish: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return noEnv();
+		const env = bindings(platform);
 
 		const content = (await request.formData()).get('content');
 		if (typeof content === 'string') {
@@ -160,8 +144,7 @@ export const actions: Actions = {
 	},
 
 	revert: async ({ platform }) => {
-		const env = platform?.env;
-		if (!env) return noEnv();
+		const env = bindings(platform);
 		const doc = await revert(env);
 		if (!doc) return fail(400, { error: 'Nothing to revert to yet.' });
 		await restoreToD1(env, doc);
@@ -171,8 +154,7 @@ export const actions: Actions = {
 	clear: async ({ platform, locals }) => {
 		const denied = requireFull(locals);
 		if (denied) return denied;
-		const env = platform?.env;
-		if (!env) return noEnv();
+		const env = bindings(platform);
 		const doc = await clearCache(env);
 		if (!doc) {
 			return fail(400, { error: 'Nothing is published yet, so there is no cache to clear.' });
@@ -183,8 +165,7 @@ export const actions: Actions = {
 	deleteFile: async ({ request, platform, locals }) => {
 		const denied = requireFull(locals);
 		if (denied) return denied;
-		const env = platform?.env;
-		if (!env) return noEnv();
+		const env = bindings(platform);
 
 		const key = String((await request.formData()).get('key') ?? '');
 		if (!isAssetKey(key)) return fail(400, { error: 'That image cannot be deleted here.' });

@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
 import { MAX_LIVE_KEYS, mintKey } from '$lib/apps/installKeys.server';
 import { SLUG_PATTERN } from '$lib/slugs/slugs';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * Mints a one-time install key (plan §9.5). Admin token only: Shelf mints one
@@ -14,8 +15,7 @@ import { SLUG_PATTERN } from '$lib/slugs/slugs';
  */
 
 export const POST: RequestHandler = async ({ request, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);

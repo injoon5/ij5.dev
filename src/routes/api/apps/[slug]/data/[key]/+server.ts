@@ -2,12 +2,12 @@ import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
 import { DATA_LIMITS, KEY_RULE, isDataKey, readOne, writeData } from '$lib/apps/appData.server';
 import { MAX_DATA_VALUE_BYTES } from '$lib/apps/app';
+import { bindings } from '$lib/server/bindings';
 
 /** One key of an app's data: read it, replace it, delete it. Admin token only. */
 
 export const GET: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);
@@ -25,8 +25,7 @@ export const GET: RequestHandler = async ({ request, params, platform }) => {
 };
 
 export const PUT: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);
@@ -53,8 +52,7 @@ export const PUT: RequestHandler = async ({ request, params, platform }) => {
 };
 
 export const DELETE: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);

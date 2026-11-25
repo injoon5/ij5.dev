@@ -9,6 +9,7 @@ import { describeAgent, listEvents, logEvent } from '$lib/auth/events.server';
 import { regenerate, remaining } from '$lib/auth/recovery.server';
 import { passwordConfigured } from '$lib/auth/signIn.server';
 import { issuer, oidcConfigured } from '$lib/auth/oidc.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * Everything about getting in (§4): passkeys, sessions, recovery codes, the
@@ -25,17 +26,7 @@ import { issuer, oidcConfigured } from '$lib/auth/oidc.server';
  */
 
 export const load: PageServerLoad = async ({ platform, locals }) => {
-	const env = platform?.env;
-	const empty = {
-		passkeys: [],
-		installKeys: [],
-		sessions: [],
-		events: [],
-		recovery: { left: 0, total: 0, created_at: null },
-		password: false,
-		oidc: null
-	};
-	if (!env) return empty;
+	const env = bindings(platform);
 
 	const [passkeys, installKeys, sessions, events, recovery] = await Promise.all([
 		listPasskeys(env),
@@ -78,8 +69,7 @@ export const actions: Actions = {
 	delete: async ({ request, platform, locals }) => {
 		const denied = requireFull(locals);
 		if (denied) return denied;
-		const env = platform?.env;
-		if (!env) return fail(500, { error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const id = await idFrom(request);
 		if (!id) return fail(400, { error: 'No passkey given.' });
@@ -89,8 +79,7 @@ export const actions: Actions = {
 	},
 
 	revokeKey: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return fail(500, { error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const id = await idFrom(request);
 		if (!id) return fail(400, { error: 'No install key given.' });
@@ -103,8 +92,7 @@ export const actions: Actions = {
 
 	/** End one session. Ending your own is always allowed; anyone else's needs a full one. */
 	revokeSession: async ({ request, platform, locals }) => {
-		const env = platform?.env;
-		if (!env) return fail(500, { error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const id = await idFrom(request);
 		if (!id) return fail(400, { error: 'No session given.' });
@@ -120,8 +108,8 @@ export const actions: Actions = {
 	signOutOthers: async ({ request, platform, locals }) => {
 		const denied = requireFull(locals);
 		if (denied) return denied;
-		const env = platform?.env;
-		if (!env || !locals.session) return fail(500, { error: 'No platform bindings.' });
+		const env = bindings(platform);
+		if (!locals.session) return fail(401, { error: 'Sign in again.' });
 
 		const ended = await deleteOtherSessions(env, locals.session.id);
 		await logEvent(env, 'sign-out-all', null, requestMeta(request));
@@ -132,8 +120,7 @@ export const actions: Actions = {
 	recoveryCodes: async ({ platform, locals }) => {
 		const denied = requireFull(locals);
 		if (denied) return denied;
-		const env = platform?.env;
-		if (!env) return fail(500, { error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		return { codes: await regenerate(env) };
 	}

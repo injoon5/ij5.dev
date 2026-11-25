@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
 import { deleteSlug, getSlug, isTargetUrl, purgeLocalCache, updateSlug } from '$lib/links/links.server';
 import type { SlugRow } from '$lib/links/link';
+import { bindings } from '$lib/server/bindings';
 
 /** Item routes for the shortener API. */
 
@@ -31,8 +32,7 @@ const publicShape = (row: SlugRow) => ({
 });
 
 export const GET: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);
@@ -44,8 +44,7 @@ export const GET: RequestHandler = async ({ request, params, platform }) => {
 };
 
 export const PATCH: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);
@@ -86,8 +85,7 @@ export const PATCH: RequestHandler = async ({ request, params, platform }) => {
 };
 
 export const DELETE: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);

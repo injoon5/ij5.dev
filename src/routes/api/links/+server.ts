@@ -6,6 +6,7 @@ import { getFile } from '$lib/files/files.server';
 import { getPaste } from '$lib/pastes/pastes.server';
 import { createSlug, getSlug, isTargetUrl, listSlugs } from '$lib/links/links.server';
 import type { SlugRow } from '$lib/links/link';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * The shortener API. Collection routes; `[slug]` handles the item routes.
@@ -44,8 +45,7 @@ const publicShape = (row: SlugRow) => ({
 });
 
 export const GET: RequestHandler = async ({ request, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);
@@ -55,8 +55,7 @@ export const GET: RequestHandler = async ({ request, platform }) => {
 };
 
 export const POST: RequestHandler = async ({ request, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);

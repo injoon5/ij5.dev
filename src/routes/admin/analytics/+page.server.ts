@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { RANGES, fillDays, isRange, type RangeKey } from '$lib/analytics/ranges';
+import { afterResponse, bindings } from '$lib/server/bindings';
 
 /**
  * Every query on this page runs in one `DB.batch()` — one round trip to D1,
@@ -14,7 +15,7 @@ import { RANGES, fillDays, isRange, type RangeKey } from '$lib/analytics/ranges'
 type Row<T> = Array<T>;
 
 export const load: PageServerLoad = async ({ platform, url }) => {
-	const env = platform?.env;
+	const env = bindings(platform);
 	const requested = url.searchParams.get('r');
 	const range: RangeKey = isRange(requested) ? requested : '30d';
 	const rawSlug = url.searchParams.get('s');
@@ -33,7 +34,6 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 		notFound: [] as Row<{ path: string; hits: number }>,
 		totals: { clicks: 0, views: 0, visitors: 0 }
 	};
-	if (!env) return empty;
 
 	const offset = RANGES[range];
 	const only = slug !== null ? ' AND slug = ?2' : '';
@@ -88,11 +88,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 	// §6 — `visitors` is the only table that grows, so prune it opportunistically
 	// rather than running a scheduled job for it.
 	if (Math.random() < 0.05) {
-		platform?.context?.waitUntil?.(
-			env.DB.prepare(`DELETE FROM visitors WHERE day < date('now','-180 day')`)
-				.run()
-				.catch(() => {})
-		);
+		afterResponse(platform, env.DB.prepare(`DELETE FROM visitors WHERE day < date('now','-180 day')`).run());
 	}
 
 	const totalRow = (totals.results as Array<{ clicks: number | null; views: number | null }>)[0];

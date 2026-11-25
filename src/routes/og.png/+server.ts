@@ -4,6 +4,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import HomeCard from '$lib/home/OgCard.svelte';
 import { loadFromD1, readPublished } from '$lib/home/home.server';
 import type { Profile } from '$lib/home/types';
+import { bindings, afterResponse } from '$lib/server/bindings';
 
 /**
  * The Open Graph image for `/`, rendered on demand from the published profile
@@ -36,7 +37,7 @@ const FALLBACK: Profile = {
 };
 
 export const GET: RequestHandler = async ({ platform, url }) => {
-	const env = platform?.env;
+	const env = bindings(platform);
 	const cache = platform?.caches?.default;
 
 	let profile: Profile = FALLBACK;
@@ -117,7 +118,7 @@ export const GET: RequestHandler = async ({ platform, url }) => {
 	if (!DEV && cache) {
 		const store = res.clone();
 		store.headers.set('Cache-Control', 'public, s-maxage=31536000');
-		platform?.context?.waitUntil?.(cache.put(key, store));
+		afterResponse(platform, cache.put(key, store));
 	}
 
 	return res;

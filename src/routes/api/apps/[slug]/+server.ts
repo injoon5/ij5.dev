@@ -6,6 +6,7 @@ import { KEY_ERROR, newClaim, spendAttempt } from '$lib/apps/installKeys.server'
 import { SLUG_PATTERN } from '$lib/slugs/slugs';
 import { parseReply } from '$lib/apps/replyParser';
 import { MAX_APP_BYTES } from '$lib/apps/app';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * Item routes for Shelf's apps (plan §1.3, §9.5).
@@ -30,8 +31,7 @@ const fieldErrors = (issues: { path: PropertyKey[]; message: string }[]) => {
 };
 
 export const GET: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);
@@ -43,8 +43,7 @@ export const GET: RequestHandler = async ({ request, params, platform }) => {
 };
 
 export const PUT: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorizeApp(request, env, { slug: params.slug, action: 'write' });
 	if (!auth.ok) return apiError(auth.status, auth.error);
@@ -123,8 +122,7 @@ export const PUT: RequestHandler = async ({ request, params, platform }) => {
 };
 
 export const DELETE: RequestHandler = async ({ request, params, url, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);

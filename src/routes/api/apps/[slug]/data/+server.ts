@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
 import { DATA_LIMITS, KEY_RULE, isDataKey, readAll, readSince, writeData } from '$lib/apps/appData.server';
 import { MAX_DATA_APP_BYTES } from '$lib/apps/app';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * An app's data (Shelf plan §8.2): all of it, everything since a rev, or a
@@ -13,8 +14,7 @@ import { MAX_DATA_APP_BYTES } from '$lib/apps/app';
 const MAX_BATCH_BODY = MAX_DATA_APP_BYTES + 1024 * 1024;
 
 export const GET: RequestHandler = async ({ request, params, url, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);
@@ -27,8 +27,7 @@ export const GET: RequestHandler = async ({ request, params, url, platform }) =>
 };
 
 export const POST: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);

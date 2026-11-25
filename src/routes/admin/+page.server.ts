@@ -15,6 +15,7 @@ import {
 	updateSlug
 } from '$lib/links/links.server';
 import type { SlugRow } from '$lib/links/link';
+import { bindings } from '$lib/server/bindings';
 
 const form = z.object({
 	slug: z
@@ -71,8 +72,7 @@ function parse(data: FormData): { ok: true; row: Omit<SlugRow, 'created_at'> } |
 }
 
 export const load: PageServerLoad = async ({ platform, url }) => {
-	const env = platform?.env;
-	if (!env) return { slugs: [], recent: {}, selected: null };
+	const env = bindings(platform);
 
 	// One round trip, not two. The same rule holds on every admin screen.
 	const [links, stats] = await env.DB.batch([
@@ -110,8 +110,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 
 export const actions: Actions = {
 	create: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return fail(500, { error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const data = await request.formData();
 		const parsed = parse(data);
@@ -159,8 +158,7 @@ export const actions: Actions = {
 	},
 
 	update: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return fail(500, { error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const parsed = parse(await request.formData());
 		if (!parsed.ok) return fail(400, { intent: 'update', ...parsed });
@@ -177,8 +175,7 @@ export const actions: Actions = {
 	delete: async ({ request, platform, locals }) => {
 		const denied = requireFull(locals);
 		if (denied) return denied;
-		const env = platform?.env;
-		if (!env) return fail(500, { error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const slug = String((await request.formData()).get('slug') ?? '');
 		if (!slug) return fail(400, { intent: 'delete', error: 'No link given.' });

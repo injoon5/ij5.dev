@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { cleanName, fileKey, insertFileRow, parseExpiry, slugAvailable } from '$lib/files/files.server';
 import { sameOrigin } from '$lib/server/origin';
 import { MAX_PARTS, uploadLimits } from '$lib/files/uploads';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * The rest of a multipart upload, keyed by the slug its create step chose:
@@ -21,8 +22,7 @@ import { MAX_PARTS, uploadLimits } from '$lib/files/uploads';
 const fail = (status: number, message: string) => json({ message }, { status });
 
 export const PUT: RequestHandler = async ({ request, params, platform, url }) => {
-	const env = platform?.env;
-	if (!env) return fail(503, 'No platform bindings.');
+	const env = bindings(platform);
 	if (!sameOrigin(request)) return fail(403, 'Cross-origin request refused.');
 
 	const uploadId = url.searchParams.get('uploadId') ?? '';
@@ -60,8 +60,7 @@ export const PUT: RequestHandler = async ({ request, params, platform, url }) =>
 };
 
 export const POST: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return fail(503, 'No platform bindings.');
+	const env = bindings(platform);
 	if (!sameOrigin(request)) return fail(403, 'Cross-origin request refused.');
 
 	let body: { uploadId?: unknown; parts?: unknown; name?: unknown; expires?: unknown };
@@ -109,8 +108,7 @@ export const POST: RequestHandler = async ({ request, params, platform }) => {
 };
 
 export const DELETE: RequestHandler = async ({ request, params, platform, url }) => {
-	const env = platform?.env;
-	if (!env) return fail(503, 'No platform bindings.');
+	const env = bindings(platform);
 	if (!sameOrigin(request)) return fail(403, 'Cross-origin request refused.');
 
 	const uploadId = url.searchParams.get('uploadId') ?? '';

@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { getPaste } from '$lib/pastes/pastes.server';
 import { track } from '$lib/analytics/track.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * The stable raw URL for a paste: `ij5.dev/raw/{slug}` returns the body as
@@ -16,8 +17,7 @@ const TTL = 300;
 
 export const GET: RequestHandler = async (event) => {
 	const { params, platform } = event;
-	const env = platform?.env;
-	if (!env) return new Response('Unavailable', { status: 503 });
+	const env = bindings(platform);
 
 	const paste = await getPaste(env, params.slug);
 	if (!paste) return new Response('No paste with that slug.', { status: 404 });

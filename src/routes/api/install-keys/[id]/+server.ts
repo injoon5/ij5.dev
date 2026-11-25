@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { apiError, apiJson, authorize } from '$lib/server/api';
 import { getKey, keyStatus, revokeKey } from '$lib/apps/installKeys.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * A key's status, polled by Shelf while its sheet is open so it can close the
@@ -10,8 +11,7 @@ import { getKey, keyStatus, revokeKey } from '$lib/apps/installKeys.server';
  */
 
 export const GET: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);
@@ -24,8 +24,7 @@ export const GET: RequestHandler = async ({ request, params, platform }) => {
 };
 
 export const DELETE: RequestHandler = async ({ request, params, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);

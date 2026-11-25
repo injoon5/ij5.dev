@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { bumpDownloads, contentDisposition, getFile, parseRange } from '$lib/files/files.server';
+import { bindings, afterResponse } from '$lib/server/bindings';
 
 /**
  * The bytes. Streamed from R2 with `Content-Disposition: attachment`, so the
@@ -18,8 +19,7 @@ import { bumpDownloads, contentDisposition, getFile, parseRange } from '$lib/fil
 
 export const GET: RequestHandler = async (event) => {
 	const { params, platform } = event;
-	const env = platform?.env;
-	if (!env) return new Response('Unavailable', { status: 503 });
+	const env = bindings(platform);
 
 	const file = await getFile(env, params.slug);
 	if (!file) return new Response('No file with that slug.', { status: 404 });
@@ -53,7 +53,7 @@ export const GET: RequestHandler = async (event) => {
 	// that starts at the beginning, not every piece. Off the response path —
 	// a missed count is not worth a failed download.
 	if (!span || span.offset === 0) {
-		platform.context?.waitUntil?.(bumpDownloads(env, params.slug).catch(() => {}));
+		afterResponse(platform, bumpDownloads(env, params.slug));
 	}
 
 	if (span) {

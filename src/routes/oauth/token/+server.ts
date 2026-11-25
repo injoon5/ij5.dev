@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authenticateClient, mintTokens, oidcConfigured, redeemCode, type TokenError } from '$lib/auth/oidc.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * The OIDC token endpoint (§4). Called by Cloudflare Access from its servers,
@@ -21,7 +22,7 @@ function oauthError(e: TokenError) {
 }
 
 export const POST: RequestHandler = async ({ request, platform }) => {
-	const env = platform?.env;
+	const env = bindings(platform);
 	if (!oidcConfigured(env)) error(404, 'Not found');
 
 	const type = request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase();

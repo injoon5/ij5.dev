@@ -15,6 +15,7 @@ import {
 } from '$lib/apps/apps.server';
 import { DATA_LIMITS, KEY_RULE, isDataKey, listEntries, readOne, writeData } from '$lib/apps/appData.server';
 import { MAX_APP_BYTES } from '$lib/apps/app';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * Shelf's apps in the admin (plan §1.4, §8.2, §9.3): a master–detail list, an
@@ -27,8 +28,7 @@ import { MAX_APP_BYTES } from '$lib/apps/app';
 const FIELDS = ['slug', 'name', 'icon', 'tint', 'source'] as const;
 
 export const load: PageServerLoad = async ({ platform, url }) => {
-	const env = platform?.env;
-	if (!env) return { apps: [], selected: null, versions: [], entries: [], value: null };
+	const env = bindings(platform);
 
 	const wanted = url.searchParams.get('s');
 	const key = url.searchParams.get('k');
@@ -52,8 +52,7 @@ type Values = Partial<Record<(typeof FIELDS)[number], string>>;
 
 export const actions: Actions = {
 	save: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return fail(500, { intent: 'save', error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const data = await request.formData();
 		const values: Values = Object.fromEntries(FIELDS.map((k) => [k, String(data.get(k) ?? '')]));
@@ -90,8 +89,7 @@ export const actions: Actions = {
 	},
 
 	revert: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return fail(500, { intent: 'revert', error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const slug = String((await request.formData()).get('slug') ?? '');
 		const result = await revertApp(env, slug);
@@ -107,8 +105,7 @@ export const actions: Actions = {
 	delete: async ({ request, platform, locals }) => {
 		const denied = requireFull(locals);
 		if (denied) return denied;
-		const env = platform?.env;
-		if (!env) return fail(500, { intent: 'delete', error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const data = await request.formData();
 		const slug = String(data.get('slug') ?? '');
@@ -119,8 +116,7 @@ export const actions: Actions = {
 	},
 
 	setData: async ({ request, platform }) => {
-		const env = platform?.env;
-		if (!env) return fail(500, { intent: 'data', error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const data = await request.formData();
 		const slug = String(data.get('slug') ?? '');
@@ -146,8 +142,7 @@ export const actions: Actions = {
 	deleteData: async ({ request, platform, locals }) => {
 		const denied = requireFull(locals);
 		if (denied) return denied;
-		const env = platform?.env;
-		if (!env) return fail(500, { intent: 'data', error: 'No platform bindings.' });
+		const env = bindings(platform);
 
 		const data = await request.formData();
 		const slug = String(data.get('slug') ?? '');

@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/browser';
 import { startSession } from '$lib/auth/signIn.server';
 import { finishAuthentication } from '$lib/auth/webauthn.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * Step two of passkey sign-in: verify the assertion the authenticator produced
@@ -11,8 +12,7 @@ import { finishAuthentication } from '$lib/auth/webauthn.server';
 
 export const POST: RequestHandler = async (event) => {
 	const { request, platform } = event;
-	const env = platform?.env;
-	if (!env) error(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	let body: { response?: AuthenticationResponseJSON };
 	try {

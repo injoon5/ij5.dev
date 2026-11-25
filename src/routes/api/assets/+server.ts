@@ -1,5 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * Binary upload (§5). The one place a `+server.ts` endpoint beats a form
@@ -65,8 +66,7 @@ const hex = (buffer: ArrayBuffer) =>
 		.join('');
 
 export const POST: RequestHandler = async ({ request, platform }) => {
-	const env = platform?.env;
-	if (!env) error(500, 'No platform bindings.');
+	const env = bindings(platform);
 
 	// SvelteKit's built-in CSRF protection only covers form-encoded POSTs, so a
 	// binary upload from another origin would otherwise sail through on the

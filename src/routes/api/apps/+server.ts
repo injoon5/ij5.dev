@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { apiError, authorize } from '$lib/server/api';
 import { appsEtag, etagMatches, listApps } from '$lib/apps/apps.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * The app index Shelf syncs on every launch (plan §1.3). Metadata only — the
@@ -9,8 +10,7 @@ import { appsEtag, etagMatches, listApps } from '$lib/apps/apps.server';
  */
 
 export const GET: RequestHandler = async ({ request, platform }) => {
-	const env = platform?.env;
-	if (!env) return apiError(503, 'No platform bindings.');
+	const env = bindings(platform);
 
 	const auth = await authorize(request, env.AUTH_HASH);
 	if (!auth.ok) return apiError(auth.status, auth.error);

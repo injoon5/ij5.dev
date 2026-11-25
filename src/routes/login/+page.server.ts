@@ -12,6 +12,7 @@ import {
 	type Outcome
 } from '$lib/auth/signIn.server';
 import { turnstileEnabled, turnstileOk } from '$lib/auth/turnstile.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * Four doors (§4), strongest first:
@@ -29,7 +30,7 @@ export const load: PageServerLoad = async ({ locals, url, platform }) => {
 	const next = safeNext(url.searchParams.get('next'));
 	if (locals.authed && !url.searchParams.has('reauth')) redirect(303, next);
 
-	const env = platform?.env;
+	const env = bindings(platform);
 	const password = passwordConfigured(env);
 	return {
 		next,
@@ -46,7 +47,7 @@ function refuse(o: Extract<Outcome, { ok: false }>, door: string) {
 export const actions: Actions = {
 	token: async (event) => {
 		const { request, platform, url } = event;
-		const env = platform?.env;
+		const env = bindings(platform);
 		if (!env?.AUTH_HASH) return fail(500, { door: 'token', error: 'Auth is not configured on this deployment.', retryAt: null });
 
 		const token = String((await request.formData()).get('token') ?? '');
@@ -63,8 +64,7 @@ export const actions: Actions = {
 
 	password: async (event) => {
 		const { request, platform, url } = event;
-		const env = platform?.env;
-		if (!env) return fail(500, { door: 'password', error: 'No platform bindings.', retryAt: null });
+		const env = bindings(platform);
 
 		const form = await request.formData();
 		if (!(await turnstileOk(env, String(form.get('cf-turnstile-response') ?? ''), clientIp(request)))) {
@@ -84,8 +84,7 @@ export const actions: Actions = {
 
 	recovery: async (event) => {
 		const { request, platform, url } = event;
-		const env = platform?.env;
-		if (!env) return fail(500, { door: 'recovery', error: 'No platform bindings.', retryAt: null });
+		const env = bindings(platform);
 
 		const form = await request.formData();
 		if (!(await turnstileOk(env, String(form.get('cf-turnstile-response') ?? ''), clientIp(request)))) {

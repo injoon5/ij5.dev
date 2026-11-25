@@ -1,3 +1,5 @@
+import { afterResponse } from '$lib/server/bindings';
+
 /**
  * The sign-in log and alerts (§4).
  *
@@ -65,8 +67,8 @@ export function alert(
 			Click: `${origin}/admin/security`
 		},
 		body: lines.filter(Boolean).join('\n')
-	}).catch(() => {});
-	platform?.context?.waitUntil?.(send);
+	});
+	afterResponse(platform, send);
 }
 
 /** "Chrome on Windows" — enough to recognise a device, not a fingerprint. */

@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getFile } from '$lib/files/files.server';
+import { bindings } from '$lib/server/bindings';
 
 /**
  * The download landing page. Existence and expiry are judged here on the
@@ -9,8 +10,7 @@ import { getFile } from '$lib/files/files.server';
 
 export const load: PageServerLoad = async (event) => {
 	const { params, platform, url } = event;
-	const env = platform?.env;
-	if (!env) throw error(503, 'Unavailable.');
+	const env = bindings(platform);
 
 	const file = await getFile(env, params.slug);
 	if (!file) throw error(404, 'No file with that slug.');
