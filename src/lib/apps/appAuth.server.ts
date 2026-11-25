@@ -1,5 +1,5 @@
-import { authorize, bearerToken } from '$lib/server/api';
-import { checkKey, KEY_ERROR, KEY_PREFIX, type InstallKeyRow } from './installKeys.server';
+import { authorize, bearerToken, KEY_ERROR, KEY_PREFIX } from '$lib/server/api';
+import { checkKey, type InstallKeyRow } from './installKeys.server';
 
 export type AppAuth =
 	| { ok: true; origin: 'admin' }

@@ -1,4 +1,5 @@
 import { eq, randomToken, sha256 } from '$lib/server/crypto';
+import { KEY_PREFIX } from '$lib/server/api';
 
 /**
  * One-time install keys.
@@ -15,8 +16,6 @@ import { eq, randomToken, sha256 } from '$lib/server/crypto';
  */
 
 type Env = App.Platform['env'];
-
-export const KEY_PREFIX = 'shelf_ik_';
 
 /** Thirty minutes: long enough to paste a prompt into an agent and let it
  * work, short enough that a key found in a chat log later is dead. */
@@ -37,12 +36,6 @@ const KEEP_DEAD_MS = 24 * 60 * 60 * 1000;
 /** A key that can still be used: bind with `[now, MAX_KEY_ATTEMPTS]`. */
 const LIVE = `used_at IS NULL AND expires_at > ? AND attempts < ?`;
 
-/**
- * The one sentence every key failure gets — wrong secret, unknown id, used,
- * expired, burned, wrong slug, wrong route. A caller holding a key learns
- * nothing about which, so a leaked or guessed key cannot be probed.
- */
-export const KEY_ERROR = 'This key is used, expired or wrong.';
 
 /** 8 bytes → 11 base64url characters, fixed. The id may itself contain `_`
  * (base64url uses it), so the key is split by length, never by `_`. */

@@ -1,9 +1,9 @@
 import type { RequestHandler } from './$types';
-import { apiError, apiJson, authorize } from '$lib/server/api';
+import { apiError, apiJson, authorize, KEY_ERROR } from '$lib/server/api';
 import { authorizeApp } from '$lib/apps/appAuth.server';
 import { appContent, deleteApp, getApp, getAppMeta, putApp } from '$lib/apps/apps.server';
 import { fieldErrors } from '$lib/forms';
-import { KEY_ERROR, spendAttempt } from '$lib/apps/installKeys.server';
+import { spendAttempt } from '$lib/apps/installKeys.server';
 import { SLUG_PATTERN } from '$lib/slugs/slugs';
 import { parseReply } from '$lib/apps/replyParser';
 import { MAX_APP_BYTES, SOURCE_TOO_BIG, utf8Bytes } from '$lib/apps/app';

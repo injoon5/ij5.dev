@@ -1,5 +1,4 @@
 import { eq, sha256 } from '$lib/server/crypto';
-import { KEY_ERROR, KEY_PREFIX } from '$lib/apps/installKeys.server';
 
 /**
  * Bearer auth for the JSON API (the admin token, used as a bearer credential).
@@ -13,6 +12,15 @@ import { KEY_ERROR, KEY_PREFIX } from '$lib/apps/installKeys.server';
  * The token is the same 256-bit value the login form takes, checked against the
  * same `AUTH_HASH` — one credential to rotate, not two.
  */
+
+/** Install keys (Shelf) start with this; no other route accepts one. */
+export const KEY_PREFIX = 'shelf_ik_';
+/**
+ * The one sentence every key failure gets — wrong secret, unknown id, used,
+ * expired, burned, wrong slug, wrong route. A caller holding a key learns
+ * nothing about which, so a leaked or guessed key cannot be probed.
+ */
+export const KEY_ERROR = 'This key is used, expired or wrong.';
 
 export type ApiAuth = { ok: true } | { ok: false; status: number; error: string };
 

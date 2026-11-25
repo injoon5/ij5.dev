@@ -10,7 +10,8 @@ import * as dataKey from './[slug]/data/[key]/+server';
 import * as keys from '../install-keys/+server';
 import * as keyItem from '../install-keys/[id]/+server';
 import { call, sqlite, testEnv } from '$lib/server/testing/d1';
-import { KEY_ERROR, MAX_KEY_ATTEMPTS } from '$lib/apps/installKeys.server';
+import { MAX_KEY_ATTEMPTS } from '$lib/apps/installKeys.server';
+import { KEY_ERROR } from '$lib/server/api';
 import { MAX_APP_BYTES, SOURCE_TOO_BIG } from '$lib/apps/app';
 
 /**
