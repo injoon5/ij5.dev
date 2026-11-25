@@ -1,5 +1,5 @@
 import { RANGES } from './ranges';
-import type { Kind } from './track.server';
+import type { Kind } from './visit';
 
 type Env = App.Platform['env'];
 

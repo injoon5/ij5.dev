@@ -1,6 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { RANGES, fillDays, isRange, type RangeKey } from '$lib/analytics/ranges';
 import { afterResponse, bindings } from '$lib/server/bindings';
+import { HOME_SLUG, OTHER_PATH } from '$lib/analytics/visit';
 
 /**
  * Every query on this page runs in one `DB.batch()` — one round trip to D1,
@@ -19,7 +20,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 	const requested = url.searchParams.get('r');
 	const range: RangeKey = isRange(requested) ? requested : '30d';
 	const rawSlug = url.searchParams.get('s');
-	const slug = rawSlug === '/' ? '' : rawSlug || null;
+	const slug = rawSlug === '/' ? HOME_SLUG : rawSlug || null;
 
 	const empty = {
 		range,
@@ -69,7 +70,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 			// worth creating.
 			env.DB.prepare(
 				`SELECT slug AS path, SUM(n) AS hits FROM hits
-				 WHERE kind = '404' AND day >= date('now', ?1) AND device != 'bot' AND slug != '*'
+				 WHERE kind = '404' AND day >= date('now', ?1) AND device != 'bot' AND slug != '${OTHER_PATH}'
 				 GROUP BY path HAVING SUM(n) > 1 ORDER BY hits DESC LIMIT 10`
 			).bind(offset),
 			q(

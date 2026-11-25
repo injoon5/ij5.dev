@@ -1,3 +1,5 @@
+import { OTHER_PATH, UNKNOWN_COUNTRY, type Kind } from './visit';
+import { classify, deviceClass } from './userAgent';
 import { utcDay } from './ranges';
 import { afterResponse } from '$lib/server/bindings';
 import type { RequestEvent } from '@sveltejs/kit';
@@ -20,54 +22,6 @@ import { SLUG_PATTERN } from '$lib/slugs/slugs';
  * it with the day and the salt, so it is useless across days.
  */
 
-export type Kind = 'redirect' | 'paste' | 'home' | '404';
-
-const BOT =
-	/bot|crawl|spider|slurp|facebookexternalhit|embedly|quora link preview|pinterest|vkshare|whatsapp|telegram|discord|slackbot|preview|headless|monitor|curl|wget|python-requests|axios|node-fetch/i;
-
-const MOBILE = /android|iphone|ipod|ipad|iemobile|opera mini|mobile safari|windows phone/i;
-
-export function deviceClass(ua: string): 'mobile' | 'desktop' | 'bot' {
-	if (!ua || BOT.test(ua)) return 'bot';
-	return MOBILE.test(ua) ? 'mobile' : 'desktop';
-}
-
-/** Everything server-side, so it applies to redirect clicks too — no JS needed. */
-export const UNKNOWN = 'Unknown';
-
-function detectOS(ua: string): string {
-	if (/Windows/.test(ua)) return 'Windows';
-	if (/Android/.test(ua)) return 'Android';
-	// iPads report `Mac OS X` too, so the check has to come first.
-	if (/iPhone|iPad|iPod/.test(ua)) return 'iOS';
-	if (/CrOS/.test(ua)) return 'Chrome OS';
-	if (/Mac OS X/.test(ua)) return 'macOS';
-	if (/Ubuntu/.test(ua)) return 'Ubuntu';
-	if (/Fedora/.test(ua)) return 'Fedora';
-	if (/Debian/.test(ua)) return 'Debian';
-	if (/Arch Linux/.test(ua)) return 'Arch Linux';
-	if (/Linux/.test(ua)) return 'Linux';
-	return UNKNOWN;
-}
-
-function detectBrowser(ua: string): string {
-	// Every check that would otherwise match `Chrome/` comes first.
-	if (/Edg(e|A|iOS)?\/|Edge\//.test(ua)) return 'Edge';
-	if (/OPR\/|Opera/.test(ua)) return 'Opera';
-	if (/SamsungBrowser\//.test(ua)) return 'Samsung Internet';
-	if (/Brave/.test(ua)) return 'Brave';
-	if (/CriOS\//.test(ua)) return 'Chrome';
-	if (/FxiOS\//.test(ua)) return 'Firefox';
-	if (/Firefox\//.test(ua)) return 'Firefox';
-	if (/Chrome\//.test(ua)) return 'Chrome';
-	if (/MicroMessenger/.test(ua)) return 'WeChat';
-	if (/Safari\//.test(ua)) return 'Safari';
-	return UNKNOWN;
-}
-
-export function classify(ua: string): { os: string; browser: string } {
-	return { os: detectOS(ua), browser: detectBrowser(ua) };
-}
 
 /** Hostname only, never the full URL — a full URL would explode cardinality. */
 export function referrerHost(referer: string | null, selfHost: string): string {
@@ -96,11 +50,10 @@ export function referrerHost(referer: string | null, selfHost: string): string {
  *     so those rows are written and then never read — pure cardinality. The row
  *     still exists under `*`, so the device breakdown keeps its count.
  */
-export const OTHER = '*';
 
 export function bucket404(path: string, device: 'mobile' | 'desktop' | 'bot'): string {
-	if (device === 'bot') return OTHER;
-	return SLUG_PATTERN.test(path) ? path : OTHER;
+	if (device === 'bot') return OTHER_PATH;
+	return SLUG_PATTERN.test(path) ? path : OTHER_PATH;
 }
 
 /** Shared with the test that proves it increments rather than duplicating. */
@@ -133,7 +86,7 @@ export const PURGE_VISITOR = `DELETE FROM visitors WHERE day = ?1 AND vh = ?2`;
 /** First-party fingerprint cookie. HttpOnly: the page never needs to read it. */
 export const FP_COOKIE = 'f';
 export const fpCookie = (fp: string) =>
-	`${FP_COOKIE}=${fp}; Path=/; SameSite=Lax; Max-Age=86400`;
+	`${FP_COOKIE}=${fp}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400`;
 
 const hex = (b: ArrayBuffer, bytes: number) =>
 	Array.from(new Uint8Array(b, 0, bytes))
@@ -153,6 +106,10 @@ export async function visitorHash(salt: string, day: string, ...parts: string[])
 	);
 	return hex(digest, 8);
 }
+
+/** The identity of a visitor with no fingerprint cookie: IP + UA. */
+export const anonymousVisitor = (salt: string, day: string, request: Request) =>
+	visitorHash(salt, day, request.headers.get('cf-connecting-ip') ?? '0.0.0.0', request.headers.get('user-agent') ?? '');
 
 /** The signal set `/a.js` collects. Optional fields, but wrong types reject. */
 export type BeaconSignals = {
@@ -244,8 +201,7 @@ export function track(event: RequestEvent, e: { slug: string; kind: Kind }) {
 	const ua = req.headers.get('user-agent') ?? '';
 	const device = deviceClass(ua);
 	const referrer = referrerHost(req.headers.get('referer'), event.url.hostname);
-	const country = (req as { cf?: { country?: string } }).cf?.country ?? 'XX';
-	const ip = req.headers.get('cf-connecting-ip') ?? '0.0.0.0';
+	const country = (req as { cf?: { country?: string } }).cf?.country ?? UNKNOWN_COUNTRY;
 	const slug = e.kind === '404' ? bucket404(e.slug, device) : e.slug;
 	const salt = env.SALT ?? '';
 	const { os, browser } = classify(ua);
@@ -269,7 +225,7 @@ export function track(event: RequestEvent, e: { slug: string; kind: Kind }) {
 			// the beacon that set it also folded any cookie-less rows into the
 			// fingerprint identity, so the two paths never double count (§6).
 			const fp = readCookie(req.headers.get('cookie'), FP_COOKIE);
-			const vh = fp ? await visitorHash(salt, day, fp) : await visitorHash(salt, day, ip, ua);
+			const vh = fp ? await visitorHash(salt, day, fp) : await anonymousVisitor(salt, day, req);
 
 			// §11 — the `visitors` insert is a no-op whenever this visitor already
 			// hit this slug today. A per-colo marker turns the common repeat visit

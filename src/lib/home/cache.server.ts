@@ -1,5 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import { track } from '$lib/analytics/track.server';
+import { HOME_SLUG } from '$lib/analytics/visit';
 import { afterResponse } from '$lib/server/bindings';
 import { HOME_KEYS, type HomeDoc } from './types';
 
@@ -38,7 +39,7 @@ export const serveHome: Handle = async ({ event, resolve }) => {
 	if (!platform || event.url.pathname !== '/' || !read || event.isDataRequest) return resolve(event);
 
 	// Before the cache check: a cache hit is still a visit.
-	track(event, { slug: '', kind: 'home' });
+	track(event, { slug: HOME_SLUG, kind: 'home' });
 
 	const doc = await platform.env.KV.get<HomeDoc>(HOME_KEYS.published, { type: 'json', cacheTtl: 60 }).catch(() => null);
 	if (!doc) return resolve(event);

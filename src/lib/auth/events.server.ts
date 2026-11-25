@@ -70,22 +70,3 @@ export function alert(
 	});
 	afterResponse(platform, send);
 }
-
-/** "Chrome on Windows" — enough to recognise a device, not a fingerprint. */
-export function describeAgent(ua: string | null): string {
-	if (!ua) return 'Unknown browser';
-	const browser =
-		/Edg\//.test(ua) ? 'Edge'
-		: /Firefox\//.test(ua) ? 'Firefox'
-		: /Chrome\//.test(ua) ? 'Chrome'
-		: /Safari\//.test(ua) ? 'Safari'
-		: 'Browser';
-	const os =
-		/iPhone|iPad/.test(ua) ? 'iOS'
-		: /Android/.test(ua) ? 'Android'
-		: /Mac OS X/.test(ua) ? 'macOS'
-		: /Windows/.test(ua) ? 'Windows'
-		: /Linux/.test(ua) ? 'Linux'
-		: 'unknown OS';
-	return `${browser} on ${os}`;
-}

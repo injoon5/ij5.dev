@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { HOME_SLUG, UNKNOWN_COUNTRY, visitPath } from '$lib/analytics/visit';
 	import X from 'lucide-svelte/icons/x';
 	import BarList from '$lib/ui/BarList.svelte';
 	import Chart from '$lib/ui/Chart.svelte';
@@ -13,7 +14,7 @@
 
 	const REGION = new Intl.DisplayNames(['en'], { type: 'region' });
 	const country = (code: string) => {
-		if (code === 'XX' || code.length !== 2) return 'Unknown';
+		if (code === UNKNOWN_COUNTRY || code.length !== 2) return 'Unknown';
 		try {
 			return REGION.of(code) ?? code;
 		} catch {
@@ -24,9 +25,7 @@
 	// Stored lower-case; title-cased so every list reads alike.
 	const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-	/** The path a row stands for, as a visitor would type it. */
-	const path = (slug: string, kind: string) =>
-		kind === 'home' ? '/' : kind === 'paste' ? `/p/${slug}` : `/${slug}`;
+	const path = (slug: string, kind: string) => visitPath(kind, slug);
 
 	let hasData = $derived(data.traffic.length > 0);
 
@@ -54,9 +53,7 @@
 	let title = $derived(
 		data.slug === null
 			? null
-			: data.slug === ''
-				? '/'
-				: (data.top.find((t) => t.slug === data.slug)?.kind === 'paste' ? '/p/' : '/') + data.slug
+			: visitPath(data.top.find((t) => t.slug === data.slug)?.kind ?? (data.slug === HOME_SLUG ? 'home' : 'redirect'), data.slug)
 	);
 
 	const segment =

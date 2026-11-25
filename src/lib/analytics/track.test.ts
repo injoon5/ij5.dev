@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import {
-	classify,
-	fingerprint,
-	OTHER,
-	bucket404,
-	deviceClass,
-	parseBeacon,
-	readCookie,
-	referrerHost,
-	visitorHash
-} from './track.server';
+import { bucket404, fingerprint, parseBeacon, readCookie, referrerHost, visitorHash } from './track.server';
+import { classify, deviceClass } from './userAgent';
+import { OTHER_PATH as OTHER } from './visit';
 
 /**
  * §6's bucketing, which is the whole defence against the `hits` table growing

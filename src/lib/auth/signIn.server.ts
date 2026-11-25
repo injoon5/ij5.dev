@@ -1,6 +1,7 @@
 import type { Cookies } from '@sveltejs/kit';
 import { clientIp, requestMeta } from '$lib/server/request';
-import { alert, describeAgent, logEvent } from './events.server';
+import { alert, logEvent } from './events.server';
+import { describe as describeAgent } from '$lib/analytics/userAgent';
 import { verifyPassword } from './password.server';
 import { answerMatches, parsePath, readChallenge, spendChallenge } from './puzzle.server';
 import { spend } from './recovery.server';

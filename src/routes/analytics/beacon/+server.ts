@@ -1,7 +1,7 @@
 import { utcDay } from '$lib/analytics/ranges';
 import type { RequestHandler } from './$types';
 import {
-	deviceClass,
+	anonymousVisitor,
 	fingerprint,
 	fpCookie,
 	MIGRATE_VISITOR,
@@ -10,6 +10,8 @@ import {
 	visitorHash,
 	VISITORS_INSERT
 } from '$lib/analytics/track.server';
+import { deviceClass } from '$lib/analytics/userAgent';
+import { HOME_SLUG } from '$lib/analytics/visit';
 import { afterResponse, bindings } from '$lib/server/bindings';
 
 /**
@@ -49,10 +51,9 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
 
 	const day = utcDay();
 	const salt = env.SALT ?? '';
-	const ip = request.headers.get('cf-connecting-ip') ?? '0.0.0.0';
 
 	const fp = await fingerprint(salt, sigs, ua);
-	const old = await visitorHash(salt, day, ip, ua);
+	const old = await anonymousVisitor(salt, day, request);
 	const vh = await visitorHash(salt, day, fp);
 
 	// The migration folds in every cookie-less row from earlier today (all slugs
@@ -63,9 +64,9 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
 	const stmts = [
 		env.DB.prepare(MIGRATE_VISITOR).bind(day, vh, old),
 		env.DB.prepare(PURGE_VISITOR).bind(day, old),
-		env.DB.prepare(VISITORS_INSERT).bind(day, '', vh)
+		env.DB.prepare(VISITORS_INSERT).bind(day, HOME_SLUG, vh)
 	];
-	await env.DB.batch(stmts).catch(() => {});
+	await env.DB.batch(stmts).catch((e: unknown) => console.error('visitor migration failed:', e));
 
 	// The page's own track() write is scheduled behind the response it rode in
 	// on; the beacon can land before that batch finishes. One delayed re-run of
